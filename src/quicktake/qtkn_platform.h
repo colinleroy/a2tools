@@ -19,6 +19,7 @@ void consume_extra(void);
 void init_row(void);
 void decode_row(void);
 
+void init_top(void);
 void init_shiftl4(void);
 void init_shiftl3(void);
 void init_div48(void);

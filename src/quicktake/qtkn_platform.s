@@ -3,6 +3,7 @@
         .export       _init_row
         .export       _decode_row
 
+        .export       _init_top
         .export       _init_shiftl4
         .export       _init_shiftl3
         .export       _init_buf_0
@@ -60,6 +61,15 @@ rept        = _zp13
 .endmacro
 
 .segment "LC"
+
+.proc _init_top
+        jsr     _init_huff
+        jsr     _init_shiftl3
+        jsr     _init_shiftl4
+        jsr     _init_div48
+        jmp     _init_buf_0
+.endproc
+
 .proc _init_shiftl4
         ldy     #$00
 
@@ -140,7 +150,6 @@ neg:    ldx     #$FF
 .proc _init_huff
         bit     $C083               ; WR-enable LC
         bit     $C083               ; we patch things.
-
         lda     #0
         sta     val
         sta     val+1
@@ -303,8 +312,9 @@ huff_data_done:
         rts
 .endproc
 
-.segment "CODE"
 .proc _copy_data
+        bit     $C083
+        bit     $C083
         ldx     _row_idx+1
         ldy     _row_idx
         bne     :+
@@ -375,6 +385,8 @@ end_copy_loop:
 
         rts
 .endproc
+
+.segment "CODE"
 
 .proc _consume_extra
         lda     #2

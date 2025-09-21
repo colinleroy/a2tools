@@ -107,6 +107,14 @@ void init_huff(void) {
   }
 }
 
+void init_top(void) {
+  init_huff();
+  init_shiftl3();
+  init_div48();
+  init_buf_0();
+  init_shiftl4();
+}
+
 #pragma code-name(pop)
 
 void copy_data(void) {

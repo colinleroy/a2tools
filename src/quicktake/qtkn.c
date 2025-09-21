@@ -100,16 +100,6 @@ uint8 last = 16;
 #pragma register-vars(push, on)
 
 #pragma code-name(push, "LC")
-
-void init_top(void) {
-  init_huff();
-  init_shiftl3();
-  init_div48();
-  init_buf_0();
-
-  init_shiftl4();
-}
-
 void qt_load_raw(uint16 top)
 {
   if (top == 0) {
