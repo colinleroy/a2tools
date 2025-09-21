@@ -4,6 +4,7 @@
         .export       _decode_row
 
         .export       _init_shiftl4
+        .export       _init_shiftl3
         .export       _init_buf_0
 
         .import       _row_idx, _row_idx_plus2
@@ -22,6 +23,7 @@
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1, _buf_2
         .import       _div48_l, _div48_h
+        .import       _shiftl3
         .import       _shiftl4n_l, _shiftl4n_h
         .import       _shiftl4p_l, _shiftl4p_h
 
@@ -74,6 +76,19 @@ neg:    ldx     #$FF
         sta     _shiftl4n_h-128,y
         iny
         bne     :-
+        rts
+.endproc
+
+.proc _init_shiftl3
+        ldy    #31
+:       tya
+        asl
+        asl
+        asl
+        adc    #4
+        sta    _shiftl3,y
+        dey
+        bpl    :-
         rts
 .endproc
 

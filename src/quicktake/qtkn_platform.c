@@ -39,6 +39,14 @@ void init_buf_0(void) {
   memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
   memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
 }
+
+void init_shiftl3(void) {
+  uint8 c;
+  for (c=0; c != 32; c++) {
+    shiftl3[c] = (c<<3)+4;
+    // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
+  }
+}
 #pragma code-name(pop)
 
 void copy_data(void) {
