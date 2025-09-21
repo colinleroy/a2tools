@@ -6,6 +6,7 @@
         .export       _init_shiftl4
         .export       _init_shiftl3
         .export       _init_buf_0
+        .export       _init_div48
 
         .import       _row_idx, _row_idx_plus2
 
@@ -56,6 +57,7 @@ rept        = _zp13
         stx     _refill_ret+2
 .endmacro
 
+.segment "LC"
 .proc _init_shiftl4
         ldy     #$00
 
@@ -116,6 +118,24 @@ neg:    ldx     #$FF
         jmp    _memset
 .endproc
 
+.proc _init_div48
+        lda    #0
+        sta    wordcnt
+
+:       ldx    wordcnt
+        lda    #$00
+        ldy    #48
+        jsr    approx_div16x8_direct
+        ldy    wordcnt
+        sta    _div48_l,y
+        txa
+        sta    _div48_h,y
+        inc    wordcnt
+        bne    :-
+        rts
+.endproc
+
+.segment "CODE"
 .proc _copy_data
         ldx     _row_idx+1
         ldy     _row_idx
