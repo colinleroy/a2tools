@@ -95,6 +95,7 @@ qtknconv_SOURCES := \
 
 qtknconv_CC65SOURCES := \
 	qtk_bithuff.s \
+	qtkn_platform.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -108,7 +109,8 @@ qtknconv_CC65SOURCES := \
 	../lib/check_floppy.s
 	
 qtknconv_GCCSOURCES := \
-	qtk_bithuff.c
+	qtk_bithuff.c \
+	qtkn_platform.c
 
 jpegconv_SOURCES := \
 	qt-conv.c \
