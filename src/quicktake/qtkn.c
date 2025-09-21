@@ -34,10 +34,10 @@ extern uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
 uint8 raw_image[RAW_IMAGE_SIZE];
 
-static uint8 val_hi_from_last[17] = {
+uint8 val_hi_from_last[17] = {
   0x00, 0x10, 0x08, 0x05, 0x04, 0x03, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
 };
-static uint8 val_from_last[256] = {
+uint8 val_from_last[256] = {
   0x00, 0x00, 0x00, 0x55, 0x00, 0x33, 0xab, 0x49, 0x00, 0xc7, 0x9a, 0x74, 0x55, 0x3b, 0x25, 0x11, 0x00,
   0xf1, 0xe4, 0xd8, 0xcd, 0xc3, 0xba, 0xb2, 0xab, 0xa4, 0x9e, 0x98, 0x92, 0x8d, 0x89, 0x84, 0x80,
   0x7c, 0x78, 0x75, 0x72, 0x6f, 0x6c, 0x69, 0x66, 0x64, 0x62, 0x5f, 0x5d, 0x5b, 0x59, 0x57, 0x55,
@@ -59,12 +59,12 @@ static uint8 val_from_last[256] = {
 /* note that each huff[x] share the same low byte addr */
 static int16 x, s, i;
 static uint16 c;
-static uint8 r, nreps, row, y, factor, t, rep_loop, tree;
-
+static uint8 r, nreps, row, y, t, rep_loop, tree;
+uint8 factor;
 /* Wastes bytes, but simplifies adds */
 
 #ifndef __CC65__
-static uint16 val;
+uint16 val;
 static int8 tk;
 static uint16 tk1, tk2, tk3, tk4;
 static uint8 tmp8;
@@ -80,8 +80,6 @@ uint8 shiftl3[32];
 #endif
 
 #ifdef __CC65__
-#define USEFUL_DATABUF_SIZE 321
-#define DATABUF_SIZE 0x400 /* align things */
 extern uint8 buf_0[DATABUF_SIZE];
 extern uint8 buf_1[DATABUF_SIZE];
 extern uint8 buf_2[DATABUF_SIZE];
@@ -109,11 +107,9 @@ static uint8 colh;
 #define rep zp13
 
 #else
-#define USEFUL_DATABUF_SIZE 321
-#define DATABUF_SIZE 0x400 /* align things */
-static uint8 buf_0[DATABUF_SIZE];
-static uint8 buf_1[DATABUF_SIZE];
-static uint8 buf_2[DATABUF_SIZE];
+uint8 buf_0[DATABUF_SIZE];
+uint8 buf_1[DATABUF_SIZE];
+uint8 buf_2[DATABUF_SIZE];
 static uint16 col;
 uint8 huff_ctrl[9*2][256];
 uint8 huff_data[9][256];
@@ -148,190 +144,12 @@ static const uint8 src[] = {
   2,-1, 2,13, 2,26, 3,39, 4,-16, 5,55, 6,-37, 6,76,
   2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
 };
-static uint8 last = 16;
+uint8 last = 16;
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
-
-#define SET_CURBUF_VAL(bufl, bufh, y, val) do { int16 v = (int16)(val); *(uint8 *)((bufl)+(y)) = (v)&0xff; *(uint8 *)((bufh)+(y)) = (v)>>8; } while (0)
-#define GET_CURBUF_VAL(bufl, bufh, y) ((int16)(((uint8)( *((bufl)+(y)) ))|(((uint8)( *(((bufh))+(y)) ))<<8)))
-
-
-static void init_row(void) {
-#ifndef __CC65__
-    if (last > 17)
-      val = (val_from_last[last] * factor) >> 4;
-    else
-      val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * factor) >> 4;
-    last = factor;
-    cur_buf_0l = buf_0;
-    cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-
-    if (val == 0x100) {
-      /* do nothing */
-    } else if (val == 0xFF) {
-      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-        tmp32 = GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
-        tmp32 = tmp32 - (tmp32>>8);
-        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
-        cur_buf_0l++;
-        cur_buf_0h++;
-      }
-    } else {
-      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-        tmp32 = val * GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
-        tmp32 >>= 8;
-        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
-        cur_buf_0l++;
-        cur_buf_0h++;
-      }
-    }
-
-#else
-    __asm__("lda #<(%v+256)", buf_0);
-    __asm__("ldx #>(%v+256)", buf_0);
-    __asm__("sta %v", cur_buf_0l);
-    __asm__("stx %v+1", cur_buf_0l);
-    __asm__("lda #<(%v+256+512)", buf_0);
-    __asm__("ldx #>(%v+256+512)", buf_0);
-    __asm__("sta %v", cur_buf_0h);
-    __asm__("stx %v+1", cur_buf_0h);
-
-    __asm__("ldy %v", last);
-    __asm__("cpy #18");
-    __asm__("bcs %g", small_val);
-
-    __asm__("lda %v,y", val_from_last);
-    __asm__("ldx %v,y", val_hi_from_last);
-    __asm__("jsr pushax");
-    __asm__("lda %v", factor);
-    __asm__("sta %v", last);
-    __asm__("jsr tosmula0");
-    goto shift_val;
-    small_val:
-    __asm__("lda %v,y", val_from_last);
-    __asm__("ldx %v", factor);
-    __asm__("stx %v", last);
-    __asm__("jsr mult8x8r16_direct");
-    shift_val:
-    __asm__("stx ptr2+1");
-    __asm__("lsr ptr2+1");
-    __asm__("ror a");
-    __asm__("lsr ptr2+1");
-    __asm__("ror a");
-    __asm__("lsr ptr2+1");
-    __asm__("ror a");
-    __asm__("lsr ptr2+1");
-    __asm__("ldx ptr2+1");
-    __asm__("ror a");
-    __asm__("sta ptr2");
-    __asm__("cmp #$FF");
-    __asm__("bne %g", check0x100);
-    __asm__("cpx #$00");
-    __asm__("bne %g", check0x100);
-
-    //mult_FF:
-    __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
-    __asm__("sty %v", i);
-    __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
-    __asm__("sta %v+1", i);
-
-    setup_curbuf_x_ff:
-    /* load */
-    __asm__("dey");
-    __asm__("sty %v", i);
-    __asm__("lda (%v),y", cur_buf_0h);
-    __asm__("tax");
-    __asm__("bne %g", not_null_buf_ff);
-    __asm__("lda (%v),y", cur_buf_0l);
-    __asm__("beq %g", null_buf_ff);
-    not_null_buf_ff:
-
-    __asm__("lda (%v),y", cur_buf_0l);
-    // tmp32 in AX
-    __asm__("stx tmp1");
-    __asm__("sec");
-    __asm__("sbc tmp1");
-    __asm__("tay");
-    __asm__("txa");
-    __asm__("sbc #0");
-    __asm__("tax");
-    __asm__("tya");
-    __asm__("jmp %g", store_buf_ff);
-
-    null_buf_ff:
-    __asm__("lda #$0F");
-    __asm__("ldx #$00");
-
-    store_buf_ff:
-    __asm__("ldy %v", i);
-    __asm__("sta (%v),y", cur_buf_0l);
-    __asm__("txa");
-    __asm__("sta (%v),y", cur_buf_0h);
-
-    __asm__("ldy %v", i);
-    __asm__("bne %g", setup_curbuf_x_ff);
-    __asm__("dec %v+1", cur_buf_0l);
-    __asm__("dec %v+1", cur_buf_0h);
-    __asm__("dec %v+1", i);
-    __asm__("bpl %g", setup_curbuf_x_ff);
-    __asm__("jmp %g", init_done);
-
-    check0x100:
-    __asm__("cpx #$01");
-    __asm__("bne %g", slow_mults);
-    __asm__("cmp #$00");
-    __asm__("beq %g", init_done); // nothing to do!
-
-    slow_mults:
-    __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
-    __asm__("sty %v", i);
-    __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
-    __asm__("sta %v+1", i);
-
-    setup_curbuf_x_slow:
-    /* load */
-    __asm__("dey");
-    __asm__("sty %v", i);
-    __asm__("lda (%v),y", cur_buf_0h);
-    __asm__("tax");
-    __asm__("bne %g", not_null_buf);
-    __asm__("lda (%v),y", cur_buf_0l);
-    __asm__("beq %g", null_buf);
-    not_null_buf:
-
-    __asm__("lda (%v),y", cur_buf_0l);
-
-    /* multiply */
-    __asm__("jsr mult16x16r24_direct");
-
-    /* Shift >> 8 */
-    __asm__("txa");
-    __asm__("jmp %g", store_buf);
-
-    null_buf:
-    __asm__("lda #$0F");
-    __asm__("ldx #$00");
-    __asm__("stx sreg");
-
-    store_buf:
-    __asm__("ldy %v", i);
-    __asm__("sta (%v),y", cur_buf_0l);
-    __asm__("lda sreg");
-    __asm__("sta (%v),y", cur_buf_0h);
-
-    __asm__("ldy %v", i);
-    __asm__("bne %g", setup_curbuf_x_slow);
-    __asm__("dec %v+1", cur_buf_0l);
-    __asm__("dec %v+1", cur_buf_0h);
-    __asm__("dec %v+1", i);
-    __asm__("bpl %g", setup_curbuf_x_slow);
-    init_done:
-    __asm__("nop");
-#endif
-}
 
 static void init_top_b(void);
 #pragma code-name(push, "LC")

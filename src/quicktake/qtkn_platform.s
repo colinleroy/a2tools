@@ -1,4 +1,7 @@
-        .export       _copy_data, _consume_extra
+        .export       _copy_data
+        .export       _consume_extra
+        .export       _init_row
+
         .import       _row_idx, _row_idx_plus2
 
         .import       _getdatahuff, _getdatahuff8
@@ -11,17 +14,26 @@
         .import       _huff_numd, _huff_numd_h
 
         .import       _huff_data, _huff_ctrl
+        .import       _factor, _last
+        .import       _val_from_last, _val_hi_from_last
+        .import       _buf_0
 
-        .importzp     tmp1
+        .import       mult16x16r24_direct, mult8x8r16_direct
+        .import       tosmula0, pushax
+        .importzp     tmp1, sreg, ptr2
         .importzp     _zp2, _zp4, _zp6, _zp7, _zp13
 
-WIDTH = 640
+WIDTH               = 640
+USEFUL_DATABUF_SIZE = 321
+DATABUF_SIZE        = $400
 
-_raw_ptr1 = _zp2
-_cur_buf_0l = _zp4
-_cur_buf_0h = _zp6
-_col        = _zp7
-_rep        = _zp13
+raw_ptr1    = _zp2
+wordcnt     = _zp2
+
+cur_buf_0l = _zp4
+cur_buf_0h = _zp6
+_col       = _zp7
+_rep       = _zp13
 
 
 .macro SET_REFILL_RET addr
@@ -39,8 +51,8 @@ _rep        = _zp13
         dex
 :
         dey
-        sty     _raw_ptr1
-        stx     _raw_ptr1+1
+        sty     raw_ptr1
+        stx     raw_ptr1+1
 
         ldy     #4
         sty     tmp1
@@ -63,21 +75,21 @@ even_y:
 start_copy_loop:
         ldy     #$F0
 copy_loop:
-        lda     (_raw_ptr1),y
+        lda     (raw_ptr1),y
         iny
-        sta     (_raw_ptr1),y
+        sta     (raw_ptr1),y
         iny
 end_copy_loop:
         cpy     #$F1
         bne     copy_loop
 
         clc
-        lda     _raw_ptr1
+        lda     raw_ptr1
         adc     #<(WIDTH/4)
-        sta     _raw_ptr1
-        lda     _raw_ptr1+1
+        sta     raw_ptr1
+        lda     raw_ptr1+1
         adc     #>(WIDTH/4)
-        sta     _raw_ptr1+1
+        sta     raw_ptr1+1
 
         dex
         bne     start_copy_loop
@@ -224,6 +236,150 @@ check_c_loop:
         beq     c_loop_done
         jmp     c_loop
 c_loop_done:
+        rts
+.endproc
+
+.proc _init_row
+        lda     #<(_buf_0+256)
+        ldx     #>(_buf_0+256)
+        sta     cur_buf_0l
+        stx     cur_buf_0l+1
+        lda     #<(_buf_0+256+512)
+        ldx     #>(_buf_0+256+512)
+        sta     cur_buf_0h
+        stx     cur_buf_0h+1
+
+        ldy     _last
+        cpy     #18
+        bcs     small_val
+
+        lda     _val_from_last,y
+        ldx     _val_hi_from_last,y
+        jsr     pushax
+        lda     _factor
+        sta     _last
+        jsr     tosmula0
+        jmp     shift_val
+
+small_val:
+        lda     _val_from_last,y
+        ldx     _factor
+        stx     _last
+        jsr     mult8x8r16_direct
+shift_val:
+        stx     ptr2+1
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ldx     ptr2+1
+        ror     a
+        sta     ptr2
+        cmp     #$FF
+        bne     check0x100
+        cpx     #$00
+        bne     check0x100
+
+mult_FF:
+        ldy     #<USEFUL_DATABUF_SIZE
+        sty     wordcnt
+        lda     #>USEFUL_DATABUF_SIZE
+        sta     wordcnt+1
+
+setup_curbuf_x_ff:
+        ; load
+        dey
+        sty     wordcnt
+        lda     (cur_buf_0h),y
+        tax
+        bne     not_null_buf_ff
+        lda     (cur_buf_0l),y
+        beq     null_buf_ff
+
+not_null_buf_ff:
+        lda     (cur_buf_0l),y
+        ; tmp32 in AX
+        stx     tmp1
+        sec
+        sbc     tmp1
+        tay
+        txa
+        sbc     #0
+        tax
+        tya
+        jmp     store_buf_ff
+
+null_buf_ff:
+        lda     #$0F
+        ldx     #$00
+
+store_buf_ff:
+        ldy     wordcnt
+        sta     (cur_buf_0l),y
+        txa
+        sta     (cur_buf_0h),y
+
+        ldy     wordcnt
+        bne     setup_curbuf_x_ff
+        dec     cur_buf_0l+1
+        dec     cur_buf_0h+1
+        dec     wordcnt+1
+        bpl     setup_curbuf_x_ff
+        jmp     init_done
+
+check0x100:
+        cpx     #$01
+        bne     slow_mults
+        cmp     #$00
+        beq     init_done ; nothing to do!
+
+slow_mults:
+        ldy     #<USEFUL_DATABUF_SIZE
+        sty     wordcnt
+        lda     #>USEFUL_DATABUF_SIZE
+        sta     wordcnt+1
+
+setup_curbuf_x_slow:
+        ; load
+        dey
+        sty     wordcnt
+        lda     (cur_buf_0h),y
+        tax
+        bne     not_null_buf
+        lda     (cur_buf_0l),y
+        beq     null_buf
+
+not_null_buf:
+        lda     (cur_buf_0l),y
+
+        ; multiply
+        jsr     mult16x16r24_direct
+
+        ; Shift >> 8
+        txa
+        jmp     store_buf
+
+        null_buf:
+        lda     #$0F
+        ldx     #$00
+        stx     sreg
+
+        store_buf:
+        ldy     wordcnt
+        sta     (cur_buf_0l),y
+        lda     sreg
+        sta     (cur_buf_0h),y
+
+        ldy     wordcnt
+        bne     setup_curbuf_x_slow
+        dec     cur_buf_0l+1
+        dec     cur_buf_0h+1
+        dec     wordcnt+1
+        bpl     setup_curbuf_x_slow
+init_done:
         rts
 .endproc
 
