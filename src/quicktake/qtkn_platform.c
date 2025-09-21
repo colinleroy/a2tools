@@ -96,6 +96,7 @@ void consume_extra(void) {
 void init_row(void) {
   uint16 i;
   uint32 tmp32;
+  uint16 val;
 
   if (last > 17)
     val = (val_from_last[last] * factor) >> 4;
@@ -280,6 +281,7 @@ void decode_row(void) {
     
       /* Loop this on Y on 65c02 */
       for (i = 4; i; i--) {
+        uint16 val;
         for (x= 0; x < QUARTER_WIDTH; x+=2) {
           if (cur_buf_1h[x/2] & 0x80) {
             val = 0;

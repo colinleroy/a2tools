@@ -61,56 +61,13 @@ static int16 s, i;
 static uint16 c;
 static uint8 r, row, t;
 uint8 factor;
-/* Wastes bytes, but simplifies adds */
-
-#ifndef __CC65__
-uint16 val;
-static uint8 tmp8;
-static uint16 tmp16;
-static uint32 tmp32;
-static uint8 shiftl4p_l[128];
-static uint8 shiftl4p_h[128];
-static uint8 shiftl4n_l[128];
-static uint8 shiftl4n_h[128];
-uint8 div48_l[256];
-uint8 div48_h[256];
-uint8 shiftl3[32];
-#endif
 
 #ifdef __CC65__
-extern uint8 buf_0[DATABUF_SIZE];
-
-extern uint8 shiftl4p_l[128];
-extern uint8 shiftl4p_h[128];
-extern uint8 shiftl4n_l[128];
-extern uint8 shiftl4n_h[128];
-extern uint8 shiftl3[32];
-extern uint8 div48_l[256];
-extern uint8 div48_h[256];
-
-extern uint8 huff_ctrl[9*2][256];
-extern uint8 huff_data[9][256];
-extern uint8 huff_numc, huff_numc_h;
-extern uint8 huff_numd, huff_numd_h;
-extern void refill_ret, getctrlhuff_refilled, getdatahuff_refilled, getdatahuff8_refilled;
-
 #define cur_buf_0l zp4p
 #define cur_buf_0h zp6p
-
 #else
-uint8 buf_0[DATABUF_SIZE];
-uint8 buf_1[DATABUF_SIZE];
-uint8 buf_2[DATABUF_SIZE];
-static uint16 col;
-uint8 huff_ctrl[9*2][256];
-uint8 huff_data[9][256];
-uint8 huff_num;
-uint8 rep;
-static uint8 *raw_ptr1;
-
-static uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
-static uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
-
+static uint8 *cur_buf_0l;
+static uint8 *cur_buf_0h;
 #endif
 
 uint8 *row_idx, *row_idx_plus2;
