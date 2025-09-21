@@ -16,6 +16,23 @@ extern uint8 div48_h[256];
 uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
 uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
 
+void init_shiftl4(void) {
+  uint8 c = 0;
+  do {
+    int8 sc = (int8)c;
+    if (sc >= 0) {
+      shiftl4p_l[c] = (sc<<4) & 0xFF;
+      shiftl4p_h[c] = (sc<<4) >> 8;
+      // printf("l4 p[%02X] = %04X\n", c, (uint16)(sc<<4));
+    } else {
+      shiftl4n_l[c-128] = ((int16)(sc<<4)) & 0xFF;
+      shiftl4n_h[c-128] = ((int16)(sc<<4)) >> 8;
+      // printf("l4 n[%02X] = %04X [%02X%02X]\n", c-128, (uint16)(sc<<4),
+      //        shiftl4n_h[c-128], shiftl4n_l[c-128]);
+    }
+  } while (++c);
+}
+
 void copy_data(void) {
     uint8 x, y;
 

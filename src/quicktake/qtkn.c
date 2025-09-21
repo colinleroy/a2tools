@@ -99,7 +99,6 @@ uint8 last = 16;
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-static void init_top_b(void);
 #pragma code-name(push, "LC")
 void init_top(void) {
   static uint8 l, h;
@@ -157,36 +156,13 @@ void init_top(void) {
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
   } while (++r);
 
-  init_top_b();
+  /* init buf_0[*] = 2048 */
+  memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
+  memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
+
+  init_shiftl4();
 }
 
-#pragma code-name(pop)
-static void init_top_b(void) {
-
-  for (c = 0; c < 256; c++) {
-    int8 sc = (int8)c;
-    if (sc >= 0) {
-      shiftl4p_l[c] = (sc<<4) & 0xFF;
-      shiftl4p_h[c] = (sc<<4) >> 8;
-      // printf("l4 p[%02X] = %04X\n", c, (uint16)(sc<<4));
-    } else {
-      shiftl4n_l[c-128] = ((int16)(sc<<4)) & 0xFF;
-      shiftl4n_h[c-128] = ((int16)(sc<<4)) >> 8;
-      // printf("l4 n[%02X] = %04X [%02X%02X]\n", c-128, (uint16)(sc<<4),
-      //        shiftl4n_h[c-128], shiftl4n_l[c-128]);
-    }
-  }
-
-  cur_buf_0l = buf_0;
-  cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-  for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
-    SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, 2048);
-    cur_buf_0l++;
-    cur_buf_0h++;
-  }
-}
-
-#pragma code-name(push, "LC")
 void qt_load_raw(uint16 top)
 {
   if (top == 0) {

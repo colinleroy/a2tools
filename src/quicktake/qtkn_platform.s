@@ -3,6 +3,8 @@
         .export       _init_row
         .export       _decode_row
 
+        .export       _init_shiftl4
+
         .import       _row_idx, _row_idx_plus2
 
         .import       _getdatahuff, _getdatahuff8
@@ -24,7 +26,7 @@
 
         .import       mult16x16r24_direct, mult8x8r16_direct
         .import       approx_div16x8_direct
-        .import       tosmula0, pushax, _memcpy
+        .import       tosmula0, pushax, _memcpy, aslax4
 
         .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
@@ -49,6 +51,29 @@ rept        = _zp13
         ldx     #>addr
         stx     _refill_ret+2
 .endmacro
+
+.proc _init_shiftl4
+        ldy     #$00
+
+:       tya
+        bmi     neg
+        ldx     #0
+        jsr     aslax4
+        sta     _shiftl4p_l,y
+        txa
+        sta     _shiftl4p_h,y
+        iny
+        bne     :-
+
+neg:    ldx     #$FF
+        jsr     aslax4
+        sta     _shiftl4n_l-128,y
+        txa
+        sta     _shiftl4n_h-128,y
+        iny
+        bne     :-
+        rts
+.endproc
 
 .proc _copy_data
         ldx     _row_idx+1
