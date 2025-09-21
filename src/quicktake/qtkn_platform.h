@@ -7,5 +7,6 @@
 #define HEIGHT 480U
 
 void copy_data(void);
+void consume_extra(void);
 
 #endif
