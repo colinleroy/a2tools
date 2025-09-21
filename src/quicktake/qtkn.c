@@ -56,23 +56,7 @@ uint8 val_from_last[256] = {
   0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10
 };
 
-/* note that each huff[x] share the same low byte addr */
-static int16 s, i;
-static uint16 c;
-static uint8 r, row, t;
-uint8 factor;
-
-#ifdef __CC65__
-#define cur_buf_0l zp4p
-#define cur_buf_0h zp6p
-#else
-static uint8 *cur_buf_0l;
-static uint8 *cur_buf_0h;
-#endif
-
-uint8 *row_idx, *row_idx_plus2;
-
-const uint8 src[512] = {
+const uint8 src[260] = {
   1,1, 2,3, 3,4, 4,2, 5,7, 6,5, 7,6, 7,8,
   1,0, 2,1, 3,3, 4,4, 5,2, 6,7, 7,6, 8,5, 8,8,
   2,1, 2,3, 3,0, 3,2, 3,4, 4,6, 5,5, 6,7, 6,8,
@@ -92,12 +76,12 @@ const uint8 src[512] = {
   2,-1, 2,13, 2,26, 3,39, 4,-16, 5,55, 6,-37, 6,76,
   2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
 };
+
+static uint8 row;
+uint8 factor;
 uint8 last = 16;
 
-#pragma inline-stdfuncs(push, on)
-#pragma allow-eager-inline(push, on)
-#pragma codesize(push, 200)
-#pragma register-vars(push, on)
+uint8 *row_idx, *row_idx_plus2;
 
 #pragma code-name(push, "LC")
 void qt_load_raw(uint16 top)
@@ -121,15 +105,10 @@ void qt_load_raw(uint16 top)
   row_idx_plus2 = raw_image + (WIDTH*2);
 
   for (row=0; row != BAND_HEIGHT; row+=4) {
-    if (!(row & 7)) {
-      progress_bar(-1, -1, 80*22, (top + row), height);
-    }
     factor = getbits6();
     /* Ignore those */
     getbits6();
     getbits6();
-
-    c = 0;
 
     init_row();
 
@@ -137,11 +116,10 @@ void qt_load_raw(uint16 top)
     consume_extra();
 
     copy_data();
+
+    if (!(row & 7)) {
+      progress_bar(-1, -1, 80*22, (top + row), height);
+    }
   }
 }
 #pragma code-name(pop)
-
-#pragma register-vars(pop)
-#pragma codesize(pop)
-#pragma allow-eager-inline(pop)
-#pragma inline-stdfuncs(pop)

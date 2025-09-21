@@ -540,9 +540,8 @@ shift_val:
         bne     check0x100
 
 mult_FF:                            ; Yes, loop avoiding mults
-        ldy     #<USEFUL_DATABUF_SIZE
-        sty     wordcnt
-        lda     #>USEFUL_DATABUF_SIZE
+        ldy     #<(USEFUL_DATABUF_SIZE-1)
+        lda     #>(USEFUL_DATABUF_SIZE-1)
         sta     wordcnt+1
 
 setup_curbuf_x_ff:
@@ -553,32 +552,28 @@ setup_curbuf_x_ff:
         tax
         bne     not_null_buf_ff
         lda     (cur_buf_0l),y
-        beq     null_buf_ff
-
-not_null_buf_ff:
-        lda     (cur_buf_0l),y      ; tmp32 * val(0xFF) = tmp32<<8-tmp32
-        ; tmp32 in AX
-        stx     tmp1
-        sec
-        sbc     tmp1
-        tay
-        txa
-        sbc     #0
-        tax
-        tya
-        jmp     store_buf_ff
+        bne     subtr
 
 null_buf_ff:
         lda     #$0F
         ldx     #$00
+        jmp     store_buf_ff
 
+not_null_buf_ff:
+        lda     (cur_buf_0l),y      ; tmp32 * val(0xFF) = tmp32<<8-tmp32 = tmp-(tmp>>8)
+subtr:
+        ; tmp32 in AX
+        stx     tmp1                ; Store to subtract
+        sec
+        sbc     tmp1                ; subtract high word from low : -(tmp>>8)
+        bcs     store_buf_ff
+        dex
 store_buf_ff:
-        ldy     wordcnt
         sta     (cur_buf_0l),y
         txa
         sta     (cur_buf_0h),y
 
-        ldy     wordcnt
+        cpy     #0
         bne     setup_curbuf_x_ff
         dec     cur_buf_0l+1
         dec     cur_buf_0h+1
@@ -606,30 +601,29 @@ setup_curbuf_x_slow:
         tax
         bne     not_null_buf
         lda     (cur_buf_0l),y
-        beq     null_buf
-
-not_null_buf:
-        lda     (cur_buf_0l),y
-
-        ; multiply
-        jsr     mult16x16r24_direct
-
-        ; Shift >> 8
-        txa
-        jmp     store_buf
+        bne     mult
 
 null_buf:
         lda     #$0F
         ldx     #$00
         stx     sreg
+        jmp     store_buf
 
-store_buf:
+not_null_buf:
+        lda     (cur_buf_0l),y
+mult:
+        ; multiply
+        jsr     mult16x16r24_direct
         ldy     wordcnt
+
+        ; Shift >> 8
+        txa
+store_buf:
         sta     (cur_buf_0l),y
         lda     sreg
         sta     (cur_buf_0h),y
 
-        ldy     wordcnt
+        cpy     #0
         bne     setup_curbuf_x_slow
         dec     cur_buf_0l+1
         dec     cur_buf_0h+1

@@ -197,7 +197,7 @@ void init_row(void) {
   last = factor;
   cur_buf_0l = buf_0;
   cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-
+  printf("mult %04X\n", val);
   if (val == 0x100) {
     /* do nothing */
   } else if (val == 0xFF) {

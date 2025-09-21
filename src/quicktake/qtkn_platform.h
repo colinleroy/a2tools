@@ -12,7 +12,7 @@
 
 extern uint8 val_hi_from_last[17];
 extern uint8 val_from_last[256];
-extern const uint8 src[512];
+extern const uint8 src[260];
 
 void copy_data(void);
 void consume_extra(void);
