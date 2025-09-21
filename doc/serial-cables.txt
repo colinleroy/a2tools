@@ -1,0 +1,34 @@
+
+DIN5 pins numbering, as seen when looking at the front of the male connector:
+
+ 1        5
+   2     4
+      3
+
+DB-9 pins numbering, as seen when looking at the front of the male connector:
+
+
+1   2   3   4   5
+  6   7   8   9
+
+
+Complete DIN-5 to DB-9 null-modem cable:
+DIN-5       DB-9
+3(GND)      5(GND)
+2(TX)       2(RX)
+4(RX)       3(TX)
+1(DTR)      6(DSR)
+5(DSR)      4(DTR)
+            7+8 tied together
+
+Serial cables for use with Quicktake for Apple II:
+A) The official Windows Quicktake cable, male Mini-DIN-8 to female DB-9
+
+B) A male DB-9 to double female DB-9 splitter:
+
+To Quicktake cable       Data cable             Control cable
+(male DB-9)              (female DB-9)          (female DB-9)
+2(RX)                    2(RX)
+3(TX)                    3(TX)
+5(GND)                   5(GND)
+4(DTR)                                          6(DSR)
