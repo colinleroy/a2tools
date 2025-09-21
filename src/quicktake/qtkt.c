@@ -24,7 +24,6 @@
 #include <arpa/inet.h>
 #include "progress_bar.h"
 #include "qt-conv.h"
-#include "qtk_bithuff.h"
 
 /* Shared with qt-conv.c */
 char magic[5] = QTKT_MAGIC;

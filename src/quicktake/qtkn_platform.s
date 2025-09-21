@@ -4,6 +4,7 @@
         .export       _decode_row
 
         .export       _init_shiftl4
+        .export       _init_buf_0
 
         .import       _row_idx, _row_idx_plus2
 
@@ -26,7 +27,8 @@
 
         .import       mult16x16r24_direct, mult8x8r16_direct
         .import       approx_div16x8_direct
-        .import       tosmula0, pushax, _memcpy, aslax4
+        .import       tosmula0, pushax, pusha0
+        .import       _memset, _memcpy, aslax4
 
         .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
@@ -73,6 +75,30 @@ neg:    ldx     #$FF
         iny
         bne     :-
         rts
+.endproc
+
+.proc _init_buf_0
+        lda    #<_buf_0
+        ldx    #>_buf_0
+        jsr    pushax
+
+        lda    #<2048
+        jsr    pusha0
+
+        lda    #<USEFUL_DATABUF_SIZE
+        ldx    #>USEFUL_DATABUF_SIZE
+        jsr    _memset
+
+        lda    #<_buf_0
+        ldx    #>(_buf_0+512)
+        jsr    pushax
+
+        lda    #>2048
+        jsr    pusha0
+
+        lda    #<USEFUL_DATABUF_SIZE
+        ldx    #>USEFUL_DATABUF_SIZE
+        jmp    _memset
 .endproc
 
 .proc _copy_data

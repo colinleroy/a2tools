@@ -33,6 +33,14 @@ void init_shiftl4(void) {
   } while (++c);
 }
 
+#pragma code-name(push, "LC")
+void init_buf_0(void) {
+  /* init buf_0[*] = 2048 */
+  memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
+  memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
+}
+#pragma code-name(pop)
+
 void copy_data(void) {
     uint8 x, y;
 

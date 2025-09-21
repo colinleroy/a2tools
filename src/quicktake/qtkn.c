@@ -72,7 +72,7 @@ static uint8 *cur_buf_0h;
 
 uint8 *row_idx, *row_idx_plus2;
 
-static const uint8 src[] = {
+const uint8 src[512] = {
   1,1, 2,3, 3,4, 4,2, 5,7, 6,5, 7,6, 7,8,
   1,0, 2,1, 3,3, 4,4, 5,2, 6,7, 7,6, 8,5, 8,8,
   2,1, 2,3, 3,0, 3,2, 3,4, 4,6, 5,5, 6,7, 6,8,
@@ -102,11 +102,13 @@ uint8 last = 16;
 #pragma code-name(push, "LC")
 void init_huff(void) {
   static uint8 l, h;
-
+  static uint16 s, i;
   l = 0;
   h = 1;
   for (s = i = 0; l < 18; i += 2) {
     uint8 code = s & 0xFF;
+    uint8 r, t;
+
     r = src[i];
     t = 256 >> r;
 
@@ -126,6 +128,7 @@ void init_huff(void) {
   h = 1;
   for (; i != sizeof src; i += 2) {
     uint8 code = s & 0xFF;
+    uint8 r, t;
     r = src[i];
     t = 256 >> r;
 
@@ -142,6 +145,7 @@ void init_huff(void) {
 }
 
 void init_shiftl3(void) {
+  uint8 c;
   for (c=0; c != 32; c++) {
     shiftl3[c] = (c<<3)+4;
     // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
@@ -149,7 +153,7 @@ void init_shiftl3(void) {
 }
 
 void init_div48(void) {
-  r = 0;
+  uint8 r = 0;
   do {
     /* 48 is the most common multiplier and later divisor.
      * It is worth it to approximate those divisions HARD
@@ -160,12 +164,6 @@ void init_div48(void) {
     div48_h[r] = approx >> 8;
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
   } while (++r);
-}
-
-void init_buf_0(void) {
-  /* init buf_0[*] = 2048 */
-  memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
-  memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
 }
 
 void init_top(void) {
