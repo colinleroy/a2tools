@@ -135,7 +135,7 @@ neg:    ldx     #$FF
         sta     wordcnt
 
 :       ldx     wordcnt
-        lda     #$00
+        lda     #$80
         ldy     #48
         jsr     approx_div16x8_direct
         ldy     wordcnt

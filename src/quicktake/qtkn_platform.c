@@ -55,7 +55,7 @@ void init_div48(void) {
      * It is worth it to approximate those divisions HARD
      * by rounding the numerator to the nearest 256, in order
      * to have a size-appropriate table. */
-    uint16 approx = (r<<8)/48;
+    uint16 approx = ((r<<8)|0x80)/48;
     div48_l[r] = approx & 0xFF;
     div48_h[r] = approx >> 8;
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
