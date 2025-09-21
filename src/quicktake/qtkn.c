@@ -100,7 +100,7 @@ uint8 last = 16;
 #pragma register-vars(push, on)
 
 #pragma code-name(push, "LC")
-void init_top(void) {
+void init_huff(void) {
   static uint8 l, h;
 
   l = 0;
@@ -139,11 +139,16 @@ void init_top(void) {
     }
     s += t;
   }
+}
 
+void init_shiftl3(void) {
   for (c=0; c != 32; c++) {
     shiftl3[c] = (c<<3)+4;
     // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
   }
+}
+
+void init_div48(void) {
   r = 0;
   do {
     /* 48 is the most common multiplier and later divisor.
@@ -155,10 +160,19 @@ void init_top(void) {
     div48_h[r] = approx >> 8;
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
   } while (++r);
+}
 
+void init_buf_0(void) {
   /* init buf_0[*] = 2048 */
   memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
   memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
+}
+
+void init_top(void) {
+  init_huff();
+  init_shiftl3();
+  init_div48();
+  init_buf_0();
 
   init_shiftl4();
 }
