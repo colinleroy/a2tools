@@ -7,6 +7,7 @@
         .export       _init_shiftl3
         .export       _init_buf_0
         .export       _init_div48
+        .export       _init_huff
 
         .import       _row_idx, _row_idx_plus2
 
@@ -19,7 +20,7 @@
         .import       _huff_numc, _huff_numc_h
         .import       _huff_numd, _huff_numd_h
 
-        .import       _huff_data, _huff_ctrl
+        .import       _huff_data, _huff_ctrl, _src
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1, _buf_2
@@ -42,6 +43,7 @@ DATABUF_SIZE        = $400
 
 raw_ptr1    = _zp2
 wordcnt     = _zp2
+srcbuf      = _zp2
 _x          = _zp2
 _y          = _zp3
 
@@ -82,56 +84,222 @@ neg:    ldx     #$FF
 .endproc
 
 .proc _init_shiftl3
-        ldy    #31
+        ldy     #31
 :       tya
         asl
         asl
         asl
-        adc    #4
-        sta    _shiftl3,y
+        adc     #4
+        sta     _shiftl3,y
         dey
-        bpl    :-
+        bpl     :-
         rts
 .endproc
 
 .proc _init_buf_0
-        lda    #<_buf_0
-        ldx    #>_buf_0
-        jsr    pushax
+        lda     #<_buf_0
+        ldx     #>_buf_0
+        jsr     pushax
 
-        lda    #<2048
-        jsr    pusha0
+        lda     #<2048
+        jsr     pusha0
 
-        lda    #<USEFUL_DATABUF_SIZE
-        ldx    #>USEFUL_DATABUF_SIZE
-        jsr    _memset
+        lda     #<USEFUL_DATABUF_SIZE
+        ldx     #>USEFUL_DATABUF_SIZE
+        jsr     _memset
 
-        lda    #<_buf_0
-        ldx    #>(_buf_0+512)
-        jsr    pushax
+        lda     #<_buf_0
+        ldx     #>(_buf_0+512)
+        jsr     pushax
 
-        lda    #>2048
-        jsr    pusha0
+        lda     #>2048
+        jsr     pusha0
 
-        lda    #<USEFUL_DATABUF_SIZE
-        ldx    #>USEFUL_DATABUF_SIZE
-        jmp    _memset
+        lda     #<USEFUL_DATABUF_SIZE
+        ldx     #>USEFUL_DATABUF_SIZE
+        jmp     _memset
 .endproc
 
 .proc _init_div48
-        lda    #0
-        sta    wordcnt
+        lda     #0
+        sta     wordcnt
 
-:       ldx    wordcnt
-        lda    #$00
-        ldy    #48
-        jsr    approx_div16x8_direct
-        ldy    wordcnt
-        sta    _div48_l,y
+:       ldx     wordcnt
+        lda     #$00
+        ldy     #48
+        jsr     approx_div16x8_direct
+        ldy     wordcnt
+        sta     _div48_l,y
         txa
-        sta    _div48_h,y
-        inc    wordcnt
-        bne    :-
+        sta     _div48_h,y
+        inc     wordcnt
+        bne     :-
+        rts
+.endproc
+
+.proc _init_huff
+        bit     $C083               ; WR-enable LC
+        bit     $C083               ; we patch things.
+
+        lda     #0
+        sta     val
+        sta     val+1
+        sta     src_idx
+        sta     src_idx+1
+        sta     huff_ctrl_bits+1
+        sta     huff_ctrl_value+1
+        sta     huff_data_bits+1
+        lda     #$80
+        sta     huff_data_value+1
+
+        ldx     #>_huff_ctrl
+        stx     huff_ctrl_bits+2
+        inx
+        stx     huff_ctrl_value+2
+
+        lda     #>_src
+        sta     srcbuf+1
+        lda     #<_src
+        sta     srcbuf
+ctrl_huff_next:
+        ldy     src_idx
+
+        lda     (srcbuf),y
+        tax                         ; X = numbits
+
+        stx     tmp1                ; 8-numbits
+        lda     #8
+        sec
+        sbc     tmp1
+        tay
+
+        lda     val                 ; code = val & 0xFF
+        cpy     #0
+        beq     ctrl_code_shifted
+:       lsr     a                   ; code >>= 8-numbits
+        dey
+        bne     :-
+
+ctrl_code_shifted:
+        sta     code
+        txa
+        tay
+        lda     #$80                ; incr = 256 >> numbits
+        dey
+        beq     ctrl_incr_shifted
+:       lsr     a
+        dey
+        bne     :-
+
+ctrl_incr_shifted:
+        sta     incr
+        ldy     src_idx
+        iny
+        lda     (srcbuf),y          ; A = value
+
+        ldy     code
+huff_ctrl_value:
+        sta     _huff_ctrl+256,y
+
+        txa                         ; X = numbits
+huff_ctrl_bits:
+        sta     _huff_ctrl,y
+
+        lda     src_idx             ; src_idx += 2
+        clc
+        adc     #2
+        sta     src_idx
+        bcc     :+
+        inc     srcbuf+1
+
+:       lda     val                 ; val += incr
+        clc
+        adc     incr
+        sta     val
+        bcc     ctrl_huff_next
+
+        lda     huff_ctrl_value+2
+        clc
+        adc     #2
+        cmp     #>(_huff_ctrl+18*256)
+        bcs     huff_ctrl_done
+        sta     huff_ctrl_value+2
+        inc     huff_ctrl_bits+2
+        inc     huff_ctrl_bits+2
+        jmp     ctrl_huff_next
+huff_ctrl_done:
+
+        ; Data huff now
+        ldx     #>_huff_data
+        stx     huff_data_bits+2
+        stx     huff_data_value+2
+
+data_huff_next:
+        ldy     src_idx
+
+        lda     (srcbuf),y
+        tax                         ; X = numbits
+
+        stx     tmp1                ; 8-numbits
+        lda     #8
+        sec
+        sbc     tmp1
+        tay
+
+        lda     val                 ; code = val & 0xFF
+        cpy     #0
+        beq     data_code_shifted
+:       lsr     a                   ; code >>= 8-numbits
+        dey
+        bne     :-
+
+data_code_shifted:
+        sta     code
+        txa
+        tay
+        lda     #$80                ; incr = 256 >> numbits
+        dey
+        beq     data_incr_shifted
+:       lsr     a
+        dey
+        bne     :-
+
+data_incr_shifted:
+        sta     incr
+        ldy     src_idx
+        iny
+        lda     (srcbuf),y          ; A = value
+
+        ldy     code
+huff_data_value:
+        sta     _huff_data+128,y
+
+        txa                         ; X = numbits
+huff_data_bits:
+        sta     _huff_data,y
+
+        lda     src_idx             ; src_idx += 2
+        clc
+        adc     #2
+        sta     src_idx
+        bcc     :+
+        inc     srcbuf+1
+
+:       lda     val                 ; val += incr
+        clc
+        adc     incr
+        sta     val
+        bcc     data_huff_next
+
+        lda     huff_data_value+2
+        clc
+        adc     #1
+        cmp     #>(_huff_data+9*256)
+        bcs     huff_data_done
+        sta     huff_data_value+2
+        inc     huff_data_bits+2
+        jmp     data_huff_next
+huff_data_done:
         rts
 .endproc
 
@@ -1420,3 +1588,7 @@ rep_loop:       .res 1
 nreps:          .res 1
 colh:           .res 1
 repeats:        .res 1
+val:            .res 2
+src_idx:        .res 2
+incr:           .res 1
+code:           .res 1

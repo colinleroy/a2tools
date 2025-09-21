@@ -100,49 +100,6 @@ uint8 last = 16;
 #pragma register-vars(push, on)
 
 #pragma code-name(push, "LC")
-void init_huff(void) {
-  static uint8 l, h;
-  static uint16 s, i;
-  l = 0;
-  h = 1;
-  for (s = i = 0; l < 18; i += 2) {
-    uint8 code = s & 0xFF;
-    uint8 r, t;
-
-    r = src[i];
-    t = 256 >> r;
-
-    code >>= 8-r;
-    huff_ctrl[h][code] = src[i+1];
-    huff_ctrl[l][code] = r;
-    // printf("huff_ctrl[%d][%.*b] = %d (r%d)\n", l, r, code, src[i+1], r);
-
-    if (s >> 8 != (s+t) >> 8) {
-      l += 2;
-      h += 2;
-    }
-    s += t;
-  }
-
-  l = 0;
-  h = 1;
-  for (; i != sizeof src; i += 2) {
-    uint8 code = s & 0xFF;
-    uint8 r, t;
-    r = src[i];
-    t = 256 >> r;
-
-    code >>= 8-r;
-    huff_data[l][code+128] = src[i+1];
-    huff_data[l][code] = r;
-    // printf("huff_data[%d][%.*b] = %d (r%d)\n", l, r, code, src[i+1], r);
-
-    if (s >> 8 != (s+t) >> 8) {
-      l++;
-    }
-    s += t;
-  }
-}
 
 void init_top(void) {
   init_huff();

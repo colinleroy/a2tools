@@ -62,6 +62,51 @@ void init_div48(void) {
   } while (++r);
 }
 
+void init_huff(void) {
+  static uint8 l, h;
+  static uint16 val, src_idx;
+  l = 0;
+  h = 1;
+
+  for (val = src_idx = 0; l < 18; src_idx += 2) {
+    uint8 code = val & 0xFF;
+    uint8 numbits, incr;
+
+    numbits = src[src_idx];
+    incr = 256 >> numbits;
+    code >>= 8-numbits;
+    huff_ctrl[h][code] = src[src_idx+1];
+    huff_ctrl[l][code] = numbits;
+    // printf("huff_ctrl[%d][%.*b] = %d (r%d)\n",
+    //        l, numbits, code, src[src_idx+1], numbits);
+
+    if (val >> 8 != (val+incr) >> 8) {
+      l += 2;
+      h += 2;
+    }
+    val += incr;
+  }
+
+  l = 0;
+  h = 1;
+  for (; l < 9; src_idx += 2) {
+    uint8 code = val & 0xFF;
+    uint8 numbits, incr;
+    numbits = src[src_idx];
+    incr = 256 >> numbits;
+
+    code >>= 8-numbits;
+    huff_data[l][code+128] = src[src_idx+1];
+    huff_data[l][code] = numbits;
+    // printf("huff_data[%d][%.*b] = %d (r%d)\n", l, r, code, src[i+1], r);
+
+    if (val >> 8 != (val+incr) >> 8) {
+      l++;
+    }
+    val += incr;
+  }
+}
+
 #pragma code-name(pop)
 
 void copy_data(void) {
