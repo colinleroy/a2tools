@@ -26,8 +26,8 @@
         .import       approx_div16x8_direct
         .import       tosmula0, pushax, _memcpy
 
-        .importzp     tmp1, sreg, ptr2, tmp2
-        .importzp     _zp2, _zp4, _zp6, _zp7, _zp13
+        .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
+        .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
 
 WIDTH               = 640
 USEFUL_DATABUF_SIZE = 321
@@ -35,12 +35,13 @@ DATABUF_SIZE        = $400
 
 raw_ptr1    = _zp2
 wordcnt     = _zp2
+_x          = _zp2
+_y          = _zp3
 
-cur_buf_0l = _zp4
-cur_buf_0h = _zp6
-_col       = _zp7
-_rep       = _zp13
-
+cur_buf_0l  = _zp4
+cur_buf_0h  = _zp6
+col         = _zp7
+rept        = _zp13
 
 .macro SET_REFILL_RET addr
         ldx     #<addr
@@ -123,15 +124,15 @@ end_copy_loop:
 
 .proc _consume_extra
         lda     #2
-        sta     _c
-c_loop:
+        sta     repeats
+repeat_loop:
         lda     #1
-        sta     _tree
+        sta     tree
         lda     #<(WIDTH/4)
-        sta     _col
+        sta     col
 
 col_loop2:
-        lda     _tree
+        lda     tree
         asl
         adc     #>_huff_ctrl
         sta     _huff_numc
@@ -140,12 +141,12 @@ col_loop2:
         SET_REFILL_RET _getctrlhuff_refilled
 
         jsr     _getctrlhuff
-        sta     _tree
+        sta     tree
 
         beq     tree_zero_2
 
 tree_not_zero_2:
-        dec     _col
+        dec     col
 
         ;huff_ptr = huff[tree + 10]
         cmp     #8
@@ -172,7 +173,7 @@ norm_huff:
         jmp     tree_zero_2_done
 
 tree_zero_2:
-        lda     _col
+        lda     col
         cmp     #2
         bcs     col_gt1
 
@@ -191,13 +192,13 @@ col_gt1:
         adc     #1
 
 check_nreps_2:
-        sta     _nreps
+        sta     nreps
 
         cmp     #9
         bcc     nreps_check_done_2
         lda     #8
 nreps_check_done_2:
-        sta     _rep_loop
+        sta     rep_loop
 
         ;data tree 1
         ldx     #>(_huff_data+256)
@@ -206,10 +207,10 @@ nreps_check_done_2:
         ; refiller return already set
 
         ldx     #$00
-        stx     _rep
+        stx     rept
 
 do_rep_loop_2:
-        dec     _col
+        dec     col
 
         txa
         and     #1
@@ -218,28 +219,28 @@ do_rep_loop_2:
         jsr     _getdatahuff
 
 rep_even_2:
-        ldx     _rep
+        ldx     rept
         inx
-        cpx     _rep_loop
+        cpx     rep_loop
         beq     rep_loop_2_done
-        stx     _rep
-        lda     _col
+        stx     rept
+        lda     col
         bne     do_rep_loop_2
         beq     check_c_loop
 rep_loop_2_done:
-        lda     _nreps
+        lda     nreps
         cmp     #9
         beq     tree_zero_2
 
 tree_zero_2_done:
-        lda     _col
+        lda     col
         beq     check_c_loop
         jmp     col_loop2
 
 check_c_loop:
-        dec     _c
+        dec     repeats
         beq     c_loop_done
-        jmp     c_loop
+        jmp     repeat_loop
 c_loop_done:
         rts
 .endproc
@@ -390,7 +391,7 @@ init_done:
 
 .proc _decode_row
         lda     #1
-        sta     _r
+        sta     repeats
 r_loop:
         ;  for (r=0; r != 2; r++) {
         ;  factor<<7, aslax7 inlined */
@@ -407,12 +408,12 @@ r_loop:
         sta     _buf_2+(WIDTH/2)
 
         lda     #1
-        sta     _tree
+        sta     tree
 
         lda     #<(WIDTH/2)
-        sta     _col
+        sta     col
         ldx     #>(WIDTH/2)
-        stx     _colh
+        stx     colh
         lda     #>(_buf_0+512+256)
         sta     cb0h_off0a+2
         sta     cb0h_off0b+2
@@ -469,7 +470,6 @@ r_loop:
         sta     cb1l_off1d+2
         sta     cb1l_off1e+2
         sta     cb1l_off1f+2
-        ;  sta cb1l_off1g+2
         sta     cb1l_off1h+2
         sta     cb1l_off1i+2
         sta     cb1l_off1j+2
@@ -504,14 +504,13 @@ r_loop:
         sta     cb2l_off1b+2
         sta     cb2l_off1c+2
         sta     cb2l_off1d+2
-        ;  sta cb2l_off1e+2
         sta     cb2l_off1f+2
         sta     cb2l_off1g+2
         sta     cb2l_off2b+2
         sta     cb2l_off2c+2
 
 col_loop1:
-        lda     _tree
+        lda     tree
         asl
         adc     #>_huff_ctrl
         sta     _huff_numc
@@ -523,20 +522,20 @@ col_loop1:
         stx     _refill_ret+2
 
         jsr     _getctrlhuff
-        sta     _tree
+        sta     tree
 
         bne     tree_not_zero
         jmp     tree_zero
 tree_not_zero:
         sec
-        lda     _col
+        lda     col
         bne     declow
         jsr     dec_buf_pages
 declow:
         sbc     #2
-        sta     _col
+        sta     col
 
-        lda     _tree
+        lda     tree
         cmp     #8
         bne     tree_not_eight
 
@@ -549,7 +548,7 @@ declow:
         jsr     _getdatahuff8
         ldx     _factor
         jsr     mult8x8r16_direct
-        ldy     _col
+        ldy     col
 cb1l_off1a: 
         sta     $FF01,y
         txa
@@ -559,7 +558,7 @@ cb1h_off1a:
         jsr     _getdatahuff8
         ldx     _factor
         jsr     mult8x8r16_direct
-        ldy     _col
+        ldy     col
 cb1l_off0a: 
         sta     $FF00,y
         txa
@@ -569,7 +568,7 @@ cb1h_off0a:
         jsr     _getdatahuff8
         ldx     _factor
         jsr     mult8x8r16_direct
-        ldy     _col
+        ldy     col
 cb2l_off1a:
         sta     $FF01,y
         txa
@@ -579,7 +578,7 @@ cb2h_off1a:
         jsr     _getdatahuff8
         ldx     _factor
         jsr     mult8x8r16_direct
-        ldy     _col
+        ldy     col
 cb2l_off0a:
         sta     $FF00,y
         txa
@@ -662,7 +661,7 @@ finish_bh4:
         sta     tk4_h+1
 
         clc
-        ldy     _col
+        ldy     col
 cb0l_off2a:
         lda     $FF02,y
 cb1l_off2a:
@@ -826,9 +825,9 @@ cb2h_off0b:
 
 tree_zero:
 nine_reps_loop:
-        ldx     _colh
+        ldx     colh
         bne     col_gt1a
-        lda     _col
+        lda     col
         cmp     #3
         bcs     col_gt1a
         lda     #1 ;  nreps */
@@ -847,30 +846,30 @@ col_gt1a:
         clc
         adc     #1
 check_nreps:
-        sta     _nreps
+        sta     nreps
 
         cmp     #9
         bcc     nreps_check_done
         lda     #8
 nreps_check_done:
-        sta     _rep_loop
+        sta     rep_loop
 
         ldy     #$00
-        sty     _rep
+        sty     rept
 
         ;  data tree 1
         ldx     #>(_huff_data+256)
         stx     _huff_numd
         stx     _huff_numd_h
 
-        lda     _col
+        lda     col
 do_rep_loop:
         sec
         bne     declow2
         jsr     dec_buf_pages
 declow2:
         sbc     #2
-        sta     _col
+        sta     col
         tay
 
         clc
@@ -1002,7 +1001,7 @@ cb2h_off0c:
 cb2l_off0c:
         sta     $FF00,y
 
-        lda     _rep
+        lda     rept
         and     #1
         beq     rep_even
 
@@ -1067,51 +1066,51 @@ cb2h_off1g:
         sta     $FF01,y
 
 rep_even:
-        ldx     _rep
+        ldx     rept
         inx
-        cpx     _rep_loop
+        cpx     rep_loop
         beq     rep_loop_done
-        stx     _rep
-        lda     _col
+        stx     rept
+        lda     col
         beq     check_high
         jmp     do_rep_loop
 check_high:
-        ldx     _colh
+        ldx     colh
         beq     col_loop1_done
         tay     ;  fix ZERO flag needed at do_rep_loop
         jmp     do_rep_loop
 rep_loop_done:
-        lda     _nreps
+        lda     nreps
         cmp     #9
         bne     nine_reps_loop_done
         jmp     nine_reps_loop
 nine_reps_loop_done:
 tree_done:
-        lda     _col
+        lda     col
         beq     check_high2
         jmp     col_loop1
 check_high2:
-        ldx     _colh
+        ldx     colh
         beq     col_loop1_done
         jmp     col_loop1
 col_loop1_done:
 
         clc
 
-        ldx     _r
+        ldx     repeats
         ;  logic inverted from C because here we dec R */
         beq     store_plus_2
 
         lda     _row_idx
-        sta     raw_ptr1
+        sta     store_val+1
         lda     _row_idx+1
-        sta     raw_ptr1+1
-        jmp     store_set;
+        sta     store_val+2
+        jmp     store_set
 store_plus_2:
         lda     _row_idx_plus2
-        sta     raw_ptr1
+        sta     store_val+1
         lda     _row_idx_plus2+1
-        sta     raw_ptr1+1
+        sta     store_val+2
 
 store_set:
         lda     #2
@@ -1151,13 +1150,13 @@ slowdiv:
 check_clamp:
         ldy     tmp1
         cpx     #0
-        beq     no_val_clamp
+        beq     store_val
         lda     #$FF
         cpx     #$80
         adc     #$0
 
-no_val_clamp:
-        sta     (raw_ptr1),y
+store_val:
+        sta     $FFFF,y
 
         iny
         iny
@@ -1176,12 +1175,12 @@ no_val_clamp:
         sta     cur_buf_0h+1
 
         clc
-        lda     raw_ptr1
+        lda     store_val+1
         adc     #<(WIDTH/4)
-        sta     raw_ptr1
-        lda     raw_ptr1+1
+        sta     store_val+1
+        lda     store_val+2
         adc     #>(WIDTH/4)
-        sta     raw_ptr1+1
+        sta     store_val+2
 
         dec     _x
         bne     x_loop_outer
@@ -1189,9 +1188,9 @@ no_val_clamp:
         dec     _y
         beq     loop5_done
 
-        inc     raw_ptr1
+        inc     store_val+1
         bne     :+
-        inc     raw_ptr1+1
+        inc     store_val+2
 
 :       ldy     #<(_buf_2)
         sty     cur_buf_0l
@@ -1230,7 +1229,7 @@ loop5_done:
         ldx     #>(USEFUL_DATABUF_SIZE-1)
         jsr     _memcpy
         ;  }
-        dec     _r
+        dec     repeats
         bmi     r_loop_done
         jmp     r_loop
 r_loop_done:
@@ -1238,7 +1237,7 @@ r_loop_done:
 .endproc
 
 .proc dec_buf_pages
-        dec     _colh
+        dec     colh
         dec     _decode_row::cb0h_off0a+2
         dec     _decode_row::cb0h_off0b+2
         dec     _decode_row::cb0h_off1a+2
@@ -1290,7 +1289,6 @@ r_loop_done:
         dec     _decode_row::cb1l_off1d+2
         dec     _decode_row::cb1l_off1e+2
         dec     _decode_row::cb1l_off1f+2
-        ;  dec     _decode_row::cb1l_off1g+2
         dec     _decode_row::cb1l_off1h+2
         dec     _decode_row::cb1l_off1i+2
         dec     _decode_row::cb1l_off1j+2
@@ -1316,10 +1314,8 @@ r_loop_done:
         dec     _decode_row::cb2l_off1b+2
         dec     _decode_row::cb2l_off1c+2
         dec     _decode_row::cb2l_off1d+2
-        ;  dec     _decode_row::cb2l_off1e+2
         dec     _decode_row::cb2l_off2b+2
         dec     _decode_row::cb2l_off2c+2
-
         dec     _decode_row::cb2l_off0d+2
         dec     _decode_row::cb2l_off0e+2
         dec     _decode_row::cb2h_off0d+2
@@ -1328,16 +1324,13 @@ r_loop_done:
         dec     _decode_row::cb2l_off1g+2
         dec     _decode_row::cb2h_off1f+2
         dec     _decode_row::cb2h_off1g+2
-rts
+        rts
 .endproc
 
 .bss
 
-_c:             .res 1
-_tree:          .res 1
-_rep_loop:      .res 1
-_nreps:         .res 1
-_colh:          .res 1
-_r:             .res 1
-_x:             .res 1
-_y:             .res 1
+tree:           .res 1
+rep_loop:       .res 1
+nreps:          .res 1
+colh:           .res 1
+repeats:        .res 1

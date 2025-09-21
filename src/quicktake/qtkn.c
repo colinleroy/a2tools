@@ -57,9 +57,9 @@ uint8 val_from_last[256] = {
 };
 
 /* note that each huff[x] share the same low byte addr */
-static int16 x, s, i;
+static int16 s, i;
 static uint16 c;
-static uint8 r, nreps, row, y, t, rep_loop, tree;
+static uint8 r, row, t;
 uint8 factor;
 /* Wastes bytes, but simplifies adds */
 
@@ -79,8 +79,6 @@ uint8 shiftl3[32];
 
 #ifdef __CC65__
 extern uint8 buf_0[DATABUF_SIZE];
-extern uint8 buf_1[DATABUF_SIZE];
-extern uint8 buf_2[DATABUF_SIZE];
 
 extern uint8 shiftl4p_l[128];
 extern uint8 shiftl4p_h[128];
@@ -96,13 +94,8 @@ extern uint8 huff_numc, huff_numc_h;
 extern uint8 huff_numd, huff_numd_h;
 extern void refill_ret, getctrlhuff_refilled, getdatahuff_refilled, getdatahuff8_refilled;
 
-#define raw_ptr1 zp2ip
 #define cur_buf_0l zp4p
 #define cur_buf_0h zp6p
-#define col zp7
-static uint8 colh;
-// zp8-12 used by bitbuffer
-#define rep zp13
 
 #else
 uint8 buf_0[DATABUF_SIZE];
