@@ -29,9 +29,13 @@
         .import       _shiftl4p_l, _shiftl4p_h
 
         .import       mult16x16r24_direct, mult8x8r16_direct
-        .import       approx_div16x8_direct
         .import       tosmula0, pushax, pusha0
         .import       _memset, _memcpy, aslax4
+.ifdef APPROX_DIVISION
+        .import       approx_div16x8_direct
+.else
+        .import       tosdiva0
+.endif
 
         .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
@@ -114,6 +118,7 @@ neg:    ldx     #$FF
 .endproc
 
 .proc _init_div48
+.ifdef APPROX_DIVISION
         lda     #0
         sta     wordcnt
 
@@ -127,6 +132,7 @@ neg:    ldx     #$FF
         sta     _div48_h,y
         inc     wordcnt
         bne     :-
+.endif
         rts
 .endproc
 
@@ -1060,6 +1066,7 @@ declow2:
         sta     col
         tay
 
+        ;c
         clc
 cb0l_off2b:
         lda     $FF02,y
@@ -1320,6 +1327,7 @@ store_set:
 x_loop:
         sty     _x
         lda     (cur_buf_0h),y
+.ifdef APPROX_DIVISION
         ldy     _factor
         cpy     #48
         bne     slowdiv
@@ -1331,6 +1339,13 @@ slowdiv:
         tax
         lda     (cur_buf_0l),y
         jsr     approx_div16x8_direct
+.else
+        tax
+        lda     (cur_buf_0l),y
+        jsr     pushax
+        lda     _factor
+        jsr     tosdiva0
+.endif
 check_clamp:
         ldy     _x
         cpx     #0

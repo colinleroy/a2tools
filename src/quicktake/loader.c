@@ -76,7 +76,7 @@ display:
         } else {
           c2 = c;
         }
-        if (c2 == c) {
+        if (c == c2) {
           sdl_set_pixel(screen, x*2, y*2, c, c, c);
           sdl_set_pixel(screen, x*2+1, y*2, c, c, c);
           sdl_set_pixel(screen, x*2, y*2+1, c, c, c);
@@ -91,10 +91,10 @@ display:
             printf("*");
           }
           printf("\n");
-          sdl_set_pixel(screen, x*2, y*2, color, 0, color);
-          sdl_set_pixel(screen, x*2+1, y*2, color, 0, color);
-          sdl_set_pixel(screen, x*2, y*2+1, color, 0, color);
-          sdl_set_pixel(screen, x*2+1, y*2+1, color, 0, color);
+          sdl_set_pixel(screen, x*2, y*2, color, color/(1+abs(c2-c)), color);
+          sdl_set_pixel(screen, x*2+1, y*2, color, color/(1+abs(c2-c)), color);
+          sdl_set_pixel(screen, x*2, y*2+1, color, color/(1+abs(c2-c)), color);
+          sdl_set_pixel(screen, x*2+1, y*2+1, color, color/(1+abs(c2-c)), color);
         }
       }
     }

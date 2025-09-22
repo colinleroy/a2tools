@@ -353,18 +353,14 @@ void decode_row(void) {
     x = WIDTH-1;
     do {
       uint16 val;
-      if (cur_buf_1h[x] & 0x80) {
-        val = 0;
+      if (factor == 48) {
+        val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
+        val = div48_l[val>>8]|(div48_h[val>>8]<<8);
       } else {
-        if (factor == 48) {
-          val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
-          val = div48_l[val>>8]|(div48_h[val>>8]<<8);
-        } else {
-          val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
-        }
-        if (val > 255)
-          val = 255;
+        val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
       }
+      if (val > 255)
+        val = 255;
       *(raw_ptr1+(x)) = val;
     } while (x--);
   }
