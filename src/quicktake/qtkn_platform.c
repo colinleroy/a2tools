@@ -108,9 +108,35 @@ void init_top(void) {
 
 #pragma code-name(pop)
 
-void copy_data(void) {
-    row_idx += (WIDTH*2);
-    row_idx_plus2 += (WIDTH*2);
+void copy_data(uint8 r) {
+  uint16 x;
+  // Copy to raw buffer
+  if (r == 0) {
+    raw_ptr1 = row_idx; //FILE_IDX(row, 0);
+  } else {
+    raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
+  }
+
+  cur_buf_1l = buf_1;
+  cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+
+  #if (WIDTH/4) != 80
+  #error
+  #endif
+
+  x = WIDTH-1;
+  do {
+    uint16 val;
+    if (factor == 48) {
+      val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
+      val = div48_l[val>>8]|(div48_h[val>>8]<<8);
+    } else {
+      val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
+    }
+    if (val > 255)
+      val = 255;
+    *(raw_ptr1+(x)) = val;
+  } while (x--);
 }
 
 void consume_extra(void) {
@@ -196,7 +222,6 @@ void init_row(void) {
 extern uint8 row;
 void decode_row(void) {
   uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8;
-  uint16 x;
   int8 tk;
   uint16 tk1, tk2, tk3, tk4;
   uint16 col;
@@ -336,32 +361,8 @@ void decode_row(void) {
       }
     }
 
-    // Copy to raw buffer
-    if (r == 0) {
-      raw_ptr1 = row_idx; //FILE_IDX(row, 0);
-    } else {
-      raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
-    }
-
-    cur_buf_1l = buf_1;
-    cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-
-    #if (WIDTH/4) != 80
-    #error
-    #endif
-  
-    x = WIDTH-1;
-    do {
-      uint16 val;
-      if (factor == 48) {
-        val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
-        val = div48_l[val>>8]|(div48_h[val>>8]<<8);
-      } else {
-        val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
-      }
-      if (val > 255)
-        val = 255;
-      *(raw_ptr1+(x)) = val;
-    } while (x--);
+    copy_data(r);
   }
+  row_idx += (WIDTH*2);
+  row_idx_plus2 += (WIDTH*2);
 }

@@ -301,27 +301,6 @@ huff_data_done:
         rts
 .endproc
 
-.proc _copy_data
-        clc
-        lda     _row_idx
-        adc     #<(WIDTH*2)
-        sta     _row_idx
-        lda     _row_idx+1
-        adc     #>(WIDTH*2)
-        sta     _row_idx+1
-
-        lda     _row_idx_plus2
-        adc     #<(WIDTH*2)
-        sta     _row_idx_plus2
-        lda     _row_idx_plus2+1
-        adc     #>(WIDTH*2)
-        sta     _row_idx_plus2+1
-
-        rts
-.endproc
-
-.segment "CODE"
-
 .proc _consume_extra
         lda     #2
         sta     repeats
@@ -445,6 +424,88 @@ c_loop_done:
         rts
 .endproc
 
+.segment "CODE"
+
+.proc _copy_data
+        ldx     repeats
+        ;  logic inverted from C because here we dec R */
+        beq     store_plus_2
+
+        lda     _row_idx
+        sta     store_val+1
+        ldx     _row_idx+1
+        inx
+        stx     store_val+2
+        jmp     store_set
+store_plus_2:
+        lda     _row_idx_plus2
+        sta     store_val+1
+        ldx     _row_idx_plus2+1
+        inx
+        stx     store_val+2
+
+store_set:
+        ldy     #<(_buf_1+256)
+        sty     cur_buf_0l
+        sty     cur_buf_0h
+        lda     #>(_buf_1+256)
+        sta     cur_buf_0l+1
+        clc
+        adc     #>(DATABUF_SIZE/2)
+        sta     cur_buf_0h+1
+
+        ldy     #<(WIDTH-1)
+        sty     _x
+        lda     #>(WIDTH-1)
+        sta     _x+1
+
+x_loop:
+        sty     _x
+        lda     (cur_buf_0h),y
+.ifdef APPROX_DIVISION
+        ldy     _factor
+        cpy     #48
+        bne     slowdiv
+        tay
+        ldx     _div48_h,y
+        lda     _div48_l,y
+        jmp     check_clamp
+slowdiv:
+        tax
+        lda     (cur_buf_0l),y
+        jsr     approx_div16x8_direct
+.else
+        tax
+        lda     (cur_buf_0l),y
+        jsr     pushax
+        lda     _factor
+        jsr     tosdiva0
+.endif
+check_clamp:
+        ldy     _x
+        cpx     #0
+        beq     store_val
+        lda     #$FF
+        cpx     #$80
+        adc     #$0
+
+store_val:
+        sta     $FFFF,y
+
+        cpy     #0
+        bne     :+
+        dec     cur_buf_0l+1
+        dec     cur_buf_0h+1
+        dec     store_val+2
+        dec     _x+1
+        bmi     stores_done
+:       dey
+        jmp     x_loop
+
+stores_done:
+        rts
+.endproc
+
 .proc _init_row
         lda     #<(_buf_0+256)      ; start at second page
         ldx     #>(_buf_0+256)
@@ -510,7 +571,7 @@ null_buf_ff:
         jmp     store_buf_ff
 
 not_null_buf_ff:
-        lda     (cur_buf_0l),y      ; tmp32 * val(0xFF) = tmp32<<8-tmp32 = tmp-(tmp>>8)
+        lda     (cur_buf_0l),y      ; (tmp32 * val(0xFF))>>8 = (tmp32<<8-tmp32)>>8 = tmp-(tmp>>8)
 subtr:
         ; tmp32 in AX
         stx     tmp1                ; Store to subtract
@@ -1291,112 +1352,27 @@ check_high2:
 col_loop1_done:
 
         clc
-
-        ldx     repeats
-        ;  logic inverted from C because here we dec R */
-        beq     store_plus_2
-
-        lda     _row_idx
-        sta     store_val+1
-        ldx     _row_idx+1
-        inx
-        stx     store_val+2
-        jmp     store_set
-store_plus_2:
-        lda     _row_idx_plus2
-        sta     store_val+1
-        ldx     _row_idx_plus2+1
-        inx
-        stx     store_val+2
-
-store_set:
-        ldy     #<(_buf_1+256)
-        sty     cur_buf_0l
-        sty     cur_buf_0h
-        lda     #>(_buf_1+256)
-        sta     cur_buf_0l+1
-        clc
-        adc     #>(DATABUF_SIZE/2)
-        sta     cur_buf_0h+1
-
-        ldy     #<(WIDTH-1)
-        sty     _x
-        lda     #>(WIDTH-1)
-        sta     _x+1
-
-x_loop:
-        sty     _x
-        lda     (cur_buf_0h),y
-.ifdef APPROX_DIVISION
-        ldy     _factor
-        cpy     #48
-        bne     slowdiv
-        tay
-        ldx     _div48_h,y
-        lda     _div48_l,y
-        jmp     check_clamp
-slowdiv:
-        tax
-        lda     (cur_buf_0l),y
-        jsr     approx_div16x8_direct
-.else
-        tax
-        lda     (cur_buf_0l),y
-        jsr     pushax
-        lda     _factor
-        jsr     tosdiva0
-.endif
-check_clamp:
-        ldy     _x
-        cpx     #0
-        beq     store_val
-        lda     #$FF
-        cpx     #$80
-        adc     #$0
-
-store_val:
-        sta     $FFFF,y
-
-        cpy     #0
-        bne     :+
-        dec     cur_buf_0l+1
-        dec     cur_buf_0h+1
-        dec     store_val+2
-        dec     _x+1
-        bmi     stores_done
-:       dey
-        jmp     x_loop
-
-stores_done:
-        ; clc
-        ; ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
-        ; lda     #<(_buf_0+1)
-        ; jsr     pushax
-        ; 
-        ; lda     #<(_buf_2) ;  curbuf_2 */
-        ; ldx     #>(_buf_2)
-        ; jsr     pushax
-        ; 
-        ; lda     #<(USEFUL_DATABUF_SIZE-1)
-        ; ldx     #>(USEFUL_DATABUF_SIZE-1)
-        ; jsr     _memcpy
-        ; 
-        ; ldx     #>(_buf_0+512+1) ;  cur_buf[0]+1 */
-        ; lda     #<(_buf_0+512+1)
-        ; jsr     pushax
-        ; 
-        ; lda     #<(_buf_2+512) ;  curbuf_2 */
-        ; ldx     #>(_buf_2+512)
-        ; jsr     pushax
-        ; 
-        ; lda     #<(USEFUL_DATABUF_SIZE-1)
-        ; ldx     #>(USEFUL_DATABUF_SIZE-1)
-        ; jsr     _memcpy
-        ; ;  }
+        jsr     _copy_data
         dec     repeats
         bmi     r_loop_done
         jmp     r_loop
 r_loop_done:
+
+        clc
+        lda     _row_idx
+        adc     #<(WIDTH*2)
+        sta     _row_idx
+        lda     _row_idx+1
+        adc     #>(WIDTH*2)
+        sta     _row_idx+1
+
+        lda     _row_idx_plus2
+        adc     #<(WIDTH*2)
+        sta     _row_idx_plus2
+        lda     _row_idx_plus2+1
+        adc     #>(WIDTH*2)
+        sta     _row_idx_plus2+1
+
         rts
 .endproc
 

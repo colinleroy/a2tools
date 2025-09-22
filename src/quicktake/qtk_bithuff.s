@@ -16,7 +16,7 @@
         .export         _getbits6, _getctrlhuff, _getdatahuff, _getdatahuff8
         .export         _cache
         .export         _init_floppy_starter
-        .export         _buf_0, _buf_1, _buf_2
+        .export         _buf_0, _buf_1
         .export         _raw_image, _huff_ctrl, _huff_data
         .export         _shiftl4n_l, _shiftl4n_h
         .export         _shiftl4p_l, _shiftl4p_h
@@ -44,15 +44,9 @@ _shiftl4p_l:   .res        190  ; signed shift left 4 table, pos vals, low byte
 buf1h:         .res        322
 _shiftl4p_h:   .res        190  ; signed shift left 4 table, pos vals, high byte
 
-buf2l:         .res        322
-_free5:        .res        190
 .assert <* = 0, error
-buf2h:         .res        322
-_free6:        .res        190
-
 _buf_0 = buf0l
 _buf_1 = buf1l
-_buf_2 = buf2l
 
 _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (9*256)

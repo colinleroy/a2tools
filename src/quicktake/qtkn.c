@@ -115,8 +115,6 @@ void qt_load_raw(uint16 top)
     decode_row();
     consume_extra();
 
-    copy_data();
-
     if (!(row & 7)) {
       progress_bar(-1, -1, 80*22, (top + row), height);
     }
