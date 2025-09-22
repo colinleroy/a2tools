@@ -153,11 +153,11 @@ qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
 qtknconv_CLCFLAGS = -D_CACHE_SIZE=6144 --asm-define CACHE_SIZE=6144 \
-	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
+	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=8192 --asm-define CACHE_SIZE=8192 \
-	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
+	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -D_CACHE_SIZE=8192 -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
@@ -166,7 +166,7 @@ GCCCFLAGS = -D_CACHE_SIZE=8192 -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	$(shell sdl-config --cflags)
 qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645 -DFINAL_WIDTH=640
 
-qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=640 -DFINAL_WIDTH=640
+qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320
 
 jpegconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320
 

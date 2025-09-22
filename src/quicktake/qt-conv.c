@@ -134,6 +134,10 @@ static uint8 identify(const char *name)
     else
       cur_cache_ptr = cache_start + (736);
 
+    if (!memcmp(cache_start, QTKN_MAGIC, 4)) {
+      width = 320;
+      height = 240;
+    }
   } else if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     cprintf(" image %s (640x480)...\r\n", name);

@@ -3,7 +3,7 @@
 
 #include "platform.h"
 
-#define WIDTH 640U
+#define WIDTH 320U
 #define HEIGHT 480U
 #define USEFUL_DATABUF_SIZE 321
 #define DATABUF_SIZE 0x400 /* align things */

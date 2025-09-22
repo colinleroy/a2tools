@@ -319,6 +319,7 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       l_pBits++;
    }
 }
+#pragma code-name(pop)
 
 //------------------------------------------------------------------------------
 static HuffTable* getHuffTable(uint8 index)
@@ -334,7 +335,6 @@ static HuffTable* getHuffTable(uint8 index)
       default: return 0;
    }
 }
-#pragma code-name(pop)
 
 //------------------------------------------------------------------------------
 static uint8* getHuffVal(uint8 index)

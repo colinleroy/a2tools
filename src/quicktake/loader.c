@@ -34,7 +34,8 @@ void main(int argc, char *argv[]) {
       h = 480;
     } else {
       printf("Can't guess size.\n");
-      exit(1);
+      w = 640;
+      h = 480;
     }
     rewind(fp);
     if (argc == 3) {

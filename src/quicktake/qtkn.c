@@ -77,7 +77,7 @@ const uint8 src[260] = {
   2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
 };
 
-static uint8 row;
+uint8 row;
 uint8 factor;
 uint8 last = 16;
 
@@ -95,16 +95,16 @@ void qt_load_raw(uint16 top)
     /* Init */
     init_top();
 
-    if (width != 640) {
+    if (width != 320) {
       cprintf("Unsupported format\r\n");
-      return;
+      exit(1);
     }
   }
 
   row_idx = raw_image;
-  row_idx_plus2 = raw_image + (WIDTH*2);
+  row_idx_plus2 = raw_image + WIDTH;
 
-  for (row=0; row != BAND_HEIGHT; row+=4) {
+  for (row=0; row != BAND_HEIGHT; row+=2) {
     factor = getbits6();
     /* Ignore those */
     getbits6();

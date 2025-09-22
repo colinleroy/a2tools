@@ -109,30 +109,8 @@ void init_top(void) {
 #pragma code-name(pop)
 
 void copy_data(void) {
-    uint8 x, y;
-
-    raw_ptr1 = row_idx - 1;
-    for (y = 4; y; y--) {
-      int steps, i, j;
-      x = (y & 1);
-      if (x) {
-        steps = (WIDTH/4)-2;
-        x = 0;
-      } else {
-        steps = (WIDTH/4)-1;
-        x = 1;
-      }
-
-      for (j = 4; j; j--) {
-        for (i = x; i != steps; i+=2) {
-          *(raw_ptr1 + (i+1)) = *(raw_ptr1+i);
-        }
-        raw_ptr1 += (WIDTH/4);
-      }
-    }
-
-    row_idx += (WIDTH<<2);
-    row_idx_plus2 += (WIDTH<<2);
+    row_idx += (WIDTH*2);
+    row_idx_plus2 += (WIDTH*2);
 }
 
 void consume_extra(void) {
@@ -142,7 +120,7 @@ void consume_extra(void) {
   uint8 rep, rep_loop, nreps;
   /* Consume RADC tokens but don't care about them. */
   for (c=1; c != 3; c++) {
-    for (tree = 1, col = WIDTH/4; col; ) {
+    for (tree = 1, col = WIDTH/2; col; ) {
       huff_num = tree*2;
       tree = getctrlhuff();
       if (tree) {
@@ -215,6 +193,7 @@ void init_row(void) {
   }
 }
 
+extern uint8 row;
 void decode_row(void) {
   uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8, x;
   int8 tk;
@@ -223,10 +202,10 @@ void decode_row(void) {
 
 
   for (r=0; r != 2; r++) {
-    SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
-    SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
+    SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
+    SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
 
-    col = WIDTH/2;
+    col = WIDTH;
     cur_buf_0l = buf_0 + col;
     cur_buf_0h = cur_buf_0l+(DATABUF_SIZE/2);
     cur_buf_1l = cur_buf_0l + DATABUF_SIZE;
@@ -356,6 +335,8 @@ void decode_row(void) {
         } while (nreps == 9);
       }
     }
+
+    // Copy to raw buffer
     if (r == 0) {
       raw_ptr1 = row_idx; //FILE_IDX(row, 0);
     } else {
@@ -364,41 +345,33 @@ void decode_row(void) {
 
     cur_buf_1l = buf_1;
     cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-    
-    for (y=1; ; y++) {
-      #define QUARTER_WIDTH (WIDTH/4)
-      #if QUARTER_WIDTH != 160
-      #error Unexpected width
-      #endif
-    
+
+    #if (WIDTH/4) != 80
+    #error
+    #endif
+  
       /* Loop this on Y on 65c02 */
-      for (i = 4; i; i--) {
+      for (i = 2; i; i--) {
         uint16 val;
-        for (x= 0; x < QUARTER_WIDTH; x+=2) {
-          if (cur_buf_1h[x/2] & 0x80) {
+        for (x= 0; x < WIDTH/2; x++) {
+          if (cur_buf_1h[x] & 0x80) {
             val = 0;
           } else {
             if (factor == 48) {
-              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2);
+              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
               val = div48_l[val>>8]|(div48_h[val>>8]<<8);
             } else {
-              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / factor;
+              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
             }
             if (val > 255)
               val = 255;
           }
           *(raw_ptr1+(x)) = val;
-          *(raw_ptr1+(x+1)) = val;
         }
-        cur_buf_1l+=QUARTER_WIDTH/2;
+        cur_buf_1l+=WIDTH/2;
         cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-        raw_ptr1 += QUARTER_WIDTH;
+        raw_ptr1 += WIDTH/2;
       }
-      if (y == 2)
-        break;
-      cur_buf_1l = buf_2;
-      cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-    }
     memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
     memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
   }
