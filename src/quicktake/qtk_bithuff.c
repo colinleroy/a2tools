@@ -14,7 +14,6 @@ uint8 huff_ctrl[9*2][256];
 uint8 huff_data[9][256];
 uint8 buf_0[DATABUF_SIZE];
 uint8 buf_1[DATABUF_SIZE];
-uint8 buf_2[DATABUF_SIZE];
 uint8 shiftl4p_l[128];
 uint8 shiftl4p_h[128];
 uint8 shiftl4n_l[128];

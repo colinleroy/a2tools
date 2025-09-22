@@ -34,21 +34,21 @@ _cache:        .res        CACHE_SIZE,$00
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
-buf0l:         .res        321
-_shiftl4n_l:   .res        191  ; signed shift left 4 table, neg vals, low byte
-buf0h:         .res        321
-_shiftl4n_h:   .res        191  ; signed shift left 4 table, neg vals, high byte
+buf0l:         .res        322
+_shiftl4n_l:   .res        190  ; signed shift left 4 table, neg vals, low byte
+buf0h:         .res        322
+_shiftl4n_h:   .res        190  ; signed shift left 4 table, neg vals, high byte
 
-buf1l:         .res        321
-_shiftl4p_l:   .res        191  ; signed shift left 4 table, pos vals, low byte
-buf1h:         .res        321
-_shiftl4p_h:   .res        191  ; signed shift left 4 table, pos vals, high byte
+buf1l:         .res        322
+_shiftl4p_l:   .res        190  ; signed shift left 4 table, pos vals, low byte
+buf1h:         .res        322
+_shiftl4p_h:   .res        190  ; signed shift left 4 table, pos vals, high byte
 
-buf2l:         .res        321
-_free5:        .res        191
+buf2l:         .res        322
+_free5:        .res        190
 .assert <* = 0, error
-buf2h:         .res        321
-_free6:        .res        191
+buf2h:         .res        322
+_free6:        .res        190
 
 _buf_0 = buf0l
 _buf_1 = buf1l

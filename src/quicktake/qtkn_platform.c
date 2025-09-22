@@ -9,13 +9,12 @@ extern uint16 val;
 extern uint8 factor;
 extern uint8 buf_0[DATABUF_SIZE];
 extern uint8 buf_1[DATABUF_SIZE];
-extern uint8 buf_2[DATABUF_SIZE];
 extern uint8 div48_l[256];
 extern uint8 div48_h[256];
 uint8 raw_image[RAW_IMAGE_SIZE];
 
-uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
-uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
+uint8 *cur_buf_0l, *cur_buf_1l;
+uint8 *cur_buf_0h, *cur_buf_1h;
 
 void init_shiftl4(void) {
   uint8 c = 0;
@@ -205,15 +204,14 @@ void decode_row(void) {
 
   for (r=0; r != 2; r++) {
     SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
-    SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
+    printf("init buf_0[%d]\n", WIDTH+1);
+    SET_CURBUF_VAL(buf_0, buf_0+(DATABUF_SIZE/2), (WIDTH+1), (factor<<7));
 
     col = WIDTH;
     cur_buf_0l = buf_0 + col;
     cur_buf_0h = cur_buf_0l+(DATABUF_SIZE/2);
     cur_buf_1l = cur_buf_0l + DATABUF_SIZE;
     cur_buf_1h = cur_buf_1l+(DATABUF_SIZE/2);
-    cur_buf_2l = cur_buf_1l + DATABUF_SIZE;
-    cur_buf_2h = cur_buf_2l+(DATABUF_SIZE/2);
     tree = 1;
 
     while(col) {
@@ -226,8 +224,6 @@ void decode_row(void) {
         cur_buf_0h-=2;
         cur_buf_1l-=2;
         cur_buf_1h-=2;
-        cur_buf_2l-=2;
-        cur_buf_2h-=2;
 
         if (tree == 8) {
           tmp8 = (uint8) getdatahuff8();
@@ -237,9 +233,9 @@ void decode_row(void) {
           tmp8 = (uint8) getdatahuff8();
           SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * factor);
           tmp8 = (uint8) getdatahuff8();
-          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, tmp8 * factor);
+          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, tmp8 * factor);
           tmp8 = (uint8) getdatahuff8();
-          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, tmp8 * factor);
+          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, tmp8 * factor);
         } else {
           huff_num = tree+1;
 
@@ -249,25 +245,29 @@ void decode_row(void) {
           tk3 = ((int8)getdatahuff()) << 4;
           tk4 = ((int8)getdatahuff()) << 4;
           SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
-                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
+                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) 
+                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
                             + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                             + tk1));
 
           /* Second with col - 1*/
           SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
-                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
+                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) 
+                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                             + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
                             + tk2));
 
           //b
-          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, 
-                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, 
+                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) 
+                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 3)) >> 1)
                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                             + tk3));
 
           /* Second with col - 1*/
-          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, 
-                          (((((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, 
+                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) 
+                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
                             + tk4));
         }
@@ -293,8 +293,6 @@ void decode_row(void) {
             cur_buf_0h-=2;
             cur_buf_1l-=2;
             cur_buf_1h-=2;
-            cur_buf_2l-=2;
-            cur_buf_2h-=2;
 
             //c
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1,
@@ -308,13 +306,13 @@ void decode_row(void) {
                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1);
 
             //d
-            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1,
+            SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2,
                            (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)
-                           + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 3)) >> 1)
                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1);
 
-            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0,
-                           (((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)
+            SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1,
+                           (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)
                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1);
 
@@ -323,8 +321,8 @@ void decode_row(void) {
               //e
               SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)+tk);
               SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)+tk);
-              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0)+tk);
-              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)+tk);
+              SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)+tk);
+              SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)+tk);
             }
           rep++;
           if (rep == rep_loop)
@@ -369,8 +367,5 @@ void decode_row(void) {
       }
       *(raw_ptr1+(x)) = val;
     } while (x--);
-
-    memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
-    memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
   }
 }
