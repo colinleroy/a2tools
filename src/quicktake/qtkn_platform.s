@@ -12,21 +12,18 @@
         .import       _row_idx, _row_idx_plus2
 
         .import       _getdatahuff, _getdatahuff8
-        .import       _getdatahuff_refilled, _getdatahuff8_refilled
         .import       _getctrlhuff
-        .import       _getctrlhuff_refilled
-        .import       _refill_ret
 
+        .import       _discarddatahuff, _discarddatahuff8
         .import       _huff_numc, _huff_numc_h
         .import       _huff_numd, _huff_numd_h
-
+        .import       _huff_numdd
         .import       _huff_data, _huff_ctrl, _src
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1
         .import       _div48_l, _div48_h
-        .import       _shiftl4n_l, _shiftl4n_h
-        .import       _shiftl4p_l, _shiftl4p_h
+        .import       _shiftl4_l, _shiftl4_h
 
         .import       mult16x16r24_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
@@ -54,13 +51,6 @@ cur_buf_0h  = _zp6
 col         = _zp7
 rept        = _zp13
 
-.macro SET_REFILL_RET addr
-        ldx     #<addr
-        stx     _refill_ret+1
-        ldx     #>addr
-        stx     _refill_ret+2
-.endmacro
-
 .segment "LC"
 
 .proc _init_top
@@ -73,23 +63,16 @@ rept        = _zp13
 .proc _init_shiftl4
         ldy     #$00
 
-:       tya
-        bmi     neg
-        ldx     #0
-        jsr     aslax4
-        sta     _shiftl4p_l,y
+:       ldx     #0
+        tya
+        bpl     :+
+        dex
+:       jsr     aslax4
+        sta     _shiftl4_l,y
         txa
-        sta     _shiftl4p_h,y
+        sta     _shiftl4_h,y
         iny
-        bne     :-
-
-neg:    ldx     #$FF
-        jsr     aslax4
-        sta     _shiftl4n_l-128,y
-        txa
-        sta     _shiftl4n_h-128,y
-        iny
-        bne     :-
+        bne     :--
         rts
 .endproc
 
@@ -317,7 +300,6 @@ col_loop2:
         sta     _huff_numc
         adc     #1
         sta     _huff_numc_h
-        SET_REFILL_RET _getctrlhuff_refilled
 
         jsr     _getctrlhuff
         sta     tree
@@ -330,24 +312,21 @@ tree_not_zero_2:
         ;huff_ptr = huff[tree + 10]
         cmp     #8
         bne     norm_huff
-        SET_REFILL_RET _getdatahuff8_refilled
 
-        jsr     _getdatahuff8
-        jsr     _getdatahuff8
-        jsr     _getdatahuff8
-        jsr     _getdatahuff8
+        jsr     _discarddatahuff8
+        jsr     _discarddatahuff8
+        jsr     _discarddatahuff8
+        jsr     _discarddatahuff8
         jmp     tree_zero_2_done
 
 norm_huff:
         adc     #>(_huff_data+256)
-        sta     _huff_numd
-        sta     _huff_numd_h
-        SET_REFILL_RET _getdatahuff_refilled
+        sta     _huff_numdd
 
-        jsr     _getdatahuff
-        jsr     _getdatahuff
-        jsr     _getdatahuff
-        jsr     _getdatahuff
+        jsr     _discarddatahuff
+        jsr     _discarddatahuff
+        jsr     _discarddatahuff
+        jsr     _discarddatahuff
 
         jmp     tree_zero_2_done
 
@@ -364,7 +343,6 @@ col_gt1:
         ldx     #>_huff_data
         stx     _huff_numd
         stx     _huff_numd_h
-        SET_REFILL_RET _getdatahuff_refilled
 
         jsr     _getdatahuff
         clc
@@ -381,8 +359,7 @@ nreps_check_done_2:
 
         ;data tree 1
         ldx     #>(_huff_data+256)
-        stx     _huff_numd
-        stx     _huff_numd_h
+        stx     _huff_numdd
         ; refiller return already set
 
         ldx     #$00
@@ -395,7 +372,7 @@ do_rep_loop_2:
         and     #1
         beq     rep_even_2
 
-        jsr     _getdatahuff
+        jsr     _discarddatahuff
 
 rep_even_2:
         ldx     rept
@@ -526,31 +503,21 @@ stores_done:
         lda     _factor
         sta     _last
         jsr     tosmula0
-        jmp     shift_val
+        jmp     check_multiplier
 
 small_val:
         lda     _val_from_last,y    ; yes, 8x8 mult
         ldx     _factor
         stx     _last
         jsr     mult8x8r16_direct
-shift_val:
-        stx     ptr2+1              ; >> 4
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ldx     ptr2+1
-        ror     a
-        sta     ptr2
-        cmp     #$FF                ; is multiplier 0xFF?
-        bne     check0x100
-        cpx     #$00
-        bne     check0x100
 
-mult_FF:                            ; Yes, loop avoiding mults
+check_multiplier:
+        cpx     #$0F                ; is multiplier 0xFF?
+        bne     check_0x100         ; Check before shifting
+        cmp     #$F0
+        bcc     check_0x100
+
+mult_0xFF:
         ldy     #<(USEFUL_DATABUF_SIZE-1)
         lda     #>(USEFUL_DATABUF_SIZE-1)
         sta     wordcnt+1
@@ -561,26 +528,15 @@ setup_curbuf_x_ff:
         sty     wordcnt
         lda     (cur_buf_0h),y
         tax
-        bne     not_null_buf_ff
         lda     (cur_buf_0l),y
-        bne     subtr
-
-null_buf_ff:
-        lda     #$0F
-        ldx     #$00
-        jmp     store_buf_ff
-
-not_null_buf_ff:
-        lda     (cur_buf_0l),y      ; (tmp32 * val(0xFF))>>8 = (tmp32<<8-tmp32)>>8 = tmp-(tmp>>8)
-subtr:
         ; tmp32 in AX
         stx     tmp1                ; Store to subtract
         sec
         sbc     tmp1                ; subtract high word from low : -(tmp>>8)
-        bcs     store_buf_ff
+        bcs     :+
         dex
-store_buf_ff:
-        sta     (cur_buf_0l),y
+
+:       sta     (cur_buf_0l),y
         txa
         sta     (cur_buf_0h),y
 
@@ -590,15 +546,27 @@ store_buf_ff:
         dec     cur_buf_0h+1
         dec     wordcnt+1
         bpl     setup_curbuf_x_ff
-        jmp     init_done
+        rts
 
-check0x100:                         ; Is multiplier 0x100?
-        cpx     #$01
-        bne     slow_mults
-        cmp     #$00
-        beq     init_done           ; Yes, so nothing to do!
+check_0x100:
+        cpx     #10                 ; or 0x100?
+        bne     :+
+        cmp     #10
+        bcc     init_done
 
-slow_mults:                         ; Arbitrary multiplier
+:       stx     ptr2+1              ; Arbitrary multiplier, >> 4
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ldx     ptr2+1
+        ror     a
+        sta     ptr2
+
+slow_mults:                         ; and multiply
         ldy     #<USEFUL_DATABUF_SIZE
         sty     wordcnt
         lda     #>USEFUL_DATABUF_SIZE
@@ -610,19 +578,7 @@ setup_curbuf_x_slow:
         sty     wordcnt
         lda     (cur_buf_0h),y
         tax
-        bne     not_null_buf
         lda     (cur_buf_0l),y
-        bne     mult
-
-null_buf:
-        lda     #$0F
-        ldx     #$00
-        stx     sreg
-        jmp     store_buf
-
-not_null_buf:
-        lda     (cur_buf_0l),y
-mult:
         ; multiply
         jsr     mult16x16r24_direct
         ldy     wordcnt
@@ -656,19 +612,31 @@ r_loop:
         lda     #0
         ror
 
-        ;  Update buf1/2[WIDTH/2] = factor<<7 */
+        ; buf_1[WIDTH] = factor<<7
+        ; buf_0[WIDTH+1] = factor<<7
         stx     _buf_1+(WIDTH)+512
         stx     _buf_0+(WIDTH+1)+512
         sta     _buf_1+(WIDTH)
         sta     _buf_0+(WIDTH+1)
 
+        ; tree = 1,
         lda     #1
         sta     tree
 
+        ; col = WIDTH
         lda     #<(WIDTH)
         sta     col
         ldx     #>(WIDTH)
         stx     colh
+
+        ; Init the numerous patched locations
+        ; Worth the ugliness as there are 86
+        ; locations, and we run that path
+        ; 320*120*2 times so doing $nnnn,y
+        ; instead of ($nn), y we spare:
+        ; (320*120*2)*(2*86): 13 SECONDS
+        ; (and spend only 0.165s shifting
+        ; the high bytes, only 120*2 times)
         lda     #>(_buf_0+512+256)
         sta     cb0h_off0a+2
         sta     cb0h_off0b+2
@@ -734,6 +702,8 @@ r_loop:
         sta     cb1l_off2c+2
         sta     cb1l_off2d+2
 
+        ; the 'cb2' labels apply to buf_0[]
+        ; being updated
         lda     #>(_buf_0+512+256)
         sta     cb2h_off0a+2
         sta     cb2h_off0b+2
@@ -765,27 +735,31 @@ r_loop:
         sta     cb2l_off2c+2
 
 col_loop1:
+        ; 320 loop, repeated twice, function
+        ; called 120 times: every line here
+        ; costs 153-400ms depending on the
+        ; number of cycles.
+
         lda     tree
         asl
         adc     #>_huff_ctrl
         sta     _huff_numc
         adc     #1
         sta     _huff_numc_h
-        ldx     #<_getctrlhuff_refilled
-        stx     _refill_ret+1
-        ldx     #>_getctrlhuff_refilled
-        stx     _refill_ret+2
 
         jsr     _getctrlhuff
         sta     tree
 
         bne     tree_not_zero
         jmp     tree_zero
+
+dechigh:
+        jsr     dec_buf_pages
+        jmp     declow
 tree_not_zero:
         sec
         lda     col
-        bne     declow
-        jsr     dec_buf_pages
+        beq     dechigh
 declow:
         sbc     #2
         sta     col
@@ -793,11 +767,6 @@ declow:
         lda     tree
         cmp     #8
         bne     tree_not_eight
-
-        ldx     #<_getdatahuff8_refilled
-        stx     _refill_ret+1
-        ldx     #>_getdatahuff8_refilled
-        stx     _refill_ret+2
 
         ;  tree == 8
         jsr     _getdatahuff8
@@ -840,7 +809,13 @@ cb2l_off0a:
 cb2h_off0a:
         sta     $FF01,y
 
-        jmp     tree_done
+        lda     col               ; is col loop done?
+        beq     :+
+        jmp     col_loop1
+:       ldx     colh
+        beq     :+
+        jmp     col_loop1
+:       jmp     finish_col_loop
 
 tree_not_eight:
         ; huff_num = tree+1
@@ -848,71 +823,34 @@ tree_not_eight:
         sta     _huff_numd
         sta     _huff_numd_h
 
-        ldx     #<_getdatahuff_refilled
-        stx     _refill_ret+1
-        ldx     #>_getdatahuff_refilled
-        stx     _refill_ret+2
-
         ;  Get the four tk vals in advance
         ; a
         jsr     _getdatahuff
         tax
-        bpl     pos1
-        lda     _shiftl4n_l-128,x
+        lda     _shiftl4_l,x
         sta     tk1_l+1
-        lda     _shiftl4n_h-128,x
-        jmp     finish_bh1
-pos1:
-        lda     _shiftl4p_l,x
-        sta     tk1_l+1
-        lda     _shiftl4p_h,x
-
-finish_bh1:
+        lda     _shiftl4_h,x
         sta     tk1_h+1
 
         jsr     _getdatahuff
         tax
-        bpl     pos2
-        lda     _shiftl4n_l-128,x
+        lda     _shiftl4_l,x
         sta     tk2_l+1
-        lda     _shiftl4n_h-128,x
-        jmp     finish_bh2
-pos2:
-        lda     _shiftl4p_l,x
-        sta     tk2_l+1
-        lda     _shiftl4p_h,x
-
-finish_bh2:
+        lda     _shiftl4_h,x
         sta     tk2_h+1
 
         jsr     _getdatahuff
         tax
-        bpl     pos3
-        lda     _shiftl4n_l-128,x
+        lda     _shiftl4_l,x
         sta     tk3_l+1
-        lda     _shiftl4n_h-128,x
-        jmp     finish_bh3
-pos3:
-        lda     _shiftl4p_l,x
-        sta     tk3_l+1
-        lda     _shiftl4p_h,x
-
-finish_bh3:
+        lda     _shiftl4_h,x
         sta     tk3_h+1
 
         jsr     _getdatahuff
         tax
-        bpl     pos4
-        lda     _shiftl4n_l-128,x
+        lda     _shiftl4_l,x
         sta     tk4_l+1
-        lda     _shiftl4n_h-128,x
-        jmp     finish_bh4
-pos4:
-        lda     _shiftl4p_l,x
-        sta     tk4_l+1
-        lda     _shiftl4p_h,x
-
-finish_bh4:
+        lda     _shiftl4_h,x
         sta     tk4_h+1
 
         clc
@@ -1065,7 +1003,6 @@ cb1h_off0c:
         txa
         ror     a
 
-        ;  Store to cur_buf_x */
         clc
 tk4_l:  adc     #$FF
 cb2l_off0b:
@@ -1076,7 +1013,13 @@ tk4_h:  adc     #$FF
 cb2h_off0b:
         sta     $FF01,y
 
-        jmp     tree_done
+        lda     col               ; is col loop done?
+        beq     :+
+        jmp     col_loop1
+:       ldx     colh
+        beq     :+
+        jmp     col_loop1
+:       jmp     finish_col_loop
 
 tree_zero:
 nine_reps_loop:
@@ -1092,10 +1035,6 @@ col_gt1a:
         ldx     #>(_huff_data)
         stx     _huff_numd
         stx     _huff_numd_h
-        ldx     #<_getdatahuff_refilled
-        stx     _refill_ret+1
-        ldx     #>_getdatahuff_refilled
-        stx     _refill_ret+2
 
         jsr     _getdatahuff
         clc
@@ -1264,16 +1203,9 @@ cb2l_off0c:
         ;  tk = getbithuff(8) << 4;
         jsr     _getdatahuff
         tax
-        bpl     pos5
-        lda     _shiftl4n_h-128,x
+        lda     _shiftl4_h,x
         sta     tmp2
-        lda     _shiftl4n_l-128,x
-        jmp     finish_bh5
-pos5:
-        lda     _shiftl4p_h,x
-        sta     tmp2
-        lda     _shiftl4p_l,x
-finish_bh5:
+        lda     _shiftl4_l,x
         tax
 
         ; e
@@ -1328,11 +1260,10 @@ rep_even:
         beq     rep_loop_done
         stx     rept
         lda     col
-        beq     check_high
+        beq     :+
         jmp     do_rep_loop
-check_high:
-        ldx     colh
-        beq     col_loop1_done
+:       ldx     colh
+        beq     finish_col_loop
         tay     ;  fix ZERO flag needed at do_rep_loop
         jmp     do_rep_loop
 rep_loop_done:
@@ -1341,16 +1272,15 @@ rep_loop_done:
         bne     nine_reps_loop_done
         jmp     nine_reps_loop
 nine_reps_loop_done:
-tree_done:
-        lda     col
-        beq     check_high2
-        jmp     col_loop1
-check_high2:
-        ldx     colh
-        beq     col_loop1_done
-        jmp     col_loop1
-col_loop1_done:
 
+        lda     col               ; is col loop done?
+        beq     :+
+        jmp     col_loop1
+:       ldx     colh
+        beq     finish_col_loop
+        jmp     col_loop1
+
+finish_col_loop:
         clc
         jsr     _copy_data
         dec     repeats
