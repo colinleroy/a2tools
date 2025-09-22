@@ -23,7 +23,7 @@
         .import       _huff_data, _huff_ctrl, _src
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
-        .import       _buf_0, _buf_1, _buf_2
+        .import       _buf_0, _buf_1
         .import       _div48_l, _div48_h
         .import       _shiftl4n_l, _shiftl4n_h
         .import       _shiftl4p_l, _shiftl4p_h
@@ -591,9 +591,9 @@ r_loop:
 
         ;  Update buf1/2[WIDTH/2] = factor<<7 */
         stx     _buf_1+(WIDTH)+512
-        stx     _buf_2+(WIDTH)+512
+        stx     _buf_0+(WIDTH+1)+512
         sta     _buf_1+(WIDTH)
-        sta     _buf_2+(WIDTH)
+        sta     _buf_0+(WIDTH+1)
 
         lda     #1
         sta     tree
@@ -667,7 +667,7 @@ r_loop:
         sta     cb1l_off2c+2
         sta     cb1l_off2d+2
 
-        lda     #>(_buf_2+512+256)
+        lda     #>(_buf_0+512+256)
         sta     cb2h_off0a+2
         sta     cb2h_off0b+2
         sta     cb2h_off0c+2
@@ -682,7 +682,7 @@ r_loop:
         sta     cb2h_off1g+2
         sta     cb2h_off2b+2
         sta     cb2h_off2c+2
-        lda     #>(_buf_2+256)
+        lda     #>(_buf_0+256)
         sta     cb2l_off0a+2
         sta     cb2l_off0b+2
         sta     cb2l_off0c+2
@@ -758,20 +758,20 @@ cb1h_off0a:
         jsr     mult8x8r16_direct
         ldy     col
 cb2l_off1a:
-        sta     $FF01,y
+        sta     $FF02,y
         txa
 cb2h_off1a:
-        sta     $FF01,y
+        sta     $FF02,y
 
         jsr     _getdatahuff8
         ldx     _factor
         jsr     mult8x8r16_direct
         ldy     col
 cb2l_off0a:
-        sta     $FF00,y
+        sta     $FF01,y
         txa
 cb2h_off0a:
-        sta     $FF00,y
+        sta     $FF01,y
 
         jmp     tree_done
 
@@ -933,12 +933,12 @@ cb1h_off0b:
 cb1l_off2b:
         lda     $FF02,y
 cb2l_off2b:
-        adc     $FF02,y
+        adc     $FF03,y
         tax
 cb1h_off2b:
         lda     $FF02,y
 cb2h_off2b:
-        adc     $FF02,y
+        adc     $FF03,y
         cmp     #$80
         ror     a
         sta     tmp1
@@ -961,24 +961,24 @@ cb1h_off1d:
         clc
 tk3_l:  adc     #$FF
 cb2l_off1b:
-        sta     $FF01,y
+        sta     $FF02,y
 
         lda     tmp1
 tk3_h:  adc     #$FF
 cb2h_off1b:
-        sta     $FF01,y
+        sta     $FF02,y
 
         ;  Second with col - 1*/
         clc
 cb1l_off1e:
         lda     $FF01,y
 cb2l_off1c:
-        adc     $FF01,y
+        adc     $FF02,y
         tax
 cb1h_off1e:
         lda     $FF01,y
 cb2h_off1c:
-        adc     $FF01,y
+        adc     $FF02,y
         cmp     #$80
         ror     a
         sta     tmp1
@@ -1002,12 +1002,12 @@ cb1h_off0c:
         clc
 tk4_l:  adc     #$FF
 cb2l_off0b:
-        sta     $FF00,y
+        sta     $FF01,y
 
         lda     tmp1
 tk4_h:  adc     #$FF
 cb2h_off0b:
-        sta     $FF00,y
+        sta     $FF01,y
 
         jmp     tree_done
 
@@ -1129,12 +1129,12 @@ cb1l_off0d:
 cb1l_off2d:
         lda     $FF02,y
 cb2l_off2c:
-        adc     $FF02,y
+        adc     $FF03,y
         tax
 cb1h_off2d:
         lda     $FF02,y
 cb2h_off2c:
-        adc     $FF02,y
+        adc     $FF03,y
         cmp     #$80
         ror     a
         sta     tmp1
@@ -1151,11 +1151,11 @@ cb1h_off1h:
         cmp     #$80
         ror     a
 cb2h_off1d:
-        sta     $FF01,y
+        sta     $FF02,y
         txa
         ror     a
 cb2l_off1d:
-        sta     $FF01,y
+        sta     $FF02,y
 
         ;  Second */
         clc
@@ -1164,7 +1164,7 @@ cb1l_off1i:
         adc     $FF01,y
         tax
 cb2h_off1e:
-        lda     $FF01,y
+        lda     $FF02,y
 cb1h_off1i:
         adc     $FF01,y
         cmp     #$80
@@ -1183,11 +1183,11 @@ cb1h_off0e:
         cmp     #$80
         ror     a
 cb2h_off0c:
-        sta     $FF00,y
+        sta     $FF01,y
         txa
         ror     a
 cb2l_off0c:
-        sta     $FF00,y
+        sta     $FF01,y
 
         lda     rept
         and     #1
@@ -1233,25 +1233,25 @@ cb1h_off1k:
 
         txa
 cb2l_off0d:
-        adc     $FF00,y
+        adc     $FF01,y
 cb2l_off0e:
-        sta     $FF00,y
+        sta     $FF01,y
         lda     tmp2
 cb2h_off0d:
-        adc     $FF00,y
+        adc     $FF01,y
 cb2h_off0e:
-        sta     $FF00,y
+        sta     $FF01,y
 
         txa
 cb2l_off1f:
-        adc     $FF01,y
+        adc     $FF02,y
 cb2l_off1g:
-        sta     $FF01,y
+        sta     $FF02,y
         lda     tmp2
 cb2h_off1f:
-        adc     $FF01,y
+        adc     $FF02,y
 cb2h_off1g:
-        sta     $FF01,y
+        sta     $FF02,y
 
 rep_even:
         ldx     rept
@@ -1353,31 +1353,31 @@ store_val:
         jmp     x_loop
 
 stores_done:
-        clc
-        ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
-        lda     #<(_buf_0+1)
-        jsr     pushax
-
-        lda     #<(_buf_2) ;  curbuf_2 */
-        ldx     #>(_buf_2)
-        jsr     pushax
-
-        lda     #<(USEFUL_DATABUF_SIZE-1)
-        ldx     #>(USEFUL_DATABUF_SIZE-1)
-        jsr     _memcpy
-
-        ldx     #>(_buf_0+512+1) ;  cur_buf[0]+1 */
-        lda     #<(_buf_0+512+1)
-        jsr     pushax
-
-        lda     #<(_buf_2+512) ;  curbuf_2 */
-        ldx     #>(_buf_2+512)
-        jsr     pushax
-
-        lda     #<(USEFUL_DATABUF_SIZE-1)
-        ldx     #>(USEFUL_DATABUF_SIZE-1)
-        jsr     _memcpy
-        ;  }
+        ; clc
+        ; ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
+        ; lda     #<(_buf_0+1)
+        ; jsr     pushax
+        ; 
+        ; lda     #<(_buf_2) ;  curbuf_2 */
+        ; ldx     #>(_buf_2)
+        ; jsr     pushax
+        ; 
+        ; lda     #<(USEFUL_DATABUF_SIZE-1)
+        ; ldx     #>(USEFUL_DATABUF_SIZE-1)
+        ; jsr     _memcpy
+        ; 
+        ; ldx     #>(_buf_0+512+1) ;  cur_buf[0]+1 */
+        ; lda     #<(_buf_0+512+1)
+        ; jsr     pushax
+        ; 
+        ; lda     #<(_buf_2+512) ;  curbuf_2 */
+        ; ldx     #>(_buf_2+512)
+        ; jsr     pushax
+        ; 
+        ; lda     #<(USEFUL_DATABUF_SIZE-1)
+        ; ldx     #>(USEFUL_DATABUF_SIZE-1)
+        ; jsr     _memcpy
+        ; ;  }
         dec     repeats
         bmi     r_loop_done
         jmp     r_loop
