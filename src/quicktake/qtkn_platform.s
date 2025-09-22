@@ -36,7 +36,7 @@
         .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
 
-WIDTH               = 640
+WIDTH               = 320
 USEFUL_DATABUF_SIZE = 321
 DATABUF_SIZE        = $400
 
@@ -297,74 +297,19 @@ huff_data_done:
 .endproc
 
 .proc _copy_data
-        bit     $C083
-        bit     $C083
-        ldx     _row_idx+1
-        ldy     _row_idx
-        bne     :+
-        dex
-:
-        dey
-        sty     raw_ptr1
-        stx     raw_ptr1+1
-
-        ldy     #4
-        sty     tmp1
-
-y_loop:
-        ldx     #4
-        lda     tmp1
-        and     #1
-        beq     even_y
-        lda     #<((WIDTH/4)-2)
-        sta     end_copy_loop+1
-        ldy     #0
-        sty     start_copy_loop+1
-        jmp     copy_loop
-even_y:
-        lda     #<((WIDTH/4)-1)
-        sta     end_copy_loop+1
-        ldy     #1
-        sty     start_copy_loop+1
-start_copy_loop:
-        ldy     #$F0
-copy_loop:
-        lda     (raw_ptr1),y
-        iny
-        sta     (raw_ptr1),y
-        iny
-end_copy_loop:
-        cpy     #$F1
-        bne     copy_loop
-
-        clc
-        lda     raw_ptr1
-        adc     #<(WIDTH/4)
-        sta     raw_ptr1
-        lda     raw_ptr1+1
-        adc     #>(WIDTH/4)
-        sta     raw_ptr1+1
-
-        dex
-        bne     start_copy_loop
-
-        ;  Finish Y loop */
-        dec     tmp1
-        bne     y_loop
-
         clc
         lda     _row_idx
-        adc     #<(WIDTH<<2)
+        adc     #<(WIDTH*2)
         sta     _row_idx
         lda     _row_idx+1
-        adc     #>(WIDTH<<2)
+        adc     #>(WIDTH*2)
         sta     _row_idx+1
 
         lda     _row_idx_plus2
-        adc     #<(WIDTH<<2)
+        adc     #<(WIDTH*2)
         sta     _row_idx_plus2
         lda     _row_idx_plus2+1
-        adc     #>(WIDTH<<2)
+        adc     #>(WIDTH*2)
         sta     _row_idx_plus2+1
 
         rts
@@ -378,7 +323,7 @@ end_copy_loop:
 repeat_loop:
         lda     #1
         sta     tree
-        lda     #<(WIDTH/4)
+        lda     #<(WIDTH/2)
         sta     col
 
 col_loop2:
@@ -646,17 +591,17 @@ r_loop:
         ror
 
         ;  Update buf1/2[WIDTH/2] = factor<<7 */
-        stx     _buf_1+(WIDTH/2)+512
-        stx     _buf_2+(WIDTH/2)+512
-        sta     _buf_1+(WIDTH/2)
-        sta     _buf_2+(WIDTH/2)
+        stx     _buf_1+(WIDTH)+512
+        stx     _buf_2+(WIDTH)+512
+        sta     _buf_1+(WIDTH)
+        sta     _buf_2+(WIDTH)
 
         lda     #1
         sta     tree
 
-        lda     #<(WIDTH/2)
+        lda     #<(WIDTH)
         sta     col
-        ldx     #>(WIDTH/2)
+        ldx     #>(WIDTH)
         stx     colh
         lda     #>(_buf_0+512+256)
         sta     cb0h_off0a+2
@@ -1357,9 +1302,6 @@ store_plus_2:
         sta     store_val+2
 
 store_set:
-        lda     #2
-        sta     _y
-
         ldy     #<(_buf_1)
         sty     cur_buf_0l
         sty     cur_buf_0h
@@ -1369,16 +1311,12 @@ store_set:
         adc     #>(DATABUF_SIZE/2)
         sta     cur_buf_0h+1
 
-loop5:
-        lda     #4
+        lda     #2
         sta     _x
 x_loop_outer:
         ldy     #0
 x_loop:
         sty     tmp1
-        tya
-        lsr     a
-        tay
         lda     (cur_buf_0h),y
         ldy     _factor
         cpy     #48
@@ -1403,51 +1341,31 @@ store_val:
         sta     $FFFF,y
 
         iny
-        iny
-        cpy     #<(WIDTH/4)
+        cpy     #<(WIDTH/2)
         bne     x_loop
 
         clc
         lda     cur_buf_0l
-        adc     #<(WIDTH/8)
+        adc     #<(WIDTH/2)
         sta     cur_buf_0l
         sta     cur_buf_0h
         lda     cur_buf_0l+1
-        adc     #>(WIDTH/8)
+        adc     #>(WIDTH/2)
         sta     cur_buf_0l+1
         adc     #>(DATABUF_SIZE/2)
         sta     cur_buf_0h+1
 
         clc
         lda     store_val+1
-        adc     #<(WIDTH/4)
+        adc     #<(WIDTH/2)
         sta     store_val+1
         lda     store_val+2
-        adc     #>(WIDTH/4)
+        adc     #>(WIDTH/2)
         sta     store_val+2
 
         dec     _x
         bne     x_loop_outer
 
-        dec     _y
-        beq     loop5_done
-
-        inc     store_val+1
-        bne     :+
-        inc     store_val+2
-
-:       ldy     #<(_buf_2)
-        sty     cur_buf_0l
-        sty     cur_buf_0h
-        lda     #>(_buf_2)
-        sta     cur_buf_0l+1
-        clc
-        adc     #>(DATABUF_SIZE/2)
-        sta     cur_buf_0h+1
-
-        jmp     loop5
-
-loop5_done:
         clc
         ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
         lda     #<(_buf_0+1)
