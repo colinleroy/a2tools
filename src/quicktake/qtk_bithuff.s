@@ -16,7 +16,8 @@
         .export         _getbits6, _getctrlhuff, _getdatahuff, _getdatahuff8
         .export         _cache
         .export         _init_floppy_starter
-        .export         _buf_0, _buf_1, _buf_2, _huff_ctrl, _huff_data
+        .export         _buf_0, _buf_1, _buf_2
+        .export         _raw_image, _huff_ctrl, _huff_data
         .export         _shiftl4n_l, _shiftl4n_h
         .export         _shiftl4p_l, _shiftl4p_h
         .export         _div48_l, _div48_h
@@ -58,7 +59,7 @@ _huff_data:   .res        (9*256)
 _div48_l:     .res        256
 _div48_h:     .res        256
 .assert <* = 0, error
-
+_raw_image:   .res        (20*320)
 
 _bitbuf     = _zp8
 readn       = _zp9

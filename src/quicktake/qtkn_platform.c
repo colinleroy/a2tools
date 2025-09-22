@@ -1,5 +1,6 @@
 #include "qtkn_platform.h"
 #include "qtk_bithuff.h"
+#include "qt-conv.h"
 
 uint8 *raw_ptr1;
 extern uint8 *row_idx, *row_idx_plus2;
@@ -9,9 +10,9 @@ extern uint8 factor;
 extern uint8 buf_0[DATABUF_SIZE];
 extern uint8 buf_1[DATABUF_SIZE];
 extern uint8 buf_2[DATABUF_SIZE];
-
 extern uint8 div48_l[256];
 extern uint8 div48_h[256];
+uint8 raw_image[RAW_IMAGE_SIZE];
 
 uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
 uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
@@ -195,7 +196,8 @@ void init_row(void) {
 
 extern uint8 row;
 void decode_row(void) {
-  uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8, x;
+  uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8;
+  uint16 x;
   int8 tk;
   uint16 tk1, tk2, tk3, tk4;
   uint16 col;
@@ -350,28 +352,24 @@ void decode_row(void) {
     #error
     #endif
   
-      /* Loop this on Y on 65c02 */
-      for (i = 2; i; i--) {
-        uint16 val;
-        for (x= 0; x < WIDTH/2; x++) {
-          if (cur_buf_1h[x] & 0x80) {
-            val = 0;
-          } else {
-            if (factor == 48) {
-              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
-              val = div48_l[val>>8]|(div48_h[val>>8]<<8);
-            } else {
-              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
-            }
-            if (val > 255)
-              val = 255;
-          }
-          *(raw_ptr1+(x)) = val;
+    x = WIDTH-1;
+    do {
+      uint16 val;
+      if (cur_buf_1h[x] & 0x80) {
+        val = 0;
+      } else {
+        if (factor == 48) {
+          val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
+          val = div48_l[val>>8]|(div48_h[val>>8]<<8);
+        } else {
+          val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
         }
-        cur_buf_1l+=WIDTH/2;
-        cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-        raw_ptr1 += WIDTH/2;
+        if (val > 255)
+          val = 255;
       }
+      *(raw_ptr1+(x)) = val;
+    } while (x--);
+
     memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
     memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
   }

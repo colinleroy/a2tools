@@ -44,7 +44,6 @@ raw_ptr1    = _zp2
 wordcnt     = _zp2
 srcbuf      = _zp2
 _x          = _zp2
-_y          = _zp3
 
 cur_buf_0l  = _zp4
 cur_buf_0h  = _zp6
@@ -1292,31 +1291,34 @@ col_loop1_done:
 
         lda     _row_idx
         sta     store_val+1
-        lda     _row_idx+1
-        sta     store_val+2
+        ldx     _row_idx+1
+        inx
+        stx     store_val+2
         jmp     store_set
 store_plus_2:
         lda     _row_idx_plus2
         sta     store_val+1
-        lda     _row_idx_plus2+1
-        sta     store_val+2
+        ldx     _row_idx_plus2+1
+        inx
+        stx     store_val+2
 
 store_set:
-        ldy     #<(_buf_1)
+        ldy     #<(_buf_1+256)
         sty     cur_buf_0l
         sty     cur_buf_0h
-        lda     #>(_buf_1)
+        lda     #>(_buf_1+256)
         sta     cur_buf_0l+1
         clc
         adc     #>(DATABUF_SIZE/2)
         sta     cur_buf_0h+1
 
-        lda     #2
-        sta     _x
-x_loop_outer:
-        ldy     #0
+        ldy     #<(WIDTH-1)
+        sty     _x
+        lda     #>(WIDTH-1)
+        sta     _x+1
+
 x_loop:
-        sty     tmp1
+        sty     _x
         lda     (cur_buf_0h),y
         ldy     _factor
         cpy     #48
@@ -1330,7 +1332,7 @@ slowdiv:
         lda     (cur_buf_0l),y
         jsr     approx_div16x8_direct
 check_clamp:
-        ldy     tmp1
+        ldy     _x
         cpx     #0
         beq     store_val
         lda     #$FF
@@ -1340,32 +1342,17 @@ check_clamp:
 store_val:
         sta     $FFFF,y
 
-        iny
-        cpy     #<(WIDTH/2)
-        bne     x_loop
+        cpy     #0
+        bne     :+
+        dec     cur_buf_0l+1
+        dec     cur_buf_0h+1
+        dec     store_val+2
+        dec     _x+1
+        bmi     stores_done
+:       dey
+        jmp     x_loop
 
-        clc
-        lda     cur_buf_0l
-        adc     #<(WIDTH/2)
-        sta     cur_buf_0l
-        sta     cur_buf_0h
-        lda     cur_buf_0l+1
-        adc     #>(WIDTH/2)
-        sta     cur_buf_0l+1
-        adc     #>(DATABUF_SIZE/2)
-        sta     cur_buf_0h+1
-
-        clc
-        lda     store_val+1
-        adc     #<(WIDTH/2)
-        sta     store_val+1
-        lda     store_val+2
-        adc     #>(WIDTH/2)
-        sta     store_val+2
-
-        dec     _x
-        bne     x_loop_outer
-
+stores_done:
         clc
         ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
         lda     #<(_buf_0+1)
