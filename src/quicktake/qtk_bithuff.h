@@ -20,6 +20,8 @@ extern uint8 shiftl4n_h[128];
 extern uint8 shiftl3[32];
 extern uint8 div48_l[256];
 extern uint8 div48_h[256];
+extern uint8 dyndiv_l[256];
+extern uint8 dyndiv_h[256];
 
 void __fastcall__ reset_bitbuff (void);
 uint8 __fastcall__ get_four_bits (void);

@@ -23,9 +23,10 @@
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1
         .import       _div48_l, _div48_h
+        .import       _dyndiv_l, _dyndiv_h
         .import       _shiftl4_l, _shiftl4_h
 
-        .import       mult16x16r24_direct, mult8x8r16_direct
+        .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
         .import       _memset, _memcpy, aslax4
 .ifdef APPROX_DIVISION
@@ -113,8 +114,15 @@ rept        = _zp13
         sta     _div48_l,y
         txa
         sta     _div48_h,y
+        bne     overflows
         inc     wordcnt
         bne     :-
+        rts
+
+overflows:                        ; Fill the rest
+        sta     _dyndiv_h,y
+        iny
+        bne     overflows
 .endif
         rts
 .endproc
@@ -345,17 +353,16 @@ col_gt1:
         stx     _huff_numd_h
 
         jsr     _getdatahuff
-        clc
-        adc     #1
+        inx
 
 check_nreps_2:
-        sta     nreps
+        stx     nreps
 
-        cmp     #9
+        cpx     #9
         bcc     nreps_check_done_2
-        lda     #8
+        ldx     #8
 nreps_check_done_2:
-        sta     rep_loop
+        stx     rep_loop
 
         ;data tree 1
         ldx     #>(_huff_data+256)
@@ -404,82 +411,120 @@ c_loop_done:
 .segment "CODE"
 
 .proc _copy_data
-        ldx     repeats
-        ;  logic inverted from C because here we dec R */
-        beq     store_plus_2
-
         lda     _row_idx
-        sta     store_val+1
         ldx     _row_idx+1
-        inx
-        stx     store_val+2
-        jmp     store_set
+        ldy     _factor
+        sty     div_factor+1
+        ldy     repeats
+        ;  logic inverted from C because here we dec R */
+        bne     store_set
 store_plus_2:
         lda     _row_idx_plus2
-        sta     store_val+1
         ldx     _row_idx_plus2+1
-        inx
-        stx     store_val+2
 
 store_set:
-        ldy     #<(_buf_1+256)
-        sty     cur_buf_0l
-        sty     cur_buf_0h
-        lda     #>(_buf_1+256)
-        sta     cur_buf_0l+1
-        clc
-        adc     #>(DATABUF_SIZE/2)
-        sta     cur_buf_0h+1
+        sta     store_val+1
+        inx                       ; Start at page 2
+        stx     store_val+2
 
-        ldy     #<(WIDTH-1)
+.ifndef APPROX_DIVISION
+        lda     #>(_buf_1+256)    ; Start at page 2
+        sta     cb0l_c+2
+.endif
+        lda     #>(_buf_1+256+512)
+        sta     cb0h_c+2
+
+        ldy     #<(WIDTH)
         sty     _x
-        lda     #>(WIDTH-1)
+        lda     #>(WIDTH)
         sta     _x+1
 
 x_loop:
+        dey
         sty     _x
-        lda     (cur_buf_0h),y
 .ifdef APPROX_DIVISION
-        ldy     _factor
-        cpy     #48
-        bne     slowdiv
-        tay
-        ldx     _div48_h,y
-        lda     _div48_l,y
-        jmp     check_clamp
-slowdiv:
-        tax
-        lda     (cur_buf_0l),y
-        jsr     approx_div16x8_direct
-.else
-        tax
-        lda     (cur_buf_0l),y
-        jsr     pushax
-        lda     _factor
-        jsr     tosdiva0
-.endif
-check_clamp:
-        ldy     _x
-        cpx     #0
-        beq     store_val
+cb0h_c: ldx     $FF00,y
+div_factor:
+        ldy     #$FF
+divtable_l:
+        lda     _div48_l,x    ; Preload even if we'll clamp, which is rare
+divtable_h:
+        ldy     _div48_h,x
+        beq     reload_x_and_store
+clamp:
         lda     #$FF
-        cpx     #$80
-        adc     #$0
 
+.else
+cb0h_c: ldx     $FF00,y
+cb0l_c: lda     $FF00,y
+        jsr     pushax
+div_factor:
+        lda     #$FF
+        jsr     tosdiva0
+check_clamp:
+        cpx     #0
+        beq     reload_x_and_store
+clamp:
+        lda     #$FF
+        cpx     #$80          ; X < 0 ==> 0, X > 0 ==> 255
+        adc     #$0
+.endif
+
+reload_x_and_store:
+        ldy     _x
 store_val:
         sta     $FFFF,y
 
-        cpy     #0
-        bne     :+
-        dec     cur_buf_0l+1
-        dec     cur_buf_0h+1
+        ; cpy     #0
+        bne     x_loop
+.ifndef APPROX_DIVISION
+        dec     cb0l_c+2
+.endif
+        dec     cb0h_c+2
         dec     store_val+2
         dec     _x+1
-        bmi     stores_done
-:       dey
-        jmp     x_loop
+        bpl     x_loop
 
 stores_done:
+        rts
+.endproc
+
+.proc _init_dyndiv
+.ifdef APPROX_DIVISION
+        sta     abck
+        stx     xbck
+        sty     ybck
+        sta     fact+1
+
+        lda     #0
+        sta     wordcnt
+
+:       ldx     wordcnt
+        lda     #$80
+fact:   ldy     #$FF
+        jsr     approx_div16x8_direct
+        ldy     wordcnt
+        sta     _dyndiv_l,y
+        txa
+        sta     _dyndiv_h,y
+        bne     overflows         ; Stop if result > 256
+        inc     wordcnt
+        bne     :-
+        jmp     done
+
+overflows:                        ; Fill the rest, overflowed
+        sta     _dyndiv_h,y
+        iny
+        bne     overflows
+
+done:
+abck = *+1
+        lda     #$FF
+xbck = *+1
+        ldx     #$FF
+ybck = *+1
+        ldy     #$FF
+.endif
         rts
 .endproc
 
@@ -493,6 +538,12 @@ stores_done:
         sta     cur_buf_0h
         stx     cur_buf_0h+1
 
+.ifdef APPROX_DIVISION
+        ldx     #>_div48_h
+        stx     _copy_data::divtable_h+2
+        ldx     #>_div48_l
+        stx     _copy_data::divtable_l+2
+.endif
         ldy     _last               ; is last 8bits?
         cpy     #18
         bcs     small_val
@@ -500,15 +551,43 @@ stores_done:
         lda     _val_from_last,y    ; no, 16x8 mult
         ldx     _val_hi_from_last,y
         jsr     pushax
-        lda     _factor
+        lda     _factor             ; 
         sta     _last
+.ifdef APPROX_DIVISION
+        cmp     #48
+        beq     :+
+        ldx     #>_dyndiv_h         ; Set table to dyn
+        stx     _copy_data::divtable_h+2
+        ldx     #>_dyndiv_l
+        stx     _copy_data::divtable_l+2
+        cmp     last_dyndiv
+        beq     :+
+        sta     last_dyndiv
+        jsr     _init_dyndiv        ; Init current factor division table
+:
+ .endif
         jsr     tosmula0
         jmp     check_multiplier
 
-small_val:
-        lda     _val_from_last,y    ; yes, 8x8 mult
+small_val:                          ; Last is 8bit, do a small mult
         ldx     _factor
         stx     _last
+        cpx     _last
+.ifdef APPROX_DIVISION
+        cpx     #48
+        beq     :+
+        lda     #>_dyndiv_h
+        sta     _copy_data::divtable_h+2
+        lda     #>_dyndiv_l
+        sta     _copy_data::divtable_l+2
+        cpx     last_dyndiv
+        beq     :+
+        txa
+        sta     last_dyndiv
+        jsr     _init_dyndiv
+:
+.endif
+        lda     _val_from_last,y    ; yes, 8x8 mult
         jsr     mult8x8r16_direct
 
 check_multiplier:
@@ -580,14 +659,12 @@ setup_curbuf_x_slow:
         tax
         lda     (cur_buf_0l),y
         ; multiply
-        jsr     mult16x16r24_direct
+        jsr     mult16x16mid16_direct
         ldy     wordcnt
 
-        ; Shift >> 8
-        txa
 store_buf:
         sta     (cur_buf_0l),y
-        lda     sreg
+        txa
         sta     (cur_buf_0h),y
 
         cpy     #0
@@ -607,6 +684,10 @@ r_loop:
         ;  for (r=0; r != 2; r++) {
         ;  factor<<7, aslax7 inlined */
         lda     _factor
+        sta     mult_factor1+1
+        sta     mult_factor2+1
+        sta     mult_factor3+1
+        sta     mult_factor4+1
         lsr     a
         tax
         lda     #0
@@ -756,6 +837,7 @@ col_loop1:
 dechigh:
         jsr     dec_buf_pages
         jmp     declow
+
 tree_not_zero:
         sec
         lda     col
@@ -763,14 +845,15 @@ tree_not_zero:
 declow:
         sbc     #2
         sta     col
-
+        tay
         lda     tree
         cmp     #8
         bne     tree_not_eight
 
         ;  tree == 8
         jsr     _getdatahuff8
-        ldx     _factor
+mult_factor1:
+        ldx     #$FF
         jsr     mult8x8r16_direct
         ldy     col
 cb1l_off1a: 
@@ -780,7 +863,8 @@ cb1h_off1a:
         sta     $FF01,y
 
         jsr     _getdatahuff8
-        ldx     _factor
+mult_factor2:
+        ldx     #$FF
         jsr     mult8x8r16_direct
         ldy     col
 cb1l_off0a: 
@@ -790,7 +874,8 @@ cb1h_off0a:
         sta     $FF00,y
 
         jsr     _getdatahuff8
-        ldx     _factor
+mult_factor3:
+        ldx     #$FF
         jsr     mult8x8r16_direct
         ldy     col
 cb2l_off1a:
@@ -800,7 +885,8 @@ cb2h_off1a:
         sta     $FF02,y
 
         jsr     _getdatahuff8
-        ldx     _factor
+mult_factor4:
+        ldx     #$FF
         jsr     mult8x8r16_direct
         ldy     col
 cb2l_off0a:
@@ -823,38 +909,7 @@ tree_not_eight:
         sta     _huff_numd
         sta     _huff_numd_h
 
-        ;  Get the four tk vals in advance
-        ; a
-        jsr     _getdatahuff
-        tax
-        lda     _shiftl4_l,x
-        sta     tk1_l+1
-        lda     _shiftl4_h,x
-        sta     tk1_h+1
-
-        jsr     _getdatahuff
-        tax
-        lda     _shiftl4_l,x
-        sta     tk2_l+1
-        lda     _shiftl4_h,x
-        sta     tk2_h+1
-
-        jsr     _getdatahuff
-        tax
-        lda     _shiftl4_l,x
-        sta     tk3_l+1
-        lda     _shiftl4_h,x
-        sta     tk3_h+1
-
-        jsr     _getdatahuff
-        tax
-        lda     _shiftl4_l,x
-        sta     tk4_l+1
-        lda     _shiftl4_h,x
-        sta     tk4_h+1
-
         clc
-        ldy     col
 cb0l_off2a:
         lda     $FF02,y
 cb1l_off2a:
@@ -879,15 +934,21 @@ cb0h_off1a:
         adc     $FF01,y
         cmp     #$80
         ror     a
-        sta     tmp1
+        sta     tk1_h+1
         txa
         ror     a
+        sta     tk1_l+1
+        
+        jsr     _getdatahuff
+        ldy     col
+        lda     _shiftl4_l,x
 
         clc
 tk1_l:  adc     #$FF
 cb1l_off1b:
         sta     $FF01,y
-        lda     tmp1
+
+        lda     _shiftl4_h,x
 tk1_h:  adc     #$FF
 cb1h_off1b:
         sta     $FF01,y
@@ -918,17 +979,21 @@ cb0h_off0a:
         adc     $FF00,y
         cmp     #$80
         ror     a
-        sta     tmp1
+        sta     tk2_h+1
         txa
         ror     a
+        sta     tk2_l+1
+        
+        jsr     _getdatahuff
+        ldy     col
+        lda     _shiftl4_l,x
 
-        ;  Store to cur_buf_x */
         clc
 tk2_l:  adc     #$FF
 cb1l_off0b:
         sta     $FF00,y
 
-        lda     tmp1
+        lda     _shiftl4_h,x
 tk2_h:  adc     #$FF
 cb1h_off0b:
         sta     $FF00,y
@@ -959,16 +1024,21 @@ cb1h_off1d:
         adc     $FF01,y
         cmp     #$80
         ror     a
-        sta     tmp1
+        sta     tk3_h+1
         txa
         ror     a
+        sta     tk3_l+1
+        
+        jsr     _getdatahuff
+        ldy     col
+        lda     _shiftl4_l,x
 
         clc
 tk3_l:  adc     #$FF
 cb2l_off1b:
         sta     $FF02,y
 
-        lda     tmp1
+        lda     _shiftl4_h,x
 tk3_h:  adc     #$FF
 cb2h_off1b:
         sta     $FF02,y
@@ -999,16 +1069,21 @@ cb1h_off0c:
         adc     $FF00,y
         cmp     #$80
         ror     a
-        sta     tmp1
+        sta     tk4_h+1
         txa
         ror     a
+        sta     tk4_l+1
+        
+        jsr     _getdatahuff
+        ldy     col
+        lda     _shiftl4_l,x
 
         clc
 tk4_l:  adc     #$FF
 cb2l_off0b:
         sta     $FF01,y
 
-        lda     tmp1
+        lda     _shiftl4_h,x
 tk4_h:  adc     #$FF
 cb2h_off0b:
         sta     $FF01,y
@@ -1037,16 +1112,15 @@ col_gt1a:
         stx     _huff_numd_h
 
         jsr     _getdatahuff
-        clc
-        adc     #1
+        inx
 check_nreps:
-        sta     nreps
+        stx     nreps
 
-        cmp     #9
+        cpx     #9
         bcc     nreps_check_done
-        lda     #8
+        ldx     #8
 nreps_check_done:
-        sta     rep_loop
+        stx     rep_loop
 
         ldy     #$00
         sty     rept
@@ -1202,7 +1276,6 @@ cb2l_off0c:
 
         ;  tk = getbithuff(8) << 4;
         jsr     _getdatahuff
-        tax
         lda     _shiftl4_h,x
         sta     tmp2
         lda     _shiftl4_l,x
@@ -1408,3 +1481,4 @@ val:            .res 2
 src_idx:        .res 2
 incr:           .res 1
 code:           .res 1
+last_dyndiv:    .res 1

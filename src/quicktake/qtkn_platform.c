@@ -7,10 +7,6 @@ extern uint8 *row_idx, *row_idx_plus2;
 extern uint8 last;
 extern uint16 val;
 extern uint8 factor;
-extern uint8 buf_0[DATABUF_SIZE];
-extern uint8 buf_1[DATABUF_SIZE];
-extern uint8 div48_l[256];
-extern uint8 div48_h[256];
 uint8 raw_image[RAW_IMAGE_SIZE];
 
 uint8 *cur_buf_0l, *cur_buf_1l;
@@ -51,6 +47,16 @@ void init_div48(void) {
     div48_l[r] = approx & 0xFF;
     div48_h[r] = approx >> 8;
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
+  } while (++r);
+}
+
+void init_dyndiv(uint8 factor) {
+  uint8 r = 0;
+
+  do {
+    uint16 approx = ((r<<8)|0x80)/factor;
+    dyndiv_l[r] = approx & 0xFF;
+    dyndiv_h[r] = approx >> 8;
   } while (++r);
 }
 
@@ -127,11 +133,11 @@ void copy_data(uint8 r) {
   x = WIDTH-1;
   do {
     uint16 val;
+    val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
     if (factor == 48) {
-      val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
       val = div48_l[val>>8]|(div48_h[val>>8]<<8);
     } else {
-      val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x) / factor;
+      val = dyndiv_l[val>>8]|(dyndiv_h[val>>8]<<8);
     }
     if (val > 255)
       val = 255;
@@ -189,6 +195,7 @@ void consume_extra(void) {
   }
 }
 
+uint8 lastdyn = 0;
 void init_row(void) {
   uint16 i;
   uint32 tmp32;
@@ -198,10 +205,19 @@ void init_row(void) {
     val = (val_from_last[last] * factor) >> 4;
   else
     val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * factor) >> 4;
+  if (factor != 48) {
+    if (lastdyn != factor) {
+      printf("reinit dyndiv %d\n", factor);
+      init_dyndiv(factor);
+      lastdyn = factor;
+    } else {
+      printf("reuse dyndiv\n");
+    }
+  }
   last = factor;
   cur_buf_0l = buf_0;
   cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-  printf("mult %04X\n", val);
+
   if (val == 0x100) {
     /* do nothing */
   } else if (val == 0xFF) {
@@ -229,7 +245,6 @@ void decode_row(void) {
 
   for (r=0; r != 2; r++) {
     SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
-    printf("init buf_0[%d]\n", WIDTH+1);
     SET_CURBUF_VAL(buf_0, buf_0+(DATABUF_SIZE/2), (WIDTH+1), (factor<<7));
 
     col = WIDTH;

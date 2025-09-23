@@ -22,6 +22,7 @@
         .export         _raw_image, _huff_ctrl, _huff_data
         .export         _shiftl4_l, _shiftl4_h
         .export         _div48_l, _div48_h
+        .export         _dyndiv_l, _dyndiv_h
         .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
@@ -52,6 +53,8 @@ _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (9*256)
 _div48_l:     .res        256
 _div48_h:     .res        256
+_dyndiv_l:     .res        256
+_dyndiv_h:     .res        256
 .assert <* = 0, error
 _raw_image:   .res        (20*320)
 
@@ -86,75 +89,93 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+; Returns value in A
 _getbits6:
         lda    #0
         ldy    #6
-:       dec    _vbits
+        ldx     _vbits
+:       dex
         bpl    :+
         jsr    refill
 :       asl    _bitbuf
         rol    a
         dey
         bne    :--
+        stx     _vbits
         rts
 
-
+ctrl_refill:
+        jsr     refill
+        jmp     ctrl_cont
+; Returns value in A
 _getctrlhuff:
         lda    #0             ; r = 0
         tay                   ; n = 0
+        ldx     _vbits
 
 :       iny                   ; Read until valid code
-        dec    _vbits
-        bpl    :+
-        jsr    refill
-:       asl    _bitbuf
-        rol    a
-        sta    bitscheckc+1    ; Patch bitcheck address
+        dex
+        bmi     ctrl_refill
+ctrl_cont:
+        asl     _bitbuf
+        rol     a
+        sta     bitscheckc+1    ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
 
 bitscheckc:
 _huff_numc = *+2             ; Get num bits
         cpy     _huff_ctrl
-        bne    :--
+        bne     :-
+        stx     _vbits
 
         tax
 _huff_numc_h = *+2
         lda     _huff_ctrl+256,x
         rts
 
-
+data_refill:
+        jsr     refill
+        jmp     data_cont
+; Returns value in X
 _getdatahuff:
-        lda     #0             ; r = 0
+        lda     #0            ; r = 0
         tay                   ; n = 0
 
+        ldx     _vbits
 :       iny                   ; Read until valid code
-        dec     _vbits
-        bpl     :+
-        jsr     refill
-:       asl     _bitbuf
+        dex
+        bmi     data_refill
+data_cont:
+        asl     _bitbuf
         rol     a
-        sta     bitscheckd+1    ; Patch bitcheck address
+        sta     bitscheckd+1  ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
 
 bitscheckd:
-_huff_numd = *+2             ; Get num bits
-        cpy     _huff_data
-        bne    :--
+_huff_numd = *+2              ; Is this code valid with this number of bits?
+        cpy     _huff_data    ; (for example, 10 is not the same as 010!)
+        bne    :-
 
-        tax
+        stx    _vbits
+        tay                   ; Valid code, get value
 _huff_numd_h = *+2
-        lda     _huff_data+128,x
+        ldx     _huff_data+128,y
         rts
 
+discarddata_refill:
+        jsr     refill
+        jmp     discarddata_cont
+; Returns nothing
 _discarddatahuff:
         lda     #0             ; r = 0
         tay                   ; n = 0
 
+        ldx     _vbits
 :       iny                   ; Read until valid code
-        dec     _vbits
-        bpl     :+
-        jsr     refill
-:       asl     _bitbuf
+        dex
+        bmi     discarddata_refill
+discarddata_cont:
+        asl     _bitbuf
         rol     a
         sta     bitscheckdd+1    ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
@@ -162,13 +183,17 @@ _discarddatahuff:
 bitscheckdd:
 _huff_numdd = *+2             ; Get num bits
         cpy     _huff_data
-        bne    :--
+        bne    :-
+
+        stx     _vbits
         rts
 
+; Returns value in A
 _getdatahuff8:
         lda     #0             ; Read and consume 5 bits
         ldy     #5
-:       dec     _vbits
+        ldx     _vbits
+:       dex
         bpl     :+
         jsr     refill
 :       asl     _bitbuf
@@ -176,20 +201,24 @@ _getdatahuff8:
         dey
         bne     :--
 
+        stx     _vbits
         asl
         asl
         asl
         ora     #$04
         rts
 
+; Returns nothing
 _discarddatahuff8:
         ldy     #5
-:       dec     _vbits
+        ldx     _vbits
+:       dex
         bpl     :+
         jsr     refill
 :       asl     _bitbuf
         dey
         bne     :--
+        stx     _vbits
         rts
 
 ; Must never destroy A or Y
@@ -203,7 +232,7 @@ cache_read = *+1
 
         inc     cache_read        ; 17
         beq     inc_cache_high    ; 19  20
-        rts                       
+        rts
 
 inc_cache_high:
         inc     cache_read+1      ;     25
@@ -214,6 +243,7 @@ inc_cache_high:
         ; drive restarts
         cpx     #(>CACHE_END)-4   ;     29
         bcs     start_floppy_motor;     31  32
+        ldx     #7                ; Reload vbits
         rts
 
 start_floppy_motor:
@@ -221,6 +251,7 @@ start_floppy_motor:
 
         cpx     #(>CACHE_END)
         beq     do_read
+        ldx     #7                ; Reload vbits
         rts
 do_read:
         sty     ybck
@@ -255,4 +286,5 @@ ybck = *+1
         ldy     #$FF
 abck = *+1
         lda     #$FF
+        ldx     #7                ; Reload vbits
         rts

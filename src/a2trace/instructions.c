@@ -736,8 +736,10 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
   /* Log */
   if (verbose) {
     tabulate_stack();
-    fprintf(stderr, "depth %d, %s returning (%s, asm line %d)\n", tree_depth,
-            symbol_get_name(my_info->func_symbol), from, line_num);
+    fprintf(stderr, "depth %d, %s returning after %zu cycles, (%s, asm line %d)\n", tree_depth,
+            symbol_get_name(my_info->func_symbol),
+            tree_functions[tree_depth]->cur_call_self_cycle_count,
+            from, line_num);
   }
 
   /* We done ? */

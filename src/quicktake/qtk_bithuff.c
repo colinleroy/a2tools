@@ -20,6 +20,8 @@ uint8 shiftl4n_l[128];
 uint8 shiftl4n_h[128];
 uint8 div48_l[256];
 uint8 div48_h[256];
+uint8 dyndiv_l[256];
+uint8 dyndiv_h[256];
 
 uint8 cache[CACHE_SIZE];
 uint8 bitbuf=0;
