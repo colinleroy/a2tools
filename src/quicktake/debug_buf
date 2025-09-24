@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ "$1" = "" ]; then
+  accesses=$(grep "^A=.*cb" out|cut -f2 -d' '|sort|uniq)
+else
+  accesses=$1
+fi
+
+for i in $accesses; do
+  grep "\($i\|init row\)" out |sed "s/ 0$//" > pc
+  grep "adr..$i.*sta" t.tr|\
+    sed "s/^\([0-9]\)*; //"|sed "s/ X.*adr://"|\
+    sed "s/   .*sta buf..../ /"|sed "s/    .*//" > 65
+  diff -u pc 65 > diff$i
+done

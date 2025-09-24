@@ -453,13 +453,25 @@ store_set:
         sta     _x+1
 
 x_loop:
-        dey
-        sty     _x
 .ifdef APPROX_DIVISION
+        dey
 cb0h_c: ldx     $FF00,y
 divtable_l:
         lda     _div48_l,x    ; Preload even if we'll clamp, which is rare
+
+store_val:
+        sta     $FFFF,y
+
+        cpy     #0
+        bne     x_loop
+        dec     cb0h_c+2
+        dec     store_val+2
+        dec     _x+1
+        bpl     x_loop
+
 .else
+
+        sty     _x
 cb0h_c: ldx     $FF00,y
 cb0l_c: lda     $FF00,y
         jsr     pushax
@@ -473,22 +485,19 @@ clamp:
         lda     #$FF
         cpx     #$80          ; X < 0 ==> 0, X > 0 ==> 255
         adc     #$0
-.endif
-
 reload_x_and_store:
         ldy     _x
 store_val:
         sta     $FFFF,y
 
-        ; cpy     #0
         bne     x_loop
-.ifndef APPROX_DIVISION
         dec     cb0l_c+2
-.endif
         dec     cb0h_c+2
         dec     store_val+2
         dec     _x+1
         bpl     x_loop
+
+.endif
 
 stores_done:
         rts
