@@ -108,6 +108,9 @@ rept        = _zp13
 
 :       ldx     wordcnt
         lda     #$80
+        ; jsr     pushax
+        ; lda     #48
+        ; jsr     tosdiva0
         ldy     #48
         jsr     approx_div16x8_direct
         ldy     wordcnt
@@ -421,8 +424,10 @@ c_loop_done:
 .proc _copy_data
         lda     _row_idx
         ldx     _row_idx+1
+.ifndef APPROX_DIVISION
         ldy     _factor
         sty     div_factor+1
+.endif
         ldy     repeats
         ;  logic inverted from C because here we dec R */
         bne     store_set
@@ -452,8 +457,6 @@ x_loop:
         sty     _x
 .ifdef APPROX_DIVISION
 cb0h_c: ldx     $FF00,y
-div_factor:
-        ldy     #$FF
 divtable_l:
         lda     _div48_l,x    ; Preload even if we'll clamp, which is rare
 .else
@@ -503,6 +506,9 @@ stores_done:
 
 :       ldx     wordcnt
         lda     #$80
+;         jsr     pushax
+; fact:   lda     #$FF
+;         jsr     tosdiva0
 fact:   ldy     #$FF
         jsr     approx_div16x8_direct
         ldy     wordcnt
@@ -601,8 +607,8 @@ check_multiplier:
         bcc     check_0x100
 
 mult_0xFF:
-        ldy     #<(USEFUL_DATABUF_SIZE-1)
-        lda     #>(USEFUL_DATABUF_SIZE-1)
+        ldy     #<(USEFUL_DATABUF_SIZE)
+        lda     #>(USEFUL_DATABUF_SIZE)
         sta     wordcnt+1
 
 setup_curbuf_x_ff:
@@ -619,9 +625,10 @@ setup_curbuf_x_ff:
         bcs     :+
         dex
 
+set0lf:
 :       sta     (cur_buf_0l),y
         txa
-        sta     (cur_buf_0h),y
+set0hf: sta     (cur_buf_0h),y
 
         cpy     #0
         bne     setup_curbuf_x_ff
@@ -662,14 +669,43 @@ setup_curbuf_x_slow:
         lda     (cur_buf_0h),y
         tax
         lda     (cur_buf_0l),y
+
+        cpx     #$80
+        bcc     posmult
+        ; reverse sign, less expensive than extending
+        ; and doing a 16x24 mult
+        clc
+        eor     #$FF
+        adc     #1
+        pha
+        txa
+        eor     #$FF
+        adc     #0
+        tax
+        pla
         ; multiply
         jsr     mult16x16mid16_direct
-        ldy     wordcnt
+        clc
+        adc     #1
+        clc
+        eor     #$FF
+        adc     #1
+        pha
+        txa
+        eor     #$FF
+        adc     #0
+        tax
+        pla
+        jmp     set0
+posmult:
+        jsr     mult16x16mid16_direct
 
-store_buf:
+set0:
+        ldy     wordcnt
+set0ls:
         sta     (cur_buf_0l),y
         txa
-        sta     (cur_buf_0h),y
+set0hs: sta     (cur_buf_0h),y
 
         cpy     #0
         bne     setup_curbuf_x_slow
@@ -923,8 +959,7 @@ cb0h_off2a:
         lda     $FF02,y
 cb1h_off2a:
         adc     $FF02,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -936,8 +971,7 @@ cb0l_off1a:
         lda     tmp1
 cb0h_off1a:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tk1_h+1
         txa
         ror     a
@@ -968,8 +1002,7 @@ cb0h_off1b:
         lda     $FF01,y
 cb1h_off1c:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -981,8 +1014,7 @@ cb0l_off0a:
         lda     tmp1
 cb0h_off0a:
         adc     $FF00,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tk2_h+1
         txa
         ror     a
@@ -1013,8 +1045,7 @@ cb1h_off2b:
         lda     $FF02,y
 cb2h_off2b:
         adc     $FF03,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1026,8 +1057,7 @@ cb1l_off1d:
         lda     tmp1
 cb1h_off1d:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tk3_h+1
         txa
         ror     a
@@ -1049,17 +1079,16 @@ cb2h_off1b:
 
         ;  Second with col - 1*/
         clc
-cb1l_off1e:
-        lda     $FF01,y
 cb2l_off1c:
-        adc     $FF02,y
+        lda     $FF02,y
+cb1l_off1e:
+        adc     $FF01,y
         tax
-cb1h_off1e:
-        lda     $FF01,y
 cb2h_off1c:
-        adc     $FF02,y
-        cmp     #$80
-        ror     a
+        lda     $FF02,y
+cb1h_off1e:
+        adc     $FF01,y
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1071,8 +1100,7 @@ cb1l_off0c:
         lda     tmp1
 cb1h_off0c:
         adc     $FF00,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tk4_h+1
         txa
         ror     a
@@ -1155,8 +1183,7 @@ cb0h_off2b:
         lda     $FF02,y
 cb1h_off2c:
         adc     $FF02,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1168,8 +1195,7 @@ cb0l_off1c:
         lda     tmp1
 cb0h_off1c:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
 cb1h_off1f:
         sta     $FF01,y
         txa
@@ -1187,8 +1213,7 @@ cb1h_off1g:
         lda     $FF01,y
 cb0h_off1d:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1200,8 +1225,7 @@ cb0l_off0b:
         lda     tmp1
 cb0h_off0b:
         adc     $FF00,y
-        cmp     #$80
-        ror     a
+        lsr     a
 cb1h_off0d:
         sta     $FF00,y
         txa
@@ -1220,8 +1244,7 @@ cb1h_off2d:
         lda     $FF02,y
 cb2h_off2c:
         adc     $FF03,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1233,8 +1256,7 @@ cb1l_off1h:
         lda     tmp1
 cb1h_off1h:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
 cb2h_off1d:
         sta     $FF02,y
         txa
@@ -1252,8 +1274,7 @@ cb2h_off1e:
         lda     $FF02,y
 cb1h_off1i:
         adc     $FF01,y
-        cmp     #$80
-        ror     a
+        lsr     a
         sta     tmp1
         txa
         ror     a
@@ -1265,8 +1286,7 @@ cb1l_off0e:
         lda     tmp1
 cb1h_off0e:
         adc     $FF00,y
-        cmp     #$80
-        ror     a
+        lsr     a
 cb2h_off0c:
         sta     $FF01,y
         txa
@@ -1287,6 +1307,7 @@ cb2l_off0c:
 
         ; e
         clc
+        ldy     col
 cb1l_off0f:
         adc     $FF00,y
 cb1l_off0g:
@@ -1297,6 +1318,7 @@ cb1h_off0f:
 cb1h_off0g:
         sta     $FF00,y
 
+        clc
         txa
 cb1l_off1j:
         adc     $FF01,y
@@ -1308,6 +1330,7 @@ cb1h_off1j:
 cb1h_off1k:
         sta     $FF01,y
 
+        clc
         txa
 cb2l_off0d:
         adc     $FF01,y
@@ -1319,6 +1342,7 @@ cb2h_off0d:
 cb2h_off0e:
         sta     $FF01,y
 
+        clc
         txa
 cb2l_off1f:
         adc     $FF02,y
