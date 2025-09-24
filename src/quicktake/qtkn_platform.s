@@ -22,8 +22,8 @@
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1
-        .import       _div48_l, _div48_h
-        .import       _dyndiv_l, _dyndiv_h
+        .import       _div48_l
+        .import       _dyndiv_l
         .import       _shiftl4_l, _shiftl4_h
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
@@ -113,16 +113,24 @@ rept        = _zp13
         ldy     wordcnt
         sta     _div48_l,y
         txa
-        sta     _div48_h,y
         bne     overflows
         inc     wordcnt
+        bmi     overflows_neg
         bne     :-
         rts
 
 overflows:                        ; Fill the rest
-        sta     _dyndiv_h,y
+        lda     #$FF
+:       sta     _div48_l,y
         iny
-        bne     overflows
+        bmi     overflows_neg
+        bne     :-
+
+overflows_neg:
+        lda     #$00
+:       sta     _div48_l,y
+        iny
+        bne     :-
 .endif
         rts
 .endproc
@@ -448,12 +456,6 @@ div_factor:
         ldy     #$FF
 divtable_l:
         lda     _div48_l,x    ; Preload even if we'll clamp, which is rare
-divtable_h:
-        ldy     _div48_h,x
-        beq     reload_x_and_store
-clamp:
-        lda     #$FF
-
 .else
 cb0h_c: ldx     $FF00,y
 cb0l_c: lda     $FF00,y
@@ -504,18 +506,26 @@ stores_done:
 fact:   ldy     #$FF
         jsr     approx_div16x8_direct
         ldy     wordcnt
+        bmi     overflows_neg     ; stop if signed < 0
         sta     _dyndiv_l,y
         txa
-        sta     _dyndiv_h,y
         bne     overflows         ; Stop if result > 256
         inc     wordcnt
         bne     :-
         jmp     done
 
-overflows:                        ; Fill the rest, overflowed
-        sta     _dyndiv_h,y
+overflows:                        ; Fill the rest
+        lda     #$FF
+:       sta     _dyndiv_l,y
         iny
-        bne     overflows
+        bmi     overflows_neg
+        bne     :-
+
+overflows_neg:
+        lda     #$00
+:       sta     _dyndiv_l,y
+        iny
+        bne     :-
 
 done:
 abck = *+1
@@ -539,8 +549,6 @@ ybck = *+1
         stx     cur_buf_0h+1
 
 .ifdef APPROX_DIVISION
-        ldx     #>_div48_h
-        stx     _copy_data::divtable_h+2
         ldx     #>_div48_l
         stx     _copy_data::divtable_l+2
 .endif
@@ -556,8 +564,6 @@ ybck = *+1
 .ifdef APPROX_DIVISION
         cmp     #48
         beq     :+
-        ldx     #>_dyndiv_h         ; Set table to dyn
-        stx     _copy_data::divtable_h+2
         ldx     #>_dyndiv_l
         stx     _copy_data::divtable_l+2
         cmp     last_dyndiv
@@ -576,8 +582,6 @@ small_val:                          ; Last is 8bit, do a small mult
 .ifdef APPROX_DIVISION
         cpx     #48
         beq     :+
-        lda     #>_dyndiv_h
-        sta     _copy_data::divtable_h+2
         lda     #>_dyndiv_l
         sta     _copy_data::divtable_l+2
         cpx     last_dyndiv

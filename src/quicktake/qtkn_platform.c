@@ -44,9 +44,20 @@ void init_div48(void) {
      * by rounding the numerator to the nearest 256, in order
      * to have a size-appropriate table. */
     uint16 approx = ((r<<8)|0x80)/48;
-    div48_l[r] = approx & 0xFF;
-    div48_h[r] = approx >> 8;
-    // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
+    if ((r<<8) & 0x8000) {
+      div48_l[r] = 0;
+      div48_h[r] = 0xFF;
+      printf("%04x/48 = -%04x\n", r<<8, div48_l[r]+(div48_h[r]<<8));
+    } else {
+      if (approx >> 8) {
+        div48_l[r] = 0xFF;
+        div48_h[r] = 0x01;
+      } else {
+        div48_l[r] = (approx) & 0xFF;
+        div48_h[r] = approx >> 8;
+      }
+      printf("%04x/48 = %04x\n", r<<8, div48_l[r]+(div48_h[r]<<8));
+    }
   } while (++r);
 }
 
@@ -55,8 +66,20 @@ void init_dyndiv(uint8 factor) {
 
   do {
     uint16 approx = ((r<<8)|0x80)/factor;
-    dyndiv_l[r] = approx & 0xFF;
-    dyndiv_h[r] = approx >> 8;
+    if ((r<<8) & 0x8000) {
+      dyndiv_l[r] = 0;
+      dyndiv_h[r] = 0xFF;
+      printf("%04x/48 = -%04x\n", r<<8, dyndiv_l[r]+(dyndiv_h[r]<<8));
+    } else {
+      if (approx >> 8) {
+        dyndiv_l[r] = 0xFF;
+        dyndiv_h[r] = 0x01;
+      } else {
+        dyndiv_l[r] = (approx) & 0xFF;
+        dyndiv_h[r] = approx >> 8;
+      }
+      printf("%04x/48 = %04x\n", r<<8, dyndiv_l[r]+(dyndiv_h[r]<<8));
+    }
   } while (++r);
 }
 
@@ -135,12 +158,10 @@ void copy_data(uint8 r) {
     uint16 val;
     val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
     if (factor == 48) {
-      val = div48_l[val>>8]|(div48_h[val>>8]<<8);
+        val = div48_l[val>>8];
     } else {
-      val = dyndiv_l[val>>8]|(dyndiv_h[val>>8]<<8);
+        val = dyndiv_l[val>>8];
     }
-    if (val > 255)
-      val = 255;
     *(raw_ptr1+(x)) = val;
   } while (x--);
 }

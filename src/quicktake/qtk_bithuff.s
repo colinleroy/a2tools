@@ -21,8 +21,8 @@
         .export         _buf_0, _buf_1
         .export         _raw_image, _huff_ctrl, _huff_data
         .export         _shiftl4_l, _shiftl4_h
-        .export         _div48_l, _div48_h
-        .export         _dyndiv_l, _dyndiv_h
+        .export         _div48_l
+        .export         _dyndiv_l
         .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
@@ -52,9 +52,7 @@ _buf_1 = buf1l
 _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (9*256)
 _div48_l:     .res        256
-_div48_h:     .res        256
 _dyndiv_l:     .res        256
-_dyndiv_h:     .res        256
 .assert <* = 0, error
 _raw_image:   .res        (20*320)
 
