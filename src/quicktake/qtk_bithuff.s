@@ -18,7 +18,7 @@
         .export         _discarddatahuff, _discarddatahuff8
         .export         _cache
         .export         _init_floppy_starter
-        .export         _buf_0, _buf_1
+        .export         _next_line_l, _next_line_h
         .export         _raw_image, _huff_ctrl, _huff_data
         .export         _shiftl4_l, _shiftl4_h
         .export         _div48_l
@@ -32,29 +32,22 @@ _cache:        .res        CACHE_SIZE,$00
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
-buf0l:         .res        322
+_next_line_l:  .res        322
 free1:         .res        190
-buf0h:         .res        322
-free2:         .res        190
-
-buf1l:         .res        322
-free3:         .res        190  ; signed shift left 4 table, pos vals, low byte
-buf1h:         .res        322
-free4:         .res        190  ; signed shift left 4 table, pos vals, high byte
 
 _shiftl4_l:    .res        256
 _shiftl4_h:    .res        256
 
 .assert <* = 0, error
-_buf_0 = buf0l
-_buf_1 = buf1l
 
 _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (9*256)
 _div48_l:     .res        256
 _dyndiv_l:     .res        256
 .assert <* = 0, error
-_raw_image:   .res        (20*320)
+_raw_image:   .res        (20*320)  ; Cool, this is aligned!
+.assert <* = 0, error
+_next_line_h:  .res        322
 
 _bitbuf     = _zp8
 readn       = _zp9
@@ -134,28 +127,33 @@ _huff_numc_h = *+2
 data_refill:
         jsr     refill
         jmp     data_cont
+
 ; Returns value in X
+; _huff_data is a 256 bytes array with [0-127] containing the number of bits of each code,
+; as reading binary 10 is not the same as 010 for the Huffman encoding, and [128]-[255]
+; contains the value of each code.
+; There are multiple (aligned)huff arrays and the high byte addresses are patched by caller.
 _getdatahuff:
-        lda     #0            ; r = 0
-        tay                   ; n = 0
+        lda     #0            ; huff code = 0
+        tay                   ; numbits read = 0
 
-        ldx     _vbits
-:       iny                   ; Read until valid code
-        dex
-        bmi     data_refill
+        ldx     _vbits        ; How many remaining bits in the buffer?
+:       iny                   ; Count read bit
+        dex                   ; Remove from buffer remaining
+        bmi     data_refill   ; Go refill buffer if empty - comes back to data_cont
 data_cont:
-        asl     _bitbuf
-        rol     a
-        sta     bitscheckd+1  ; Patch bitcheck address
-                              ; cpy $nnnn,x is impossible so this is faster
+        asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
 
-bitscheckd:
+        sta     _huff_numd-1  ; Patch bitcheck address right below (the array is
+                              ; aligned, so that makes an ad-hoc tax / cpy $nnnn,x)
+
 _huff_numd = *+2              ; Is this code valid with this number of bits?
         cpy     _huff_data    ; (for example, 10 is not the same as 010!)
-        bne    :-
+        bne    :-             ; Nope. Go read another bit
 
-        stx    _vbits
-        tay                   ; Valid code, get value
+        stx    _vbits         ; Valid code. Save remaining
+        tay                   ; And get value
 _huff_numd_h = *+2
         ldx     _huff_data+128,y
         rts
@@ -175,10 +173,9 @@ _discarddatahuff:
 discarddata_cont:
         asl     _bitbuf
         rol     a
-        sta     bitscheckdd+1    ; Patch bitcheck address
+        sta     _huff_numdd-1 ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
 
-bitscheckdd:
 _huff_numdd = *+2             ; Get num bits
         cpy     _huff_data
         bne    :-

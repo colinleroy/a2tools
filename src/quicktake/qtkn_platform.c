@@ -2,15 +2,12 @@
 #include "qtk_bithuff.h"
 #include "qt-conv.h"
 
-uint8 *raw_ptr1;
+static uint8 *dest;
 extern uint8 *row_idx, *row_idx_plus2;
 extern uint8 last;
 extern uint16 val;
 extern uint8 factor;
 uint8 raw_image[RAW_IMAGE_SIZE];
-
-uint8 *cur_buf_0l, *cur_buf_1l;
-uint8 *cur_buf_0h, *cur_buf_1h;
 
 void init_shiftl4(void) {
   uint8 c = 0;
@@ -30,10 +27,11 @@ void init_shiftl4(void) {
 }
 
 #pragma code-name(push, "LC")
-void init_buf_0(void) {
-  /* init buf_0[*] = 2048 */
-  memset(buf_0, 2048 & 0xFF, USEFUL_DATABUF_SIZE);
-  memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
+void init_next_line(void) {
+  uint16 i;
+  for (i = 0; i < DATABUF_SIZE; i++) {
+    next_line[i] = 2048;
+  }
 }
 
 void init_div48(void) {
@@ -119,7 +117,7 @@ void init_huff(void) {
     code >>= 8-numbits;
     huff_data[l][code+128] = src[src_idx+1];
     huff_data[l][code] = numbits;
-    // printf("huff_data[%d][%.*b] = %d (r%d)\n", l, r, code, src[i+1], r);
+    // printf("huff_data[%d][%.*b] = %d (%d bits)\n", l, numbits, code, src[src_idx+1], numbits);
 
     if (val >> 8 != (val+incr) >> 8) {
       l++;
@@ -131,40 +129,11 @@ void init_huff(void) {
 void init_top(void) {
   init_huff();
   init_div48();
-  init_buf_0();
+  init_next_line();
   init_shiftl4();
 }
 
 #pragma code-name(pop)
-
-void copy_data(uint8 r) {
-  uint16 x;
-  // Copy to raw buffer
-  if (r == 0) {
-    raw_ptr1 = row_idx; //FILE_IDX(row, 0);
-  } else {
-    raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
-  }
-
-  cur_buf_1l = buf_1;
-  cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-
-  #if (WIDTH/4) != 80
-  #error
-  #endif
-
-  x = WIDTH-1;
-  do {
-    uint16 val;
-    val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x);
-    if (factor == 48) {
-        val = div48_l[val>>8];
-    } else {
-        val = dyndiv_l[val>>8];
-    }
-    *(raw_ptr1+(x)) = val;
-  } while (x--);
-}
 
 void consume_extra(void) {
   uint8 c;
@@ -174,8 +143,7 @@ void consume_extra(void) {
   /* Consume RADC tokens but don't care about them. */
   for (c=1; c != 3; c++) {
     for (tree = 1, col = WIDTH/2; col; ) {
-      huff_num = tree*2;
-      tree = getctrlhuff();
+      tree = getctrlhuff(tree*2);
       if (tree) {
         col--;
         if (tree == 8) {
@@ -184,17 +152,15 @@ void consume_extra(void) {
           getdatahuff8();
           getdatahuff8();
         } else {
-          huff_num = tree+1;
-          getdatahuff();
-          getdatahuff();
-          getdatahuff();
-          getdatahuff();
+          getdatahuff(tree+1);
+          getdatahuff(tree+1);
+          getdatahuff(tree+1);
+          getdatahuff(tree+1);
         }
       } else {
         do {
           if (col > 1) {
-            huff_num = 0;
-            nreps = getdatahuff() + 1;
+            nreps = getdatahuff(0) + 1;
           } else {
             nreps = 1;
           }
@@ -203,11 +169,10 @@ void consume_extra(void) {
           } else {
             rep_loop = nreps;
           }
-          huff_num = 1;
           for (rep=0; rep != rep_loop && col; rep++) {
             col--;
             if (rep & 1) {
-              getdatahuff();
+              getdatahuff(1);
             }
           }
         } while (nreps == 9);
@@ -219,7 +184,7 @@ void consume_extra(void) {
 uint8 lastdyn = 0;
 void init_row(void) {
   uint16 i;
-  uint32 tmp32;
+  uint16 tmp32;
   uint16 val;
 
   if (last > 17)
@@ -228,176 +193,137 @@ void init_row(void) {
     val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * factor) >> 4;
   if (factor != 48) {
     if (lastdyn != factor) {
-      printf("reinit dyndiv %d\n", factor);
-      init_dyndiv(factor);
       lastdyn = factor;
-    } else {
-      printf("reuse dyndiv\n");
+      init_dyndiv(factor);
     }
   }
   last = factor;
-  cur_buf_0l = buf_0;
-  cur_buf_0h = buf_0+(DATABUF_SIZE/2);
 
   if (val == 0x100) {
     /* do nothing */
   } else if (val == 0xFF) {
-    for (i = 0; i < USEFUL_DATABUF_SIZE; i++) {
-      tmp32 = GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, i);
-      tmp32 = tmp32 - (tmp32>>8);
-      SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, i, tmp32);
+    for (i = 0; i < DATABUF_SIZE-1; i++) {
+      tmp32 = next_line[i];
+      next_line[i] = tmp32 - (tmp32>>8);
     }
   } else {
-    for (i = 0; i < USEFUL_DATABUF_SIZE; i++) {
-      tmp32 = val * GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, i);
-      tmp32 >>= 8;
-      SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, i, tmp32);
+    for (i = 0; i < DATABUF_SIZE-1; i++) {
+      tmp32 = (val * next_line[i]) >> 8;
+      next_line[i] = tmp32;
     }
   }
 }
 
-extern uint8 row;
+#define SET_OUTPUT(offset, value) do {                                          \
+  dest[col+offset] = (factor == 48) ? div48_l[value>>8] : dyndiv_l[value>>8]; \
+} while(0)
+
 void decode_row(void) {
   uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8;
-  int8 tk;
-  uint16 tk1, tk2, tk3, tk4;
-  uint16 col;
-
+  int16 tk;
+  int16 tk1, tk2, tk3, tk4;
+  int16 col;
+  int16 val1, val0;
 
   for (r=0; r != 2; r++) {
-    SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH), (factor<<7));
-    SET_CURBUF_VAL(buf_0, buf_0+(DATABUF_SIZE/2), (WIDTH+1), (factor<<7));
+    val0 = ((int16)factor)<<7;
+    next_line[WIDTH+1] = factor << 7;
+
+    if (r == 0) {
+      dest = row_idx;
+    } else {
+      dest = row_idx_plus2;
+    }
 
     col = WIDTH;
-    cur_buf_0l = buf_0 + col;
-    cur_buf_0h = cur_buf_0l+(DATABUF_SIZE/2);
-    cur_buf_1l = cur_buf_0l + DATABUF_SIZE;
-    cur_buf_1h = cur_buf_1l+(DATABUF_SIZE/2);
     tree = 1;
 
     while(col) {
-      huff_num = tree*2;
-      tree = (uint8) getctrlhuff();
+      tree = (uint8) getctrlhuff(tree*2);
 
       if (tree) {
         col-=2;
-        cur_buf_0l-=2;
-        cur_buf_0h-=2;
-        cur_buf_1l-=2;
-        cur_buf_1h-=2;
 
         if (tree == 8) {
           tmp8 = (uint8) getdatahuff8();
           /* No need for a lookup table here, it's not done a lot
            * and is a 8x8 mult anyway */
-          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * factor);
+          val1 = tmp8 * factor;
+          SET_OUTPUT(1, val1);
+
           tmp8 = (uint8) getdatahuff8();
-          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * factor);
+          val0 = tmp8 * factor;
+          SET_OUTPUT(0, val0);
+
           tmp8 = (uint8) getdatahuff8();
-          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, tmp8 * factor);
+          next_line[col+2] = tmp8 * factor;
           tmp8 = (uint8) getdatahuff8();
-          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, tmp8 * factor);
+          next_line[col+1] = tmp8 * factor;
         } else {
-          huff_num = tree+1;
+          tk1 = ((int8)getdatahuff(tree+1)) << 4;
+          tk2 = ((int8)getdatahuff(tree+1)) << 4;
+          tk3 = ((int8)getdatahuff(tree+1)) << 4;
+          tk4 = ((int8)getdatahuff(tree+1)) << 4;
 
-          //a
-          tk1 = ((int8)getdatahuff()) << 4;
-          tk2 = ((int8)getdatahuff()) << 4;
-          tk3 = ((int8)getdatahuff()) << 4;
-          tk4 = ((int8)getdatahuff()) << 4;
-          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
-                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) 
-                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
-                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
-                            + tk1));
+          val1 = ((((val0 + next_line[col+2]) >> 1)
+                  + next_line[col+1]) >> 1)
+                  + tk1;
+          SET_OUTPUT(1, val1);
 
-          /* Second with col - 1*/
-          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
-                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) 
-                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
-                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
-                            + tk2));
+          next_line[col+2] = ((((val0 + next_line[col+3]) >> 1)
+                              + val1) >> 1)
+                              + tk3;
 
-          //b
-          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, 
-                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) 
-                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 3)) >> 1)
-                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
-                            + tk3));
+          val0 = ((((val1 + next_line[col+1]) >> 1)
+                  + next_line[col+0]) >> 1)
+                  + tk2;
+          SET_OUTPUT(0, val0);
 
-          /* Second with col - 1*/
-          SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, 
-                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) 
-                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
-                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
-                            + tk4));
+          next_line[col+1] = ((((val1 + next_line[col+2]) >> 1)
+                              + val0) >> 1)
+                              + tk4;
         }
       } else {
         do {
-          if (col > 2) {
-            huff_num = 0;
-            nreps = getdatahuff();
-            nreps++;
-          } else {
-            nreps = 1;
-          }
-          if (nreps > 8) {
+          nreps = (col > 2) ? getdatahuff(0) + 1 : 1;
+          rep_loop = nreps;
+          if (rep_loop > 8) {
             rep_loop = 8;
-          } else {
-            rep_loop = nreps;
           }
-          rep = 0;
-          huff_num = 1;
-          do_rep_loop:
+          
+          for (rep = 0; rep < rep_loop && col > 0; rep++) {
             col-=2;
-            cur_buf_0l-=2;
-            cur_buf_0h-=2;
-            cur_buf_1l-=2;
-            cur_buf_1h-=2;
 
-            //c
-            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1,
-                           (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)
-                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
-                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1);
+            val1 = ((((val0 + next_line[col+2]) >> 1)
+                    + next_line[col+1]) >> 1);
+            SET_OUTPUT(1, val1);
 
-            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0,
-                           (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)
-                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
-                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1);
+            next_line[col+2] = ((((val0 + next_line[col+3]) >> 1)
+                                + val1) >> 1);
 
-            //d
-            SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2,
-                           (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)
-                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 3)) >> 1)
-                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1);
+            val0 = ((((val1 + next_line[col+1]) >> 1)
+                    + next_line[col+0]) >> 1);
+            SET_OUTPUT(0, val0);
 
-            SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1,
-                           (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)
-                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
-                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1);
+            next_line[col+1] = ((((val1 + next_line[col+2]) >> 1)
+                                + val0) >> 1);
 
             if (rep & 1) {
-              tk = getdatahuff() << 4;
+              tk = ((int8)getdatahuff(1)) << 4;
               //e
-              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)+tk);
-              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)+tk);
-              SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)+tk);
-              SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)+tk);
-            }
-          rep++;
-          if (rep == rep_loop)
-            goto rep_loop_done;
-          if (!col)
-            goto rep_loop_done;
-          goto do_rep_loop;
+              val1 += tk;
+              SET_OUTPUT(1, val1);
 
-          rep_loop_done:
+              val0 += tk;
+              SET_OUTPUT(0, val0);
+
+              next_line[col+2] += tk;
+              next_line[col+1] += tk;
+            }
+          }
         } while (nreps == 9);
       }
     }
-
-    copy_data(r);
   }
   row_idx += (WIDTH*2);
   row_idx_plus2 += (WIDTH*2);

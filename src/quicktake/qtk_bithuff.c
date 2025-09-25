@@ -8,12 +8,10 @@
 static uint16 tmp;
 static uint8 shift;
 
-uint8 huff_num;
+int16 next_line[DATABUF_SIZE];
 uint8 huff_split[18*2][256];
 uint8 huff_ctrl[9*2][256];
 uint8 huff_data[9][256];
-uint8 buf_0[DATABUF_SIZE];
-uint8 buf_1[DATABUF_SIZE];
 uint8 shiftl4p_l[128];
 uint8 shiftl4p_h[128];
 uint8 shiftl4n_l[128];
@@ -65,7 +63,7 @@ uint8 __fastcall__ getbits6 (void) {
   return r;
 }
 
-uint8 __fastcall__ getctrlhuff (void) {
+uint8 __fastcall__ getctrlhuff (uint8 huff_num) {
   uint8 r = 0;
   uint8 n = 0;
 
@@ -79,7 +77,7 @@ uint8 __fastcall__ getctrlhuff (void) {
   return huff_ctrl[huff_num+1][r];
 }
 
-uint8 __fastcall__ getdatahuff (void) {
+uint8 __fastcall__ getdatahuff (uint8 huff_num) {
   uint8 r = 0;
   uint8 n = 0;
 

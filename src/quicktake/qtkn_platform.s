@@ -1,12 +1,10 @@
-        .export       _copy_data
         .export       _consume_extra
         .export       _init_row
         .export       _decode_row
 
         .export       _init_top
         .export       _init_shiftl4
-        .export       _init_buf_0
-        .export       _init_div48
+        .export       _init_next_line
         .export       _init_huff
 
         .import       _row_idx, _row_idx_plus2
@@ -21,7 +19,7 @@
         .import       _huff_data, _huff_ctrl, _src
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
-        .import       _buf_0, _buf_1
+        .import       _next_line_l, _next_line_h
         .import       _div48_l
         .import       _dyndiv_l
         .import       _shiftl4_l, _shiftl4_h
@@ -40,26 +38,23 @@
 
 WIDTH               = 320
 USEFUL_DATABUF_SIZE = 321
-DATABUF_SIZE        = $400
 
-raw_ptr1    = _zp2
-wordcnt     = _zp2
-srcbuf      = _zp2
-_x          = _zp2
+; ZP vars share locations when they can - they're usually limited to one function
+val0             = _zp2
+wordcnt          = _zp2
+genptr           = _zp2
+_x               = _zp2
 
-cur_buf_0l  = _zp4
-cur_buf_0h  = _zp6
-col         = _zp7
-rept        = _zp13
+val1             = _zp4
+src_idx          = _zp4
+
+val              = _zp6
+rep_loop         = _zp6
+
+col              = _zp7
+rept             = _zp13
 
 .segment "LC"
-
-.proc _init_top
-        jsr     _init_huff
-        jsr     _init_shiftl4
-        jsr     _init_div48
-        jmp     _init_buf_0
-.endproc
 
 .proc _init_shiftl4
         ldy     #$00
@@ -77,9 +72,9 @@ rept        = _zp13
         rts
 .endproc
 
-.proc _init_buf_0
-        lda     #<_buf_0
-        ldx     #>_buf_0
+.proc _init_next_line
+        lda     #<_next_line_l
+        ldx     #>_next_line_l
         jsr     pushax
 
         lda     #<2048
@@ -89,8 +84,8 @@ rept        = _zp13
         ldx     #>USEFUL_DATABUF_SIZE
         jsr     _memset
 
-        lda     #<_buf_0
-        ldx     #>(_buf_0+512)
+        lda     #<_next_line_h
+        ldx     #>_next_line_h
         jsr     pushax
 
         lda     #>2048
@@ -99,43 +94,6 @@ rept        = _zp13
         lda     #<USEFUL_DATABUF_SIZE
         ldx     #>USEFUL_DATABUF_SIZE
         jmp     _memset
-.endproc
-
-.proc _init_div48
-.ifdef APPROX_DIVISION
-        lda     #0
-        sta     wordcnt
-
-:       ldx     wordcnt
-        lda     #$80
-        ; jsr     pushax
-        ; lda     #48
-        ; jsr     tosdiva0
-        ldy     #48
-        jsr     approx_div16x8_direct
-        ldy     wordcnt
-        sta     _div48_l,y
-        txa
-        bne     overflows
-        inc     wordcnt
-        bmi     overflows_neg
-        bne     :-
-        rts
-
-overflows:                        ; Fill the rest
-        lda     #$FF
-:       sta     _div48_l,y
-        iny
-        bmi     overflows_neg
-        bne     :-
-
-overflows_neg:
-        lda     #$00
-:       sta     _div48_l,y
-        iny
-        bne     :-
-.endif
-        rts
 .endproc
 
 .proc _init_huff
@@ -158,13 +116,13 @@ overflows_neg:
         stx     huff_ctrl_value+2
 
         lda     #>_src
-        sta     srcbuf+1
+        sta     genptr+1
         lda     #<_src
-        sta     srcbuf
+        sta     genptr
 ctrl_huff_next:
         ldy     src_idx
 
-        lda     (srcbuf),y
+        lda     (genptr),y
         tax                         ; X = numbits
 
         stx     tmp1                ; 8-numbits
@@ -195,7 +153,7 @@ ctrl_incr_shifted:
         sta     incr
         ldy     src_idx
         iny
-        lda     (srcbuf),y          ; A = value
+        lda     (genptr),y          ; A = value
 
         ldy     code
 huff_ctrl_value:
@@ -210,7 +168,7 @@ huff_ctrl_bits:
         adc     #2
         sta     src_idx
         bcc     :+
-        inc     srcbuf+1
+        inc     genptr+1
 
 :       lda     val                 ; val += incr
         clc
@@ -237,7 +195,7 @@ huff_ctrl_done:
 data_huff_next:
         ldy     src_idx
 
-        lda     (srcbuf),y
+        lda     (genptr),y
         tax                         ; X = numbits
 
         stx     tmp1                ; 8-numbits
@@ -268,7 +226,7 @@ data_incr_shifted:
         sta     incr
         ldy     src_idx
         iny
-        lda     (srcbuf),y          ; A = value
+        lda     (genptr),y          ; A = value
 
         ldy     code
 huff_data_value:
@@ -283,7 +241,7 @@ huff_data_bits:
         adc     #2
         sta     src_idx
         bcc     :+
-        inc     srcbuf+1
+        inc     genptr+1
 
 :       lda     val                 ; val += incr
         clc
@@ -313,12 +271,11 @@ repeat_loop:
         sta     col
 
 col_loop2:
-        lda     tree
-        asl
-        adc     #>_huff_ctrl
-        sta     _huff_numc
-        adc     #1
-        sta     _huff_numc_h
+        ldy     tree
+        ldx     tree_huff_ctrl_map,y
+        stx     _huff_numc
+        inx
+        stx     _huff_numc_h
 
         jsr     _getctrlhuff
         sta     tree
@@ -328,7 +285,6 @@ col_loop2:
 tree_not_zero_2:
         dec     col
 
-        ;huff_ptr = huff[tree + 10]
         cmp     #8
         bne     norm_huff
 
@@ -336,7 +292,10 @@ tree_not_zero_2:
         jsr     _discarddatahuff8
         jsr     _discarddatahuff8
         jsr     _discarddatahuff8
-        jmp     tree_zero_2_done
+
+        lda     col
+        bne     col_loop2
+        jmp     check_c_loop
 
 norm_huff:
         adc     #>(_huff_data+256)
@@ -347,7 +306,9 @@ norm_huff:
         jsr     _discarddatahuff
         jsr     _discarddatahuff
 
-        jmp     tree_zero_2_done
+        lda     col
+        bne     col_loop2
+        jmp     check_c_loop
 
 tree_zero_2:
         lda     col
@@ -370,10 +331,9 @@ check_nreps_2:
         stx     nreps
 
         cpx     #9
-        bcc     nreps_check_done_2
+        bcc     :+
         ldx     #8
-nreps_check_done_2:
-        stx     rep_loop
+:       stx     rep_loop
 
         ;data tree 1
         ldx     #>(_huff_data+256)
@@ -388,12 +348,10 @@ do_rep_loop_2:
 
         txa
         and     #1
-        beq     rep_even_2
-
+        beq     :+
         jsr     _discarddatahuff
 
-rep_even_2:
-        ldx     rept
+:       ldx     rept
         inx
         cpx     rep_loop
         beq     rep_loop_2_done
@@ -401,12 +359,12 @@ rep_even_2:
         lda     col
         bne     do_rep_loop_2
         beq     check_c_loop
+
 rep_loop_2_done:
         lda     nreps
         cmp     #9
         beq     tree_zero_2
 
-tree_zero_2_done:
         lda     col
         beq     check_c_loop
         jmp     col_loop2
@@ -421,90 +379,9 @@ c_loop_done:
 
 .segment "CODE"
 
-.proc _copy_data
-        lda     _row_idx
-        ldx     _row_idx+1
-.ifndef APPROX_DIVISION
-        ldy     _factor
-        sty     div_factor+1
-.endif
-        ldy     repeats
-        ;  logic inverted from C because here we dec R */
-        bne     store_set
-store_plus_2:
-        lda     _row_idx_plus2
-        ldx     _row_idx_plus2+1
-
-store_set:
-        sta     store_val+1
-        inx                       ; Start at page 2
-        stx     store_val+2
-
-.ifndef APPROX_DIVISION
-        lda     #>(_buf_1+256)    ; Start at page 2
-        sta     cb0l_c+2
-.endif
-        lda     #>(_buf_1+256+512)
-        sta     cb0h_c+2
-
-        ldy     #<(WIDTH)
-        sty     _x
-        lda     #>(WIDTH)
-        sta     _x+1
-
-x_loop:
-.ifdef APPROX_DIVISION
-        dey
-cb0h_c: ldx     $FF00,y
-divtable_l:
-        lda     _div48_l,x    ; Preload even if we'll clamp, which is rare
-
-store_val:
-        sta     $FFFF,y
-
-        cpy     #0
-        bne     x_loop
-        dec     cb0h_c+2
-        dec     store_val+2
-        dec     _x+1
-        bpl     x_loop
-
-.else
-
-        sty     _x
-cb0h_c: ldx     $FF00,y
-cb0l_c: lda     $FF00,y
-        jsr     pushax
-div_factor:
-        lda     #$FF
-        jsr     tosdiva0
-check_clamp:
-        cpx     #0
-        beq     reload_x_and_store
-clamp:
-        lda     #$FF
-        cpx     #$80          ; X < 0 ==> 0, X > 0 ==> 255
-        adc     #$0
-reload_x_and_store:
-        ldy     _x
-store_val:
-        sta     $FFFF,y
-
-        bne     x_loop
-        dec     cb0l_c+2
-        dec     cb0h_c+2
-        dec     store_val+2
-        dec     _x+1
-        bpl     x_loop
-
-.endif
-
-stores_done:
-        rts
-.endproc
-
-.proc _init_dyndiv
-.ifdef APPROX_DIVISION
+; Expects genptr to point to table
+; factor in A
+.proc _init_divtable
         sta     abck
         stx     xbck
         sty     ybck
@@ -515,14 +392,18 @@ stores_done:
 
 :       ldx     wordcnt
         lda     #$80
-;         jsr     pushax
-; fact:   lda     #$FF
-;         jsr     tosdiva0
+.ifndef APPROX_DIVISION
+        jsr     pushax
+fact:   lda     #$FF
+        jsr     tosdiva0
+.else
 fact:   ldy     #$FF
         jsr     approx_div16x8_direct
+.endif
         ldy     wordcnt
         bmi     overflows_neg     ; stop if signed < 0
-        sta     _dyndiv_l,y
+build_table_n:
+        sta     $FF00,y
         txa
         bne     overflows         ; Stop if result > 256
         inc     wordcnt
@@ -531,14 +412,16 @@ fact:   ldy     #$FF
 
 overflows:                        ; Fill the rest
         lda     #$FF
-:       sta     _dyndiv_l,y
+build_table_o:
+:       sta     $FF00,y
         iny
         bmi     overflows_neg
         bne     :-
 
 overflows_neg:
         lda     #$00
-:       sta     _dyndiv_l,y
+build_table_u:
+:       sta     $FF00,y
         iny
         bne     :-
 
@@ -549,187 +432,189 @@ xbck = *+1
         ldx     #$FF
 ybck = *+1
         ldy     #$FF
-.endif
+
         rts
 .endproc
 
-.proc _init_row
-        lda     #<(_buf_0+256)      ; start at second page
-        ldx     #>(_buf_0+256)
-        sta     cur_buf_0l
-        stx     cur_buf_0l+1
-        lda     #<(_buf_0+256+512)
-        ldx     #>(_buf_0+256+512)
-        sta     cur_buf_0h
-        stx     cur_buf_0h+1
-
-.ifdef APPROX_DIVISION
+.proc _init_top
+        jsr     _init_huff
+        jsr     _init_shiftl4
         ldx     #>_div48_l
-        stx     _copy_data::divtable_l+2
-.endif
-        ldy     _last               ; is last 8bits?
-        cpy     #18
-        bcs     small_val
-
-        lda     _val_from_last,y    ; no, 16x8 mult
-        ldx     _val_hi_from_last,y
-        jsr     pushax
-        lda     _factor             ; 
-        sta     _last
-.ifdef APPROX_DIVISION
-        cmp     #48
-        beq     :+
-        ldx     #>_dyndiv_l
-        stx     _copy_data::divtable_l+2
-        cmp     last_dyndiv
-        beq     :+
-        sta     last_dyndiv
-        jsr     _init_dyndiv        ; Init current factor division table
-:
- .endif
-        jsr     tosmula0
-        jmp     check_multiplier
-
-small_val:                          ; Last is 8bit, do a small mult
-        ldx     _factor
-        stx     _last
-        cpx     _last
-.ifdef APPROX_DIVISION
-        cpx     #48
-        beq     :+
-        lda     #>_dyndiv_l
-        sta     _copy_data::divtable_l+2
-        cpx     last_dyndiv
-        beq     :+
-        txa
-        sta     last_dyndiv
-        jsr     _init_dyndiv
-:
-.endif
-        lda     _val_from_last,y    ; yes, 8x8 mult
-        jsr     mult8x8r16_direct
-
-check_multiplier:
-        cpx     #$0F                ; is multiplier 0xFF?
-        bne     check_0x100         ; Check before shifting
-        cmp     #$F0
-        bcc     check_0x100
-
-mult_0xFF:
-        ldy     #<(USEFUL_DATABUF_SIZE)
-        lda     #>(USEFUL_DATABUF_SIZE)
-        sta     wordcnt+1
-
-setup_curbuf_x_ff:
-        ; load
-        dey
-        sty     wordcnt
-        lda     (cur_buf_0h),y
-        tax
-        lda     (cur_buf_0l),y
-        ; tmp32 in AX
-        stx     tmp1                ; Store to subtract
-        sec
-        sbc     tmp1                ; subtract high word from low : -(tmp>>8)
-        bcs     :+
-        dex
-
-set0lf:
-:       sta     (cur_buf_0l),y
-        txa
-set0hf: sta     (cur_buf_0h),y
-
-        cpy     #0
-        bne     setup_curbuf_x_ff
-        dec     cur_buf_0l+1
-        dec     cur_buf_0h+1
-        dec     wordcnt+1
-        bpl     setup_curbuf_x_ff
-        rts
-
-check_0x100:
-        cpx     #10                 ; or 0x100?
-        bne     :+
-        cmp     #10
-        bcc     init_done
-
-:       stx     ptr2+1              ; Arbitrary multiplier, >> 4
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ldx     ptr2+1
-        ror     a
-        sta     ptr2
-
-slow_mults:                         ; and multiply
-        ldy     #<USEFUL_DATABUF_SIZE
-        sty     wordcnt
-        lda     #>USEFUL_DATABUF_SIZE
-        sta     wordcnt+1
-
-setup_curbuf_x_slow:
-        ; load
-        dey
-        sty     wordcnt
-        lda     (cur_buf_0h),y
-        tax
-        lda     (cur_buf_0l),y
-
-        cpx     #$80
-        bcc     posmult
-        ; reverse sign, less expensive than extending
-        ; and doing a 16x24 mult
-        clc
-        eor     #$FF
-        adc     #1
-        pha
-        txa
-        eor     #$FF
-        adc     #0
-        tax
-        pla
-        ; multiply
-        jsr     mult16x16mid16_direct
-        clc
-        adc     #1
-        clc
-        eor     #$FF
-        adc     #1
-        pha
-        txa
-        eor     #$FF
-        adc     #0
-        tax
-        pla
-        jmp     set0
-posmult:
-        jsr     mult16x16mid16_direct
-
-set0:
-        ldy     wordcnt
-set0ls:
-        sta     (cur_buf_0l),y
-        txa
-set0hs: sta     (cur_buf_0h),y
-
-        cpy     #0
-        bne     setup_curbuf_x_slow
-        dec     cur_buf_0l+1
-        dec     cur_buf_0h+1
-        dec     wordcnt+1
-        bpl     setup_curbuf_x_slow
-init_done:
-        rts
+        stx     _init_divtable::build_table_n+2
+        stx     _init_divtable::build_table_o+2
+        stx     _init_divtable::build_table_u+2
+        lda     #48
+        jsr     _init_divtable
+        jmp     _init_next_line
 .endproc
+
+.macro SET_BUF_TREE_EIGHT mult_factor, address, low_label, high_label
+        jsr     _getdatahuff8
+mult_factor:
+        ldx     #$FF
+        jsr     mult8x8r16_direct
+        ldy     col
+low_label: 
+        sta     address,y
+        txa
+high_label: 
+        sta     address,y
+.endmacro
+
+.macro SET_VAL_TREE_EIGHT mult_factor, val
+        jsr     _getdatahuff8
+mult_factor:
+        ldx     #$FF
+        jsr     mult8x8r16_direct
+        ldy     col
+        sta     val
+        stx     val+1
+.endmacro
+
+
+.macro INTERPOLATE_BUF_TOKEN val_a, addr2, l2, h2, val_b, addr_res, res_l, res_h, token
+        clc
+        lda     val_a
+l2:     adc     addr2,y
+        tax
+        lda     val_a+1
+h2:     adc     addr2,y
+        lsr     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+        adc     val_b
+        tax
+        lda     tmp1
+        adc     val_b+1
+        lsr     a
+
+        .ifblank token
+res_h:  sta     addr_res,y
+        sta     tmp1
+        txa
+        ror     a
+res_l:  sta     addr_res,y
+        .else
+        sta     tmp1          ; High byte in tmp1
+        txa
+        ror     a             ; Low byte in A
+
+token:  ldx     #$FF
+        clc
+        adc     _shiftl4_l,x
+res_l:  sta     addr_res,y
+        lda     tmp1
+        adc     _shiftl4_h,x
+res_h:  sta     addr_res,y
+        .endif
+.endmacro
+
+.macro INTERPOLATE_VAL_TOKEN val, addr2, l2, h2, addr3, l3, h3, res, token
+        clc
+        lda     val
+l2:     adc     addr2,y
+        tax
+        lda     val+1
+h2:     adc     addr2,y
+        lsr     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+l3:     adc     addr3,y
+        tax
+        lda     tmp1
+h3:     adc     addr3,y
+        lsr     a
+
+        .ifblank token
+        sta     res+1
+        sta     tmp1
+        txa
+        ror     a
+        sta     res
+        .else
+        sta     tmp1          ; High byte in tmp1
+        txa
+        ror     a             ; Low byte in A
+
+token:  ldx     #$FF
+        clc
+        adc     _shiftl4_l,x
+        sta     res
+        lda     tmp1
+        adc     _shiftl4_h,x
+        sta     res+1
+        .endif
+.endmacro
+
+.macro INCR_BUF_TOKEN addr1, l1, h1, addr2, l2, h2, token
+        clc
+.ifnblank token
+        ldx     token
+.endif
+        lda     _shiftl4_l,x
+l1:     adc     addr1,y
+l2:     sta     addr2,y
+        lda     _shiftl4_h,x
+h1:     adc     addr1,y
+h2:     sta     addr2,y
+.endmacro
+
+.macro INCR_VAL_TOKEN val, token
+        clc
+.ifnblank token
+        ldx     token
+.endif
+        lda     _shiftl4_l,x
+        adc     val
+        sta     val
+        lda     _shiftl4_h,x
+        adc     val+1
+        sta     val+1
+.endmacro
 
 .proc _decode_row
         lda     #1
         sta     repeats
 r_loop:
+        lda     _row_idx
+        ldx     _row_idx+1
+        ldy     repeats
+        ;  logic inverted from C because here we dec R */
+        bne     store_set
+store_plus_2:
+        lda     _row_idx_plus2
+        ldx     _row_idx_plus2+1
+
+store_set:
+        tay
+        sty     dest0a+1
+        sty     dest0b+1
+        sty     dest0c+1
+        sty     dest0d+1
+        inx                       ; Start at page 2
+        stx     dest0a+2
+        stx     dest0b+2
+        stx     dest0c+2
+        stx     dest0d+2
+
+        iny
+        bne     :+
+        inx
+:       sty     dest1a+1
+        sty     dest1b+1
+        sty     dest1c+1
+        sty     dest1d+1
+        stx     dest1a+2
+        stx     dest1b+2
+        stx     dest1c+2
+        stx     dest1d+2
+
         ;  for (r=0; r != 2; r++) {
         ;  factor<<7, aslax7 inlined */
         lda     _factor
@@ -740,14 +625,13 @@ r_loop:
         lsr     a
         tax
         lda     #0
-        ror
+        ror     a
 
-        ; buf_1[WIDTH] = factor<<7
-        ; buf_0[WIDTH+1] = factor<<7
-        stx     _buf_1+(WIDTH)+512
-        stx     _buf_0+(WIDTH+1)+512
-        sta     _buf_1+(WIDTH)
-        sta     _buf_0+(WIDTH+1)
+        ; next_line[WIDTH+1] = factor<<7
+        stx     _next_line_h+(WIDTH+1)
+        stx     val0+1
+        sta     _next_line_l+(WIDTH+1)
+        sta     val0
 
         ; tree = 1,
         lda     #1
@@ -760,109 +644,66 @@ r_loop:
         stx     colh
 
         ; Init the numerous patched locations
-        ; Worth the ugliness as there are 86
+        ; Worth the ugliness as there are 44
         ; locations, and we run that path
         ; 320*120*2 times so doing $nnnn,y
         ; instead of ($nn), y we spare:
-        ; (320*120*2)*(2*86): 13 SECONDS
+        ; (320*120*2)*(2*44): 7 SECONDS
         ; (and spend only 0.165s shifting
         ; the high bytes, only 120*2 times)
-        lda     #>(_buf_0+512+256)
-        sta     cb0h_off0a+2
-        sta     cb0h_off0b+2
-        sta     cb0h_off1a+2
-        sta     cb0h_off1b+2
-        sta     cb0h_off1c+2
-        sta     cb0h_off1d+2
-        sta     cb0h_off2a+2
-        sta     cb0h_off2b+2
-        lda     #>(_buf_0+256)
-        sta     cb0l_off0a+2
-        sta     cb0l_off0b+2
-        sta     cb0l_off1a+2
-        sta     cb0l_off1b+2
-        sta     cb0l_off1c+2
-        sta     cb0l_off1d+2
-        sta     cb0l_off2a+2
-        sta     cb0l_off2b+2
+        lda     #>(_next_line_h+256)
+        sta     next0ha+2
+        sta     next0hb+2
 
-        lda     #>(_buf_1+512+256)
-        sta     cb1h_off0a+2
-        sta     cb1h_off0b+2
-        sta     cb1h_off0c+2
-        sta     cb1h_off0d+2
-        sta     cb1h_off0e+2
-        sta     cb1h_off0f+2
-        sta     cb1h_off0g+2
-        sta     cb1h_off1a+2
-        sta     cb1h_off1b+2
-        sta     cb1h_off1c+2
-        sta     cb1h_off1d+2
-        sta     cb1h_off1e+2
-        sta     cb1h_off1f+2
-        sta     cb1h_off1g+2
-        sta     cb1h_off1h+2
-        sta     cb1h_off1i+2
-        sta     cb1h_off1j+2
-        sta     cb1h_off1k+2
-        sta     cb1h_off2a+2
-        sta     cb1h_off2b+2
-        sta     cb1h_off2c+2
-        sta     cb1h_off2d+2
-        lda     #>(_buf_1+256)
-        sta     cb1l_off0a+2
-        sta     cb1l_off0b+2
-        sta     cb1l_off0c+2
-        sta     cb1l_off0d+2
-        sta     cb1l_off0e+2
-        sta     cb1l_off0f+2
-        sta     cb1l_off0g+2
-        sta     cb1l_off1a+2
-        sta     cb1l_off1b+2
-        sta     cb1l_off1c+2
-        sta     cb1l_off1d+2
-        sta     cb1l_off1e+2
-        sta     cb1l_off1f+2
-        sta     cb1l_off1h+2
-        sta     cb1l_off1i+2
-        sta     cb1l_off1j+2
-        sta     cb1l_off1k+2
-        sta     cb1l_off2a+2
-        sta     cb1l_off2b+2
-        sta     cb1l_off2c+2
-        sta     cb1l_off2d+2
+        sta     next1ha+2
+        sta     next1hb+2
+        sta     next1hc+2
+        sta     next1hd+2
+        sta     next1he+2
+        sta     next1hf+2
+        sta     next1hg+2
+        sta     next1hh+2
+        sta     next1hi+2
 
-        ; the 'cb2' labels apply to buf_0[]
-        ; being updated
-        lda     #>(_buf_0+512+256)
-        sta     cb2h_off0a+2
-        sta     cb2h_off0b+2
-        sta     cb2h_off0c+2
-        sta     cb2h_off0d+2
-        sta     cb2h_off0e+2
-        sta     cb2h_off1a+2
-        sta     cb2h_off1b+2
-        sta     cb2h_off1c+2
-        sta     cb2h_off1d+2
-        sta     cb2h_off1e+2
-        sta     cb2h_off1f+2
-        sta     cb2h_off1g+2
-        sta     cb2h_off2b+2
-        sta     cb2h_off2c+2
-        lda     #>(_buf_0+256)
-        sta     cb2l_off0a+2
-        sta     cb2l_off0b+2
-        sta     cb2l_off0c+2
-        sta     cb2l_off0d+2
-        sta     cb2l_off0e+2
-        sta     cb2l_off1a+2
-        sta     cb2l_off1b+2
-        sta     cb2l_off1c+2
-        sta     cb2l_off1d+2
-        sta     cb2l_off1f+2
-        sta     cb2l_off1g+2
-        sta     cb2l_off2b+2
-        sta     cb2l_off2c+2
+        sta     next2ha+2
+        sta     next2hb+2
+        sta     next2hc+2
+        sta     next2hd+2
+        sta     next2he+2
+        sta     next2hf+2
+        sta     next2hg+2
+        sta     next2hh+2
+        sta     next2hi+2
+
+        sta     next3ha+2
+        sta     next3hb+2
+
+        lda     #>(_next_line_l+256)
+        sta     next0la+2
+        sta     next0lb+2
+
+        sta     next1la+2
+        sta     next1lb+2
+        sta     next1lc+2
+        sta     next1ld+2
+        sta     next1le+2
+        sta     next1lf+2
+        sta     next1lg+2
+        sta     next1lh+2
+        sta     next1li+2
+
+        sta     next2la+2
+        sta     next2lb+2
+        sta     next2lc+2
+        sta     next2ld+2
+        sta     next2le+2
+        sta     next2lf+2
+        sta     next2lg+2
+        sta     next2lh+2
+        sta     next2li+2
+
+        sta     next3la+2
+        sta     next3lb+2
 
 col_loop1:
         ; 320 loop, repeated twice, function
@@ -870,12 +711,11 @@ col_loop1:
         ; costs 153-400ms depending on the
         ; number of cycles.
 
-        lda     tree
-        asl
-        adc     #>_huff_ctrl
-        sta     _huff_numc
-        adc     #1
-        sta     _huff_numc_h
+        ldy     tree
+        ldx     tree_huff_ctrl_map,y
+        stx     _huff_numc
+        inx
+        stx     _huff_numc_h
 
         jsr     _getctrlhuff
         sta     tree
@@ -895,54 +735,21 @@ declow:
         sbc     #2
         sta     col
         tay
+
         lda     tree
         cmp     #8
         bne     tree_not_eight
 
         ;  tree == 8
-        jsr     _getdatahuff8
-mult_factor1:
-        ldx     #$FF
-        jsr     mult8x8r16_direct
-        ldy     col
-cb1l_off1a: 
-        sta     $FF01,y
-        txa
-cb1h_off1a: 
-        sta     $FF01,y
+        SET_VAL_TREE_EIGHT mult_factor1, val1
+divt1a: lda     _div48_l,x
+dest1a: sta     $FFFF,y
+        SET_VAL_TREE_EIGHT mult_factor2, val0
+divt0a: lda     _div48_l,x
+dest0a: sta     $FFFF,y
 
-        jsr     _getdatahuff8
-mult_factor2:
-        ldx     #$FF
-        jsr     mult8x8r16_direct
-        ldy     col
-cb1l_off0a: 
-        sta     $FF00,y
-        txa
-cb1h_off0a:
-        sta     $FF00,y
-
-        jsr     _getdatahuff8
-mult_factor3:
-        ldx     #$FF
-        jsr     mult8x8r16_direct
-        ldy     col
-cb2l_off1a:
-        sta     $FF02,y
-        txa
-cb2h_off1a:
-        sta     $FF02,y
-
-        jsr     _getdatahuff8
-mult_factor4:
-        ldx     #$FF
-        jsr     mult8x8r16_direct
-        ldy     col
-cb2l_off0a:
-        sta     $FF01,y
-        txa
-cb2h_off0a:
-        sta     $FF01,y
+        SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
+        SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
 
         lda     col               ; is col loop done?
         beq     :+
@@ -958,178 +765,32 @@ tree_not_eight:
         sta     _huff_numd
         sta     _huff_numd_h
 
-        clc
-cb0l_off2a:
-        lda     $FF02,y
-cb1l_off2a:
-        adc     $FF02,y
-        tax
-cb0h_off2a:
-        lda     $FF02,y
-cb1h_off2a:
-        adc     $FF02,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb0l_off1a:
-        adc     $FF01,y
-        tax
-        lda     tmp1
-cb0h_off1a:
-        adc     $FF01,y
-        lsr     a
-        sta     tk1_h+1
-        txa
-        ror     a
-        sta     tk1_l+1
-        
         jsr     _getdatahuff
-        ldy     col
-        lda     _shiftl4_l,x
-
-        clc
-tk1_l:  adc     #$FF
-cb1l_off1b:
-        sta     $FF01,y
-
-        lda     _shiftl4_h,x
-tk1_h:  adc     #$FF
-cb1h_off1b:
-        sta     $FF01,y
-
-        ;  Second with col - 1*/
-        clc
-cb0l_off1b:
-        lda     $FF01,y
-cb1l_off1c:
-        adc     $FF01,y
-        tax
-cb0h_off1b:
-        lda     $FF01,y
-cb1h_off1c:
-        adc     $FF01,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb0l_off0a:
-        adc     $FF00,y
-        tax
-        lda     tmp1
-cb0h_off0a:
-        adc     $FF00,y
-        lsr     a
-        sta     tk2_h+1
-        txa
-        ror     a
-        sta     tk2_l+1
-        
+        stx     tk1+1
         jsr     _getdatahuff
-        ldy     col
-        lda     _shiftl4_l,x
-
-        clc
-tk2_l:  adc     #$FF
-cb1l_off0b:
-        sta     $FF00,y
-
-        lda     _shiftl4_h,x
-tk2_h:  adc     #$FF
-cb1h_off0b:
-        sta     $FF00,y
-
-        ; b
-        clc
-cb1l_off2b:
-        lda     $FF02,y
-cb2l_off2b:
-        adc     $FF03,y
-        tax
-cb1h_off2b:
-        lda     $FF02,y
-cb2h_off2b:
-        adc     $FF03,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb1l_off1d:
-        adc     $FF01,y
-        tax
-        lda     tmp1
-cb1h_off1d:
-        adc     $FF01,y
-        lsr     a
-        sta     tk3_h+1
-        txa
-        ror     a
-        sta     tk3_l+1
-        
+        stx     tk2+1
         jsr     _getdatahuff
-        ldy     col
-        lda     _shiftl4_l,x
-
-        clc
-tk3_l:  adc     #$FF
-cb2l_off1b:
-        sta     $FF02,y
-
-        lda     _shiftl4_h,x
-tk3_h:  adc     #$FF
-cb2h_off1b:
-        sta     $FF02,y
-
-        ;  Second with col - 1*/
-        clc
-cb2l_off1c:
-        lda     $FF02,y
-cb1l_off1e:
-        adc     $FF01,y
-        tax
-cb2h_off1c:
-        lda     $FF02,y
-cb1h_off1e:
-        adc     $FF01,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb1l_off0c:
-        adc     $FF00,y
-        tax
-        lda     tmp1
-cb1h_off0c:
-        adc     $FF00,y
-        lsr     a
-        sta     tk4_h+1
-        txa
-        ror     a
-        sta     tk4_l+1
-        
+        stx     tk3+1
         jsr     _getdatahuff
-        ldy     col
-        lda     _shiftl4_l,x
+        stx     tk4+1
 
-        clc
-tk4_l:  adc     #$FF
-cb2l_off0b:
-        sta     $FF01,y
+        ldy     col           ; Reload Y
 
-        lda     _shiftl4_h,x
-tk4_h:  adc     #$FF
-cb2h_off0b:
-        sta     $FF01,y
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2lb, next2hb, $FF01, next1lb, next1hb, val1, tk1
+        tax
+divt1b: lda     _div48_l,x
+dest1b: sta     $FFFF,y
 
-        lda     col               ; is col loop done?
+        INTERPOLATE_BUF_TOKEN val0, $FF03, next3la, next3ha, val1, $FF02, next2lc, next2hc, tk3
+
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lc, next1hc, $FF00, next0la, next0ha, val0, tk2
+        tax
+divt0b: lda     _div48_l,x
+dest0b: sta     $FFFF,y
+
+        INTERPOLATE_BUF_TOKEN val1, $FF02, next2ld, next2hd, val0, $FF01, next1ld, next1hd, tk4
+
+        tya                   ; is col loop done?
         beq     :+
         jmp     col_loop1
 :       ldx     colh
@@ -1173,195 +834,50 @@ nreps_check_done:
 
         lda     col
 do_rep_loop:
-        sec
         bne     declow2
         jsr     dec_buf_pages
 declow2:
+        sec
         sbc     #2
         sta     col
         tay
 
-        ;c
-        clc
-cb0l_off2b:
-        lda     $FF02,y
-cb1l_off2c:
-        adc     $FF02,y
-        tax
-cb0h_off2b:
-        lda     $FF02,y
-cb1h_off2c:
-        adc     $FF02,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1
+        ldx     tmp1
+divt1c: lda     _div48_l,x
+dest1c: sta     $FFFF,y
 
-        clc
-cb0l_off1c:
-        adc     $FF01,y
-        tax
-        lda     tmp1
-cb0h_off1c:
-        adc     $FF01,y
-        lsr     a
-cb1h_off1f:
-        sta     $FF01,y
-        txa
-        ror     a
-cb1l_off1f:
-        sta     $FF01,y
+        INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
 
-        ;  Second */
-        clc
-        ;  cb1l_off1g:   lda     $FF01,y already good
-cb0l_off1d:
-        adc     $FF01,y
-        tax
-cb1h_off1g:
-        lda     $FF01,y
-cb0h_off1d:
-        adc     $FF01,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0
+        ldx     tmp1
+divt0c: lda     _div48_l,x
+dest0c: sta     $FFFF,y
 
-        clc
-cb0l_off0b:
-        adc     $FF00,y
-        tax
-        lda     tmp1
-cb0h_off0b:
-        adc     $FF00,y
-        lsr     a
-cb1h_off0d:
-        sta     $FF00,y
-        txa
-        ror     a
-cb1l_off0d:
-        sta     $FF00,y
-
-        ; d
-        clc
-cb1l_off2d:
-        lda     $FF02,y
-cb2l_off2c:
-        adc     $FF03,y
-        tax
-cb1h_off2d:
-        lda     $FF02,y
-cb2h_off2c:
-        adc     $FF03,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb1l_off1h:
-        adc     $FF01,y
-        tax
-        lda     tmp1
-cb1h_off1h:
-        adc     $FF01,y
-        lsr     a
-cb2h_off1d:
-        sta     $FF02,y
-        txa
-        ror     a
-cb2l_off1d:
-        sta     $FF02,y
-
-        ;  Second */
-        clc
-        ;  cb2l_off1e:   lda     $FF01,y
-cb1l_off1i:
-        adc     $FF01,y
-        tax
-cb2h_off1e:
-        lda     $FF02,y
-cb1h_off1i:
-        adc     $FF01,y
-        lsr     a
-        sta     tmp1
-        txa
-        ror     a
-
-        clc
-cb1l_off0e:
-        adc     $FF00,y
-        tax
-        lda     tmp1
-cb1h_off0e:
-        adc     $FF00,y
-        lsr     a
-cb2h_off0c:
-        sta     $FF01,y
-        txa
-        ror     a
-cb2l_off0c:
-        sta     $FF01,y
+        INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
 
         lda     rept
         and     #1
         beq     rep_even
 
-        ;  tk = getbithuff(8) << 4;
+        ; tk = getbithuff(8) << 4;
         jsr     _getdatahuff
-        lda     _shiftl4_h,x
-        sta     tmp2
-        lda     _shiftl4_l,x
-        tax
+        stx     tmp1
 
-        ; e
-        clc
         ldy     col
-cb1l_off0f:
-        adc     $FF00,y
-cb1l_off0g:
-        sta     $FF00,y
-        lda     tmp2
-cb1h_off0f:
-        adc     $FF00,y
-cb1h_off0g:
-        sta     $FF00,y
+        ; Increment values by token (in tmp2/X)
+        INCR_VAL_TOKEN val1
+        tax
+divt1d: lda     _div48_l,x
+dest1d: sta     $FFFF,y
 
-        clc
-        txa
-cb1l_off1j:
-        adc     $FF01,y
-cb1l_off1k:
-        sta     $FF01,y
-        lda     tmp2
-cb1h_off1j:
-        adc     $FF01,y
-cb1h_off1k:
-        sta     $FF01,y
+        INCR_VAL_TOKEN val0, tmp1
+        tax
+divt0d: lda     _div48_l,x
+dest0d: sta     $FFFF,y
 
-        clc
-        txa
-cb2l_off0d:
-        adc     $FF01,y
-cb2l_off0e:
-        sta     $FF01,y
-        lda     tmp2
-cb2h_off0d:
-        adc     $FF01,y
-cb2h_off0e:
-        sta     $FF01,y
-
-        clc
-        txa
-cb2l_off1f:
-        adc     $FF02,y
-cb2l_off1g:
-        sta     $FF02,y
-        lda     tmp2
-cb2h_off1f:
-        adc     $FF02,y
-cb2h_off1g:
-        sta     $FF02,y
+        INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi, tmp1
+        INCR_BUF_TOKEN $FF01, next1lh, next1hh, $FF01, next1li, next1hi
 
 rep_even:
         ldx     rept
@@ -1391,13 +907,12 @@ nine_reps_loop_done:
         jmp     col_loop1
 
 finish_col_loop:
-        clc
-        jsr     _copy_data
         dec     repeats
         bmi     r_loop_done
         jmp     r_loop
 r_loop_done:
 
+        ; Advance rows
         clc
         lda     _row_idx
         adc     #<(WIDTH*2)
@@ -1416,106 +931,287 @@ r_loop_done:
         rts
 .endproc
 
-.proc dec_buf_pages
-        dec     colh
-        dec     _decode_row::cb0h_off0a+2
-        dec     _decode_row::cb0h_off0b+2
-        dec     _decode_row::cb0h_off1a+2
-        dec     _decode_row::cb0h_off1b+2
-        dec     _decode_row::cb0h_off1c+2
-        dec     _decode_row::cb0h_off1d+2
-        dec     _decode_row::cb0h_off2a+2
-        dec     _decode_row::cb0h_off2b+2
-        dec     _decode_row::cb0l_off0a+2
-        dec     _decode_row::cb0l_off0b+2
-        dec     _decode_row::cb0l_off1a+2
-        dec     _decode_row::cb0l_off1b+2
-        dec     _decode_row::cb0l_off1c+2
-        dec     _decode_row::cb0l_off1d+2
-        dec     _decode_row::cb0l_off2a+2
-        dec     _decode_row::cb0l_off2b+2
-        dec     _decode_row::cb1h_off0a+2
-        dec     _decode_row::cb1h_off0b+2
-        dec     _decode_row::cb1h_off0c+2
-        dec     _decode_row::cb1h_off0d+2
-        dec     _decode_row::cb1h_off0e+2
-        dec     _decode_row::cb1h_off0f+2
-        dec     _decode_row::cb1h_off0g+2
-        dec     _decode_row::cb1h_off1a+2
-        dec     _decode_row::cb1h_off1b+2
-        dec     _decode_row::cb1h_off1c+2
-        dec     _decode_row::cb1h_off1d+2
-        dec     _decode_row::cb1h_off1e+2
-        dec     _decode_row::cb1h_off1f+2
-        dec     _decode_row::cb1h_off1g+2
-        dec     _decode_row::cb1h_off1h+2
-        dec     _decode_row::cb1h_off1i+2
-        dec     _decode_row::cb1h_off1j+2
-        dec     _decode_row::cb1h_off1k+2
-        dec     _decode_row::cb1h_off2a+2
-        dec     _decode_row::cb1h_off2b+2
-        dec     _decode_row::cb1h_off2c+2
-        dec     _decode_row::cb1h_off2d+2
-        dec     _decode_row::cb1l_off0a+2
-        dec     _decode_row::cb1l_off0b+2
-        dec     _decode_row::cb1l_off0c+2
-        dec     _decode_row::cb1l_off0d+2
-        dec     _decode_row::cb1l_off0e+2
-        dec     _decode_row::cb1l_off0f+2
-        dec     _decode_row::cb1l_off0g+2
-        dec     _decode_row::cb1l_off1a+2
-        dec     _decode_row::cb1l_off1b+2
-        dec     _decode_row::cb1l_off1c+2
-        dec     _decode_row::cb1l_off1d+2
-        dec     _decode_row::cb1l_off1e+2
-        dec     _decode_row::cb1l_off1f+2
-        dec     _decode_row::cb1l_off1h+2
-        dec     _decode_row::cb1l_off1i+2
-        dec     _decode_row::cb1l_off1j+2
-        dec     _decode_row::cb1l_off1k+2
-        dec     _decode_row::cb1l_off2a+2
-        dec     _decode_row::cb1l_off2b+2
-        dec     _decode_row::cb1l_off2c+2
-        dec     _decode_row::cb1l_off2d+2
-        dec     _decode_row::cb2h_off0a+2
-        dec     _decode_row::cb2h_off0b+2
-        dec     _decode_row::cb2h_off0c+2
-        dec     _decode_row::cb2h_off1a+2
-        dec     _decode_row::cb2h_off1b+2
-        dec     _decode_row::cb2h_off1c+2
-        dec     _decode_row::cb2h_off1d+2
-        dec     _decode_row::cb2h_off1e+2
-        dec     _decode_row::cb2h_off2b+2
-        dec     _decode_row::cb2h_off2c+2
-        dec     _decode_row::cb2l_off0a+2
-        dec     _decode_row::cb2l_off0b+2
-        dec     _decode_row::cb2l_off0c+2
-        dec     _decode_row::cb2l_off1a+2
-        dec     _decode_row::cb2l_off1b+2
-        dec     _decode_row::cb2l_off1c+2
-        dec     _decode_row::cb2l_off1d+2
-        dec     _decode_row::cb2l_off2b+2
-        dec     _decode_row::cb2l_off2c+2
-        dec     _decode_row::cb2l_off0d+2
-        dec     _decode_row::cb2l_off0e+2
-        dec     _decode_row::cb2h_off0d+2
-        dec     _decode_row::cb2h_off0e+2
-        dec     _decode_row::cb2l_off1f+2
-        dec     _decode_row::cb2l_off1g+2
-        dec     _decode_row::cb2h_off1f+2
-        dec     _decode_row::cb2h_off1g+2
+.proc _init_row
+        ldx     #>(_next_line_l+256)      ; start at second page
+        stx     load_next_lf+2
+        stx     load_next_ls+2
+        stx     store_next_lf+2
+        stx     store_next_ls+2
+        ldx     #>(_next_line_h+256)
+        stx     load_next_hf+2
+        stx     load_next_hs+2
+        stx     store_next_hf+2
+        stx     store_next_hs+2
+
+        ldx     #>_div48_l
+        stx     _decode_row::divt0a+2
+        stx     _decode_row::divt0b+2
+        stx     _decode_row::divt0c+2
+        stx     _decode_row::divt0d+2
+        stx     _decode_row::divt1a+2
+        stx     _decode_row::divt1b+2
+        stx     _decode_row::divt1c+2
+        stx     _decode_row::divt1d+2
+
+        ldy     _last               ; is last 8bits?
+        cpy     #18
+        bcs     small_val
+
+        lda     _val_from_last,y    ; no, 16x8 mult
+        ldx     _val_hi_from_last,y
+        jsr     pushax
+        lda     _factor
+        sta     _last
+
+        cmp     #48
+        beq     :+
+        ldx     #>_dyndiv_l
+        stx     _init_divtable::build_table_n+2
+        stx     _init_divtable::build_table_o+2
+        stx     _init_divtable::build_table_u+2
+        stx     _decode_row::divt0a+2
+        stx     _decode_row::divt0b+2
+        stx     _decode_row::divt0c+2
+        stx     _decode_row::divt0d+2
+        stx     _decode_row::divt1a+2
+        stx     _decode_row::divt1b+2
+        stx     _decode_row::divt1c+2
+        stx     _decode_row::divt1d+2
+        cmp     last_dyndiv
+        beq     :+
+        sta     last_dyndiv
+        jsr     _init_divtable        ; Init current factor division table
+
+:       jsr     tosmula0
+        jmp     check_multiplier
+
+small_val:                          ; Last is 8bit, do a small mult
+        ldx     _factor
+        stx     _last
+        cpx     #48
+        beq     :+
+        lda     #>_dyndiv_l
+        sta     _init_divtable::build_table_n+2
+        sta     _init_divtable::build_table_o+2
+        sta     _init_divtable::build_table_u+2
+        sta     _decode_row::divt0a+2
+        sta     _decode_row::divt0b+2
+        sta     _decode_row::divt0c+2
+        sta     _decode_row::divt0d+2
+        sta     _decode_row::divt1a+2
+        sta     _decode_row::divt1b+2
+        sta     _decode_row::divt1c+2
+        sta     _decode_row::divt1d+2
+        cpx     last_dyndiv
+        beq     :+
+        txa
+        sta     last_dyndiv
+        jsr     _init_divtable
+
+:       lda     _val_from_last,y    ; yes, 8x8 mult
+        jsr     mult8x8r16_direct
+
+check_multiplier:
+        cpx     #$0F                ; is multiplier 0xFF?
+        bne     check_0x100         ; Check before shifting
+        cmp     #$F0
+        bcc     check_0x100
+
+mult_0xFF:
+        ldy     #<USEFUL_DATABUF_SIZE
+        lda     #>USEFUL_DATABUF_SIZE
+        sta     wordcnt+1
+
+setup_curbuf_x_ff:
+        ; load
+        dey
+        sty     wordcnt
+load_next_hf:
+        ldx     $FF00,y
+load_next_lf:
+        lda     $FF00,y
+        ; tmp32 in AX
+        stx     tmp1                ; Store to subtract
+        sec
+        sbc     tmp1                ; subtract high word from low : -(tmp>>8)
+        bcs     store_next_lf
+        dex
+
+store_next_lf:
+        sta     $FF00,y
+        txa
+store_next_hf:
+        sta     $FF00,y
+
+        cpy     #0
+        bne     setup_curbuf_x_ff
+        dec     load_next_hf+2
+        dec     load_next_lf+2
+        dec     store_next_hf+2
+        dec     store_next_lf+2
+        dec     wordcnt+1
+        bpl     setup_curbuf_x_ff
+        rts
+
+check_0x100:
+        cpx     #10                 ; or 0x100?
+        bne     :+
+        cmp     #10
+        bcc     init_done
+
+:       stx     ptr2+1              ; Arbitrary multiplier, >> 4
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ror     a
+        lsr     ptr2+1
+        ldx     ptr2+1
+        ror     a
+        sta     ptr2                ; multiplier stored in ptr2/+1
+
+slow_mults:                         ; and multiply
+        ldy     #<USEFUL_DATABUF_SIZE
+        sty     wordcnt
+        lda     #>USEFUL_DATABUF_SIZE
+        sta     wordcnt+1
+
+setup_curbuf_x_slow:
+        ; load
+        dey
+        sty     wordcnt
+load_next_hs:
+        ldx     $FF00,y
+load_next_ls:
+        lda     $FF00,y
+
+        cpx     #$80
+        bcc     posmult
+        ; reverse sign, less expensive than extending
+        ; and doing a 16x24 mult
+        clc
+        eor     #$FF
+        adc     #1
+        pha
+        txa
+        eor     #$FF
+        adc     #0
+        tax
+        pla
+        ; multiply
+        jsr     mult16x16mid16_direct
+        clc
+        adc     #1
+        clc
+        eor     #$FF
+        adc     #1
+        pha
+        txa
+        eor     #$FF
+        adc     #0
+        tax
+        pla
+        jmp     set0
+posmult:
+        jsr     mult16x16mid16_direct
+
+set0:
+        ldy     wordcnt
+store_next_ls:
+        sta     $FF00,y
+        txa
+store_next_hs:
+        sta     $FF00,y
+
+        cpy     #0
+        bne     setup_curbuf_x_slow
+        dec     load_next_hs+2
+        dec     load_next_ls+2
+        dec     store_next_hs+2
+        dec     store_next_ls+2
+        dec     wordcnt+1
+        bpl     setup_curbuf_x_slow
+init_done:
         rts
 .endproc
 
-.bss
+.segment "LC"
+
+.proc dec_buf_pages
+        dec     colh
+        dec     _decode_row::dest0a+2
+        dec     _decode_row::dest0b+2
+        dec     _decode_row::dest0c+2
+        dec     _decode_row::dest0d+2
+        dec     _decode_row::dest1a+2
+        dec     _decode_row::dest1b+2
+        dec     _decode_row::dest1c+2
+        dec     _decode_row::dest1d+2
+
+        dec     _decode_row::next0ha+2
+        dec     _decode_row::next0la+2
+        dec     _decode_row::next0hb+2
+        dec     _decode_row::next0lb+2
+
+        dec     _decode_row::next1ha+2
+        dec     _decode_row::next1la+2
+        dec     _decode_row::next1hb+2
+        dec     _decode_row::next1lb+2
+        dec     _decode_row::next1hc+2
+        dec     _decode_row::next1lc+2
+        dec     _decode_row::next1hd+2
+        dec     _decode_row::next1ld+2
+        dec     _decode_row::next1he+2
+        dec     _decode_row::next1le+2
+        dec     _decode_row::next1hf+2
+        dec     _decode_row::next1lf+2
+        dec     _decode_row::next1hg+2
+        dec     _decode_row::next1lg+2
+        dec     _decode_row::next1hh+2
+        dec     _decode_row::next1lh+2
+        dec     _decode_row::next1hi+2
+        dec     _decode_row::next1li+2
+
+        dec     _decode_row::next2ha+2
+        dec     _decode_row::next2la+2
+        dec     _decode_row::next2hb+2
+        dec     _decode_row::next2lb+2
+        dec     _decode_row::next2hc+2
+        dec     _decode_row::next2lc+2
+        dec     _decode_row::next2hd+2
+        dec     _decode_row::next2ld+2
+        dec     _decode_row::next2he+2
+        dec     _decode_row::next2le+2
+        dec     _decode_row::next2hf+2
+        dec     _decode_row::next2lf+2
+        dec     _decode_row::next2hg+2
+        dec     _decode_row::next2lg+2
+        dec     _decode_row::next2hh+2
+        dec     _decode_row::next2lh+2
+        dec     _decode_row::next2hi+2
+        dec     _decode_row::next2li+2
+
+        dec     _decode_row::next3ha+2
+        dec     _decode_row::next3la+2
+        dec     _decode_row::next3hb+2
+        dec     _decode_row::next3lb+2
+        rts
+.endproc
+
+.segment "BSS"
 
 tree:           .res 1
-rep_loop:       .res 1
 nreps:          .res 1
 colh:           .res 1
 repeats:        .res 1
-val:            .res 2
-src_idx:        .res 2
 incr:           .res 1
 code:           .res 1
 last_dyndiv:    .res 1
+
+.segment "DATA"
+
+tree_huff_ctrl_map:
+        .repeat 9,I
+        .byte   (I*2) + >_huff_ctrl
+        .endrep
