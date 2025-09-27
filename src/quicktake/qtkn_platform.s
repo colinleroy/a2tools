@@ -355,24 +355,21 @@ check_nreps_2:
         ;data tree 1
         ldx     #>(_huff_data+256)
         stx     _huff_numdd
-        ; refiller return already set
 
-        ldx     #$00
-        stx     rept
+        ; col -= rep_loop
+        lda     col
+        sec
+        sbc     rep_loop
+        sta     col
 
-do_rep_loop_2:
-        dec     col
+        ; rep_loop /= 2
+        lsr     rep_loop
 
-        txa
-        and     #1
-        beq     :+
+:       lda     rep_loop
+        beq     rep_loop_2_done
+        dec     rep_loop
         jsr     _discarddatahuff
-
-:       ldx     rept
-        inx
-        cpx     rep_loop
-        stx     rept
-        bne     do_rep_loop_2
+        jmp     :-
 
 rep_loop_2_done:
         lda     nreps

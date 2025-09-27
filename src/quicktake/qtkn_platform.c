@@ -151,12 +151,13 @@ void consume_extra(void) {
           } else {
             rep_loop = nreps;
           }
-          for (rep=0; rep != rep_loop && col; rep++) {
-            col--;
-            if (rep & 1) {
-              getdatahuff(1);
-            }
+
+          col -= rep_loop;
+          rep_loop /= 2;
+          while (rep_loop--) {
+            getdatahuff(1);
           }
+
         } while (nreps == 9);
       }
     }
