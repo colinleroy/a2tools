@@ -356,12 +356,23 @@ check_nreps_2:
 
         cpx     #9
         bcc     :+
-        ldx     #8
-:       stx     rep_loop
 
-        ;data tree 1
+        lda     col           ; nreps 9
+        sec
+        sbc     #8
+        sta     col
+
         ldx     #>(_huff_data+256)
         stx     _huff_numdd
+        ldx     #4
+        jsr     _discarddatahuff
+        jmp     tree_zero_2   ; nreps == 9 so keep going
+
+:       stx     rep_loop      ; nreps <= 8
+
+        ;data tree 1
+        lda     #>(_huff_data+256)
+        sta     _huff_numdd
 
         ; col -= rep_loop
         lda     col
@@ -370,16 +381,11 @@ check_nreps_2:
         sta     col
 
         ; rep_loop /= 2
-        lda     rep_loop
+        txa
         lsr
-        beq     :+
+        beq     discard_col_loop
         tax                   ; discard rep_loop/2 tokens
         jsr     _discarddatahuff
-
-:       lda     nreps
-        cmp     #9
-        beq     tree_zero_2
-
         jmp     discard_col_loop
 
         rts
@@ -561,11 +567,8 @@ token:  ldx     #$FF
         .endif
 .endmacro
 
-.macro INCR_BUF_TOKEN addr1, l1, h1, addr2, l2, h2, token
+.macro INCR_BUF_TOKEN addr1, l1, h1, addr2, l2, h2
         clc
-.ifnblank token
-        ldx     token
-.endif
         lda     _ushiftl4,x
 l1:     adc     addr1,y
 l2:     sta     addr2,y
@@ -576,9 +579,6 @@ h2:     sta     addr2,y
 
 .macro INCR_VAL_TOKEN val, token
         clc
-.ifnblank token
-        ldx     token
-.endif
         lda     _ushiftl4,x
         adc     val
         sta     val
@@ -705,6 +705,11 @@ nine_reps_loop:
         bcs     col_gt1a
         lda     #1 ;  nreps */
         jmp     check_nreps
+
+dechigh2:
+        jsr     dec_buf_pages
+        jmp     declow2
+
 col_gt1a:
         ;  data tree 0
         ldx     #>(_huff_data)
@@ -732,8 +737,8 @@ do_rep_loop:
         stx     rept
 
         ldy     col
-        bne     declow2
-        jsr     dec_buf_pages
+        beq     dechigh2
+
 declow2:
         dey
         dey
@@ -757,21 +762,21 @@ dest0c: sta     $FFFF,y
 
         ; tk = getbithuff(8) << 4;
         jsr     _getdatahuff
-        stx     tmp1
 
-        ldy     col
         ; Increment values by token (in tmp2/X)
         INCR_VAL_TOKEN val1
-        tax
-divt1d: lda     _div48_l,x
+        tay
+divt1d: lda     _div48_l,y
+        ldy     col
 dest1d: sta     $FFFF,y
 
-        INCR_VAL_TOKEN val0, tmp1
-        tax
-divt0d: lda     _div48_l,x
+        INCR_VAL_TOKEN val0
+        tay
+divt0d: lda     _div48_l,y
+        ldy     col
 dest0d: sta     $FFFF,y
 
-        INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi, tmp1
+        INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi
         INCR_BUF_TOKEN $FF01, next1lh, next1hh, $FF01, next1li, next1hi
 
 rep_even:
