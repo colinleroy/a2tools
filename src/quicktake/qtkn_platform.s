@@ -643,13 +643,12 @@ dechigh:
         jmp     declow
 
 tree_not_zero:
-        sec
-        lda     col
+        ldy     col
         beq     dechigh
 declow:
-        sbc     #2
-        sta     col
-        tay
+        dey
+        dey
+        sty     col
 
         lda     tree
         cmp     #8
@@ -732,17 +731,16 @@ nreps_check_done:
 do_rep_loop:
         stx     rept
 
-        lda     col
+        ldy     col
         bne     declow2
         jsr     dec_buf_pages
 declow2:
-        sec
-        sbc     #2
-        sta     col
-        tay
+        dey
+        dey
+        sty     col
 
         INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , divt1c
-divt1c: lda     _div48_l      ; Low byte patched by INTERPOLATE_VAL_TOKEN
+divt1c: lda     _div48_l      ; Low byte patched by INTERPOLATE_VAL_TOKEN, faster as there's no token
 dest1c: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
@@ -1141,8 +1139,6 @@ init_done:
 
         sta     _decode_row::next3la+2
         sta     _decode_row::next3lb+2
-
-        lda     #0            ; Caller expects A=col=0
         rts
 .endproc
 
