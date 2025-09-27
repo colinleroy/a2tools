@@ -22,7 +22,7 @@
         .import       _next_line_l, _next_line_h
         .import       _div48_l
         .import       _dyndiv_l
-        .import       _ushiftl4, _sshiftl4, _ushiftr4
+        .import       _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
@@ -80,6 +80,17 @@ rept             = _zp13
         sta     _ushiftr4,y
         iny
         bne     :-
+
+        ; shift left 3 and add 4 (first 32 values)
+        ldy     #31
+:       tya
+        asl
+        asl
+        asl
+        ora     #$04
+        sta     _ushiftl3p4,y
+        dey
+        bpl     :-
 
         rts
 .endproc
