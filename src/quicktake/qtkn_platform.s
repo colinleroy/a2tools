@@ -33,7 +33,7 @@
         .import       tosdiva0
 .endif
 
-        .importzp     tmp1, sreg, ptr2, tmp2, tmp3, tmp4
+        .importzp     tmp1, ptr2, tmp2, tmp3
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
 
 WIDTH               = 320
@@ -292,11 +292,12 @@ discard_col_loop:
         lda     col
         beq     next_pass
 
-        ldy     tree
-        ldx     tree_huff_ctrl_map,y
-        stx     _huff_numc
-        inx
-        stx     _huff_numc_h
+        lda     tree
+        asl
+        adc     #>_huff_ctrl
+        sta     _huff_numc
+        adc     #1
+        sta     _huff_numc_h
 
         jsr     _getctrlhuff
         sta     tree
@@ -613,11 +614,12 @@ decode_col_loop:
         beq     check_col_high
 
 more_cols:
-        ldy     tree
-        ldx     tree_huff_ctrl_map,y
-        stx     _huff_numc
-        inx
-        stx     _huff_numc_h
+        lda     tree
+        asl
+        adc     #>_huff_ctrl
+        sta     _huff_numc
+        adc     #1
+        sta     _huff_numc_h
 
         jsr     _getctrlhuff
         sta     tree
@@ -1142,10 +1144,3 @@ pass:           .res 1
 incr:           .res 1
 code:           .res 1
 last_dyndiv:    .res 1
-
-.segment "DATA"
-
-tree_huff_ctrl_map:
-        .repeat 9,I
-        .byte   (I*2) + >_huff_ctrl
-        .endrep
