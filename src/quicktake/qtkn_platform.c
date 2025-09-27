@@ -28,7 +28,6 @@ void init_div48(void) {
     if ((r<<8) & 0x8000) {
       div48_l[r] = 0;
       div48_h[r] = 0xFF;
-      printf("%04x/48 = -%04x\n", r<<8, div48_l[r]+(div48_h[r]<<8));
     } else {
       if (approx >> 8) {
         div48_l[r] = 0xFF;
@@ -37,7 +36,6 @@ void init_div48(void) {
         div48_l[r] = (approx) & 0xFF;
         div48_h[r] = approx >> 8;
       }
-      printf("%04x/48 = %04x\n", r<<8, div48_l[r]+(div48_h[r]<<8));
     }
   } while (++r);
 }
@@ -50,7 +48,6 @@ void init_dyndiv(uint8 factor) {
     if ((r<<8) & 0x8000) {
       dyndiv_l[r] = 0;
       dyndiv_h[r] = 0xFF;
-      printf("%04x/48 = -%04x\n", r<<8, dyndiv_l[r]+(dyndiv_h[r]<<8));
     } else {
       if (approx >> 8) {
         dyndiv_l[r] = 0xFF;
@@ -59,7 +56,6 @@ void init_dyndiv(uint8 factor) {
         dyndiv_l[r] = (approx) & 0xFF;
         dyndiv_h[r] = approx >> 8;
       }
-      printf("%04x/48 = %04x\n", r<<8, dyndiv_l[r]+(dyndiv_h[r]<<8));
     }
   } while (++r);
 }
@@ -273,8 +269,6 @@ void decode_row(void) {
           if (rep_loop > 8) {
             rep_loop = 8;
           }
-
-          printf("rep_loop %d\n", rep_loop);
 
           for (rep = 0; rep < rep_loop; rep++) {
             col-=2;
