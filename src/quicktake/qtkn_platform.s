@@ -10,8 +10,7 @@
         .import       _row_idx, _row_idx_plus2
 
         .import       _getdatahuff, _getdatahuff8
-        .import       _getctrlhuff
-
+        .import       _bitbuf_refill
         .import       _discarddatahuff, _discard4datahuff8
         .import       _huff_numc, _huff_numc_h
         .import       _huff_numd, _huff_numd_h
@@ -33,9 +32,11 @@
         .import       tosdiva0
 .endif
 
+        .importzp     _bitbuf, _vbits
         .importzp     tmp1, ptr2, tmp2, tmp3
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
 
+        .include      "qtkn_huffgetters.inc"
 WIDTH               = 320
 USEFUL_DATABUF_SIZE = 321
 
@@ -53,8 +54,6 @@ rep_loop         = _zp6
 
 col              = _zp7
 rept             = _zp13
-
-.segment "LC"
 
 .proc _init_shiftl4
         ldy     #$00
@@ -94,6 +93,8 @@ rept             = _zp13
 
         rts
 .endproc
+
+.segment "LC"
 
 .proc _init_next_line
         lda     #<_next_line_l
@@ -284,6 +285,8 @@ huff_data_done:
         rts
 .endproc
 
+.segment "CODE"
+
 .proc _consume_extra
         lda     #3
         sta     pass
@@ -306,11 +309,12 @@ discard_col_loop:
         lda     tree
         asl
         adc     #>_huff_ctrl
-        sta     _huff_numc
+        sta     huff_numc
         adc     #1
-        sta     _huff_numc_h
+        sta     huff_numc_h
 
-        jsr     _getctrlhuff
+        ; jsr     _getctrlhuff
+        GETCTRLHUFF discard_fill, discard_rts
         sta     tree
 
         beq     tree_zero_2
@@ -324,6 +328,8 @@ tree_not_zero_2:
         jsr     _discard4datahuff8
 
         jmp     discard_col_loop
+
+CTRL_REFILLER discard_fill, discard_rts
 
 norm_huff:
         adc     #>(_huff_data+256)
@@ -383,15 +389,13 @@ check_nreps_2:
         ; rep_loop /= 2
         txa
         lsr
-        beq     discard_col_loop
+        beq     :+
         tax                   ; discard rep_loop/2 tokens
         jsr     _discarddatahuff
-        jmp     discard_col_loop
+:       jmp     discard_col_loop
 
         rts
 .endproc
-
-.segment "CODE"
 
 ; Expects genptr to point to table
 ; factor in A
@@ -577,7 +581,7 @@ h1:     adc     addr1,y
 h2:     sta     addr2,y
 .endmacro
 
-.macro INCR_VAL_TOKEN val, token
+.macro INCR_VAL_TOKEN val, divtable
         clc
         lda     _ushiftl4,x
         adc     val
@@ -585,6 +589,7 @@ h2:     sta     addr2,y
         lda     _sshiftl4,x
         adc     val+1
         sta     val+1
+        sta     divtable+1
 .endmacro
 
 .proc _decode_row
@@ -628,15 +633,18 @@ more_cols:
         lda     tree
         asl
         adc     #>_huff_ctrl
-        sta     _huff_numc
+        sta     huff_numc
         adc     #1
-        sta     _huff_numc_h
+        sta     huff_numc_h
 
-        jsr     _getctrlhuff
+        GETCTRLHUFF rowctrl, rowctrlret
+
         sta     tree
 
         bne     tree_not_zero
         jmp     tree_zero
+
+CTRL_REFILLER rowctrl, rowctrlret
 
 dechigh:
         jsr     dec_buf_pages
@@ -763,17 +771,15 @@ dest0c: sta     $FFFF,y
         ; tk = getbithuff(8) << 4;
         jsr     _getdatahuff
 
-        ; Increment values by token (in tmp2/X)
-        INCR_VAL_TOKEN val1
-        tay
-divt1d: lda     _div48_l,y
         ldy     col
+
+        ; Increment values by token (in X)
+        INCR_VAL_TOKEN val1, divt1d
+divt1d: lda     _div48_l
 dest1d: sta     $FFFF,y
 
-        INCR_VAL_TOKEN val0
-        tay
-divt0d: lda     _div48_l,y
-        ldy     col
+        INCR_VAL_TOKEN val0, divt0d
+divt0d: lda     _div48_l
 dest0d: sta     $FFFF,y
 
         INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi

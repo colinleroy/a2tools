@@ -11,10 +11,10 @@
         .import         _cache_end
         .import         _ifd
         .import         floppy_motor_on
-        .export         _huff_numc, _huff_numc_h
+        .export         _bitbuf, _vbits, _bitbuf_refill
         .export         _huff_numd, _huff_numd_h
         .export         _huff_numdd
-        .export         _getbits6, _getctrlhuff, _getdatahuff, _getdatahuff8
+        .export         _getbits6, _getdatahuff, _getdatahuff8
         .export         _discarddatahuff, _discard4datahuff8
         .export         _cache
         .export         _init_floppy_starter
@@ -89,7 +89,7 @@ _getbits6:
         ldx     _vbits
 :       dex
         bpl    :+
-        jsr    refill
+        jsr    _bitbuf_refill
 :       asl    _bitbuf
         rol    a
         dey
@@ -97,37 +97,8 @@ _getbits6:
         stx     _vbits
         rts
 
-ctrl_refill:
-        jsr     refill
-        jmp     ctrl_cont
-; Returns value in A
-_getctrlhuff:
-        lda    #0             ; r = 0
-        tay                   ; n = 0
-        ldx     _vbits
-
-:       iny                   ; Read until valid code
-        dex
-        bmi     ctrl_refill
-ctrl_cont:
-        asl     _bitbuf
-        rol     a
-        sta     bitscheckc+1    ; Patch bitcheck address
-                              ; cpy $nnnn,x is impossible so this is faster
-
-bitscheckc:
-_huff_numc = *+2             ; Get num bits
-        cpy     _huff_ctrl
-        bne     :-
-        stx     _vbits
-
-        tax
-_huff_numc_h = *+2
-        lda     _huff_ctrl+256,x
-        rts
-
 data_refill:
-        jsr     refill
+        jsr     _bitbuf_refill
         jmp     data_cont
 
 ; Returns value in X
@@ -161,7 +132,7 @@ _huff_numd_h = *+2
         rts
 
 discarddata_refill:
-        jsr     refill
+        jsr     _bitbuf_refill
         jmp     discarddata_cont
 
 ; Returns nothing, discards X tokens
@@ -192,18 +163,21 @@ _huff_numdd = *+2             ; Get num bits
         bne     discard_token
         rts
 
+huff8_refill:
+        jsr     _bitbuf_refill
+        jmp     huff8_cont
 ; Returns value in A
 _getdatahuff8:
         lda     #0             ; Read and consume 5 bits
         ldy     #5
         ldx     _vbits
 :       dex
-        bpl     :+
-        jsr     refill
-:       asl     _bitbuf
+        bmi     huff8_refill
+huff8_cont:
+        asl     _bitbuf
         rol     a
         dey
-        bne     :--
+        bne     :-
 
         stx     _vbits
         tax
@@ -219,7 +193,7 @@ _discard4datahuff8:
         ldx     _vbits
 :       dex
         bpl     :+
-        jsr     refill
+        jsr     _bitbuf_refill
 :       asl     _bitbuf
         dey
         bne     :--
@@ -228,7 +202,7 @@ _discard4datahuff8:
         rts
 
 ; Must never destroy A or Y
-refill:
+_bitbuf_refill:
 cache_read = *+1
         ldx     $FFFF             ; 4
         stx     _bitbuf           ; 7
