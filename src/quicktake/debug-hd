@@ -42,7 +42,7 @@ if [ "$1" != "" ]; then
   if [ "$2" = "" ]; then
     if [ "$1" = "150" ]; then
       # The approximated division changes the output file in an acceptable way
-      expected_sha1sum="494f9fd464290eeb43342eb70350b01e081de1a5"
+      expected_sha1sum="321729809021bcc6fcf8bbdf0e529ce500e31354"
     fi
     if [ "$1" = "200" ]; then
       # The approximated division changes the output file in an acceptable way

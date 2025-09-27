@@ -457,12 +457,13 @@ high_label:
         sta     address,y
 .endmacro
 
-.macro SET_VAL_TREE_EIGHT mult_factor, val
+.macro SET_VAL_TREE_EIGHT mult_factor, val, dest
         jsr     _getdatahuff8
+        ldy     col
+dest:   sta     $FFFF,y
 mult_factor:
         ldx     #$FF
         jsr     mult8x8r16_direct
-        ldy     col
         sta     val
         stx     val+1
 .endmacro
@@ -642,12 +643,8 @@ declow:
         bne     tree_not_eight
 
         ;  tree == 8
-        SET_VAL_TREE_EIGHT mult_factor1, val1
-divt1a: lda     _div48_l,x
-dest1a: sta     $FFFF,y
-        SET_VAL_TREE_EIGHT mult_factor2, val0
-divt0a: lda     _div48_l,x
-dest0a: sta     $FFFF,y
+        SET_VAL_TREE_EIGHT mult_factor1, val1, dest1a
+        SET_VAL_TREE_EIGHT mult_factor2, val0, dest0a
 
         SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
         SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
@@ -815,11 +812,9 @@ all_passes_done:
         stx     store_next_hs+2
 
         ldx     #>_div48_l
-        stx     _decode_row::divt0a+2
         stx     _decode_row::divt0b+2
         stx     _decode_row::divt0c+2
         stx     _decode_row::divt0d+2
-        stx     _decode_row::divt1a+2
         stx     _decode_row::divt1b+2
         stx     _decode_row::divt1c+2
         stx     _decode_row::divt1d+2
@@ -840,11 +835,9 @@ all_passes_done:
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2
-        stx     _decode_row::divt0a+2
         stx     _decode_row::divt0b+2
         stx     _decode_row::divt0c+2
         stx     _decode_row::divt0d+2
-        stx     _decode_row::divt1a+2
         stx     _decode_row::divt1b+2
         stx     _decode_row::divt1c+2
         stx     _decode_row::divt1d+2
@@ -865,11 +858,9 @@ small_val:                          ; Last is 8bit, do a small mult
         sta     _init_divtable::build_table_n+2
         sta     _init_divtable::build_table_o+2
         sta     _init_divtable::build_table_u+2
-        sta     _decode_row::divt0a+2
         sta     _decode_row::divt0b+2
         sta     _decode_row::divt0c+2
         sta     _decode_row::divt0d+2
-        sta     _decode_row::divt1a+2
         sta     _decode_row::divt1b+2
         sta     _decode_row::divt1c+2
         sta     _decode_row::divt1d+2

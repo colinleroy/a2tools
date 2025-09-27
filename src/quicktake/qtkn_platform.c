@@ -225,14 +225,12 @@ void decode_row(void) {
 
         if (tree == 8) {
           tmp8 = (uint8) getdatahuff8();
-          /* No need for a lookup table here, it's not done a lot
-           * and is a 8x8 mult anyway */
+          dest[col+1] = tmp8;
           val1 = tmp8 * factor;
-          SET_OUTPUT(1, val1);
 
           tmp8 = (uint8) getdatahuff8();
+          dest[col+0] = tmp8;
           val0 = tmp8 * factor;
-          SET_OUTPUT(0, val0);
 
           tmp8 = (uint8) getdatahuff8();
           next_line[col+2] = tmp8 * factor;
