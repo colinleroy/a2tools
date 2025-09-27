@@ -15,7 +15,7 @@
         .export         _huff_numd, _huff_numd_h
         .export         _huff_numdd
         .export         _getbits6, _getctrlhuff, _getdatahuff, _getdatahuff8
-        .export         _discarddatahuff, _discarddatahuff8
+        .export         _discarddatahuff, _discard4datahuff8
         .export         _cache
         .export         _init_floppy_starter
         .export         _next_line_l, _next_line_h
@@ -162,8 +162,12 @@ _huff_numd_h = *+2
 discarddata_refill:
         jsr     refill
         jmp     discarddata_cont
-; Returns nothing
+
+; Returns nothing, discards X tokens
 _discarddatahuff:
+        stx     num_discard
+
+discard_token:
         lda     #0             ; r = 0
         tay                   ; n = 0
 
@@ -182,6 +186,9 @@ _huff_numdd = *+2             ; Get num bits
         bne    :-
 
         stx     _vbits
+
+        dec     num_discard
+        bne     discard_token
         rts
 
 ; Returns value in A
@@ -204,9 +211,12 @@ _getdatahuff8:
         ora     #$04
         rts
 
-; Returns nothing
-_discarddatahuff8:
-        ldy     #5
+; Returns nothing, discards 4 5-bit tokens
+; TODO: don't shift all bits, skip full bytes
+; Not too urgent as function is called ~30 times
+; and accounts for less than 20k cycles total
+_discard4datahuff8:
+        ldy     #20
         ldx     _vbits
 :       dex
         bpl     :+
@@ -215,6 +225,7 @@ _discarddatahuff8:
         dey
         bne     :--
         stx     _vbits
+
         rts
 
 ; Must never destroy A or Y
@@ -284,3 +295,6 @@ abck = *+1
         lda     #$FF
         ldx     #7                ; Reload vbits
         rts
+
+.segment "BSS"
+num_discard:    .res 1

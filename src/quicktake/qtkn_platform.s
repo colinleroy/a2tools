@@ -12,7 +12,7 @@
         .import       _getdatahuff, _getdatahuff8
         .import       _getctrlhuff
 
-        .import       _discarddatahuff, _discarddatahuff8
+        .import       _discarddatahuff, _discard4datahuff8
         .import       _huff_numc, _huff_numc_h
         .import       _huff_numd, _huff_numd_h
         .import       _huff_numdd
@@ -309,10 +309,7 @@ tree_not_zero_2:
         cmp     #8
         bne     norm_huff
 
-        jsr     _discarddatahuff8
-        jsr     _discarddatahuff8
-        jsr     _discarddatahuff8
-        jsr     _discarddatahuff8
+        jsr     _discard4datahuff8
 
         jmp     col_loop2
 
@@ -320,9 +317,7 @@ norm_huff:
         adc     #>(_huff_data+256)
         sta     _huff_numdd
 
-        jsr     _discarddatahuff
-        jsr     _discarddatahuff
-        jsr     _discarddatahuff
+        ldx     #4            ; Discard 4 tokens
         jsr     _discarddatahuff
 
         jmp     col_loop2
@@ -363,16 +358,13 @@ check_nreps_2:
         sta     col
 
         ; rep_loop /= 2
-        lsr     rep_loop
-
-:       lda     rep_loop
-        beq     rep_loop_2_done
-        dec     rep_loop
+        lda     rep_loop
+        lsr
+        beq     :+
+        tax                   ; discard rep_loop/2 tokens
         jsr     _discarddatahuff
-        jmp     :-
 
-rep_loop_2_done:
-        lda     nreps
+:       lda     nreps
         cmp     #9
         beq     tree_zero_2
 
