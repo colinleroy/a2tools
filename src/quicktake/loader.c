@@ -16,11 +16,21 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
 }
 
 void main(int argc, char *argv[]) {
-  FILE *fp = fopen(argv[1],"r");
+  FILE *fp = NULL;
   FILE *fp2 = NULL;
   int w, h, qt150;
   SDL_Surface *screen = NULL;
+  int video_inited = 0;
 
+display:
+  if (fp) {
+    fclose(fp);
+    fp = NULL;
+  }
+  if (fp2) {
+    fclose(fp2);
+  }
+  fp = fopen(argv[1],"r");
   if (argc < 4) {
     fseek(fp, 0, SEEK_END);
     if (ftell(fp) == 256*192) {
@@ -47,18 +57,20 @@ void main(int argc, char *argv[]) {
     qt150 = atoi(argv[4]);
   }
 
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-    printf("Couldn't initialize SDL: %s\n", SDL_GetError());
-    return;
-  }
-  printf("loading image %s (%dx%d)\n", argv[1],w,h);
-  screen = SDL_SetVideoMode(w*2, h*2, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
-  if (screen == NULL) {
-    printf("Couldn't initialize screen: %s\n", SDL_GetError());
-    return;
+  if (!video_inited) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+      printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+      return;
+    }
+    printf("loading image %s (%dx%d)\n", argv[1],w,h);
+    screen = SDL_SetVideoMode(w*2, h*2, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
+    if (screen == NULL) {
+      printf("Couldn't initialize screen: %s\n", SDL_GetError());
+      return;
+    }
+    video_inited = 1;
   }
 
-display:
   rewind(fp);
   if (fp2) {
     rewind(fp2);
@@ -170,7 +182,13 @@ display:
   SDL_UpdateRect(screen, 0, 0, w*2, h*2);
   while(1) {
     SDL_Event e;
-    SDL_WaitEvent(&e);
+    int timeout = 10;
+    while (!SDL_PollEvent(&e)) {
+      usleep(100*1000);
+      if (timeout-- == 0) {
+        goto display;
+      }
+    }
     if (e.type == SDL_KEYUP) {
       if (e.key.keysym.sym == SDLK_ESCAPE) {
         exit(0);
