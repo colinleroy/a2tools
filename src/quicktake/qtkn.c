@@ -111,9 +111,12 @@ void qt_load_raw(uint16 top)
     getbits6();
 
     init_row();
-
     decode_row();
-    consume_extra();
+
+    if ((uint8)top < 220 || row < 18) {
+      /* Need to skip data if not at the very end */
+      consume_extra();
+    }
 
     if (!(row & 7)) {
       progress_bar(-1, -1, 80*22, (top + row), height);
