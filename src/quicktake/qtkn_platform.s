@@ -274,8 +274,14 @@ huff_data_done:
 .endproc
 
 .proc _consume_extra
-        lda     #2
+        lda     #3
         sta     pass
+
+next_pass:
+        dec     pass
+        bne     repeat_loop
+        rts
+
 repeat_loop:
         lda     #1
         sta     tree
@@ -283,6 +289,9 @@ repeat_loop:
         sta     col
 
 col_loop2:
+        lda     col
+        beq     next_pass
+
         ldy     tree
         ldx     tree_huff_ctrl_map,y
         stx     _huff_numc
@@ -305,9 +314,7 @@ tree_not_zero_2:
         jsr     _discarddatahuff8
         jsr     _discarddatahuff8
 
-        lda     col
-        bne     col_loop2
-        jmp     next_pass
+        jmp     col_loop2
 
 norm_huff:
         adc     #>(_huff_data+256)
@@ -318,16 +325,14 @@ norm_huff:
         jsr     _discarddatahuff
         jsr     _discarddatahuff
 
-        lda     col
-        bne     col_loop2
-        jmp     next_pass
+        jmp     col_loop2
 
 tree_zero_2:
         lda     col
         cmp     #2
         bcs     col_gt1
 
-        lda     #1
+        ldx     #1
         jmp     check_nreps_2
 
 col_gt1:
@@ -367,27 +372,16 @@ do_rep_loop_2:
         inx
         cpx     rep_loop
         stx     rept
-        beq     rep_loop_2_done
-
-        lda     col
         bne     do_rep_loop_2
-        beq     next_pass
 
 rep_loop_2_done:
         lda     nreps
         cmp     #9
         beq     tree_zero_2
 
-        lda     col
-        beq     next_pass
         jmp     col_loop2
 
-next_pass:
-        dec     pass
-        beq     :+
-        jmp     repeat_loop
-
-:       rts
+        rts
 .endproc
 
 .segment "CODE"
