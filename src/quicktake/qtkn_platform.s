@@ -59,7 +59,7 @@ rept             = _zp13
 .proc _init_shiftl4
         ldy     #$00
 
-        ; shift left 4 (signed)
+        ; shift left 4 (unsigned and signed)
 :       ldx     #0
         tya
         bpl     :+
@@ -71,7 +71,7 @@ rept             = _zp13
         iny
         bne     :--
 
-        ; shift right 4
+        ; shift right 4 (unsigned only)
 :       tya
         lsr
         lsr
@@ -1053,34 +1053,56 @@ init_done:
         ; (320*120*2)*(2*44): 7 SECONDS
         ; (and spend only 0.165s shifting
         ; the high bytes, only 120*2 times)
-        lda     #>(_next_line_h+256)
-        sta     _decode_row::next0ha+2
-        sta     _decode_row::next0hb+2
-
-        sta     _decode_row::next1ha+2
-        sta     _decode_row::next1hb+2
-        sta     _decode_row::next1hc+2
-        sta     _decode_row::next1hd+2
-        sta     _decode_row::next1he+2
-        sta     _decode_row::next1hf+2
-        sta     _decode_row::next1hg+2
-        sta     _decode_row::next1hh+2
-        sta     _decode_row::next1hi+2
-
-        sta     _decode_row::next2ha+2
-        sta     _decode_row::next2hb+2
-        sta     _decode_row::next2hc+2
-        sta     _decode_row::next2hd+2
-        sta     _decode_row::next2he+2
-        sta     _decode_row::next2hf+2
-        sta     _decode_row::next2hg+2
-        sta     _decode_row::next2hh+2
-        sta     _decode_row::next2hi+2
-
-        sta     _decode_row::next3ha+2
-        sta     _decode_row::next3hb+2
-
+        ldx     #>(_next_line_h+256)
         lda     #>(_next_line_l+256)
+        jmp     set_buf_pages
+.endproc
+
+.segment "LC"
+
+.proc dec_buf_pages
+        dec     colh
+        dec     _decode_row::dest0a+2
+        dec     _decode_row::dest0b+2
+        dec     _decode_row::dest0c+2
+        dec     _decode_row::dest0d+2
+        dec     _decode_row::dest1a+2
+        dec     _decode_row::dest1b+2
+        dec     _decode_row::dest1c+2
+        dec     _decode_row::dest1d+2
+
+        ldx     #>(_next_line_h)
+        lda     #>(_next_line_l)
+        ; Fallthrough to set_buf_pages
+.endproc
+
+.proc set_buf_pages
+        stx     _decode_row::next0ha+2
+        stx     _decode_row::next0hb+2
+
+        stx     _decode_row::next1ha+2
+        stx     _decode_row::next1hb+2
+        stx     _decode_row::next1hc+2
+        stx     _decode_row::next1hd+2
+        stx     _decode_row::next1he+2
+        stx     _decode_row::next1hf+2
+        stx     _decode_row::next1hg+2
+        stx     _decode_row::next1hh+2
+        stx     _decode_row::next1hi+2
+
+        stx     _decode_row::next2ha+2
+        stx     _decode_row::next2hb+2
+        stx     _decode_row::next2hc+2
+        stx     _decode_row::next2hd+2
+        stx     _decode_row::next2he+2
+        stx     _decode_row::next2hf+2
+        stx     _decode_row::next2hg+2
+        stx     _decode_row::next2hh+2
+        stx     _decode_row::next2hi+2
+
+        stx     _decode_row::next3ha+2
+        stx     _decode_row::next3hb+2
+
         sta     _decode_row::next0la+2
         sta     _decode_row::next0lb+2
 
@@ -1106,69 +1128,8 @@ init_done:
 
         sta     _decode_row::next3la+2
         sta     _decode_row::next3lb+2
-        rts
-.endproc
 
-.segment "LC"
-
-.proc dec_buf_pages
-        dec     colh
-        dec     _decode_row::dest0a+2
-        dec     _decode_row::dest0b+2
-        dec     _decode_row::dest0c+2
-        dec     _decode_row::dest0d+2
-        dec     _decode_row::dest1a+2
-        dec     _decode_row::dest1b+2
-        dec     _decode_row::dest1c+2
-        dec     _decode_row::dest1d+2
-
-        dec     _decode_row::next0ha+2
-        dec     _decode_row::next0la+2
-        dec     _decode_row::next0hb+2
-        dec     _decode_row::next0lb+2
-
-        dec     _decode_row::next1ha+2
-        dec     _decode_row::next1la+2
-        dec     _decode_row::next1hb+2
-        dec     _decode_row::next1lb+2
-        dec     _decode_row::next1hc+2
-        dec     _decode_row::next1lc+2
-        dec     _decode_row::next1hd+2
-        dec     _decode_row::next1ld+2
-        dec     _decode_row::next1he+2
-        dec     _decode_row::next1le+2
-        dec     _decode_row::next1hf+2
-        dec     _decode_row::next1lf+2
-        dec     _decode_row::next1hg+2
-        dec     _decode_row::next1lg+2
-        dec     _decode_row::next1hh+2
-        dec     _decode_row::next1lh+2
-        dec     _decode_row::next1hi+2
-        dec     _decode_row::next1li+2
-
-        dec     _decode_row::next2ha+2
-        dec     _decode_row::next2la+2
-        dec     _decode_row::next2hb+2
-        dec     _decode_row::next2lb+2
-        dec     _decode_row::next2hc+2
-        dec     _decode_row::next2lc+2
-        dec     _decode_row::next2hd+2
-        dec     _decode_row::next2ld+2
-        dec     _decode_row::next2he+2
-        dec     _decode_row::next2le+2
-        dec     _decode_row::next2hf+2
-        dec     _decode_row::next2lf+2
-        dec     _decode_row::next2hg+2
-        dec     _decode_row::next2lg+2
-        dec     _decode_row::next2hh+2
-        dec     _decode_row::next2lh+2
-        dec     _decode_row::next2hi+2
-        dec     _decode_row::next2li+2
-
-        dec     _decode_row::next3ha+2
-        dec     _decode_row::next3la+2
-        dec     _decode_row::next3hb+2
-        dec     _decode_row::next3lb+2
+        lda     #0            ; Caller expects A=col=0
         rts
 .endproc
 
