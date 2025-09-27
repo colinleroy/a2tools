@@ -288,7 +288,7 @@ repeat_loop:
         lda     #<(WIDTH/2)
         sta     col
 
-col_loop2:
+discard_col_loop:
         lda     col
         beq     next_pass
 
@@ -311,7 +311,7 @@ tree_not_zero_2:
 
         jsr     _discard4datahuff8
 
-        jmp     col_loop2
+        jmp     discard_col_loop
 
 norm_huff:
         adc     #>(_huff_data+256)
@@ -320,7 +320,7 @@ norm_huff:
         ldx     #4            ; Discard 4 tokens
         jsr     _discarddatahuff
 
-        jmp     col_loop2
+        jmp     discard_col_loop
 
 tree_zero_2:
         lda     col
@@ -368,7 +368,7 @@ check_nreps_2:
         cmp     #9
         beq     tree_zero_2
 
-        jmp     col_loop2
+        jmp     discard_col_loop
 
         rts
 .endproc
@@ -575,10 +575,22 @@ h2:     sta     addr2,y
 .endmacro
 
 .proc _decode_row
-        lda     #1
+        lda     #2
         sta     pass
+
+        ldx     #0
+        stx     colh
+
+check_col_high:               ; Column loop high byte check
+        ldx     colh          ; Out of main loop for performance
+        bne     more_cols
+
 next_pass:
-        lda     _row_idx
+        dec     pass          ; Is second pass done?
+        bpl     :+
+        jmp     all_passes_done
+
+:       lda     _row_idx
         ldx     _row_idx+1
         ldy     pass
         ;  logic inverted from C because here we dec R */
@@ -588,134 +600,16 @@ store_plus_2:
         ldx     _row_idx_plus2+1
 
 store_set:
-        tay
-        sty     dest0a+1
-        sty     dest0b+1
-        sty     dest0c+1
-        sty     dest0d+1
-        inx                       ; Start at page 2
-        stx     dest0a+2
-        stx     dest0b+2
-        stx     dest0c+2
-        stx     dest0d+2
+        jsr     init_pass
 
-        iny
-        bne     :+
-        inx
-:       sty     dest1a+1
-        sty     dest1b+1
-        sty     dest1c+1
-        sty     dest1d+1
-        stx     dest1a+2
-        stx     dest1b+2
-        stx     dest1c+2
-        stx     dest1d+2
-
-        ;  for (r=0; r != 2; r++) {
-        ;  factor<<7, aslax7 inlined */
-        lda     _factor
-        sta     mult_factor1+1
-        sta     mult_factor2+1
-        sta     mult_factor3+1
-        sta     mult_factor4+1
-        lsr     a
-        tax
-        lda     #0
-        ror     a
-
-        ; next_line[WIDTH+1] = factor<<7
-        stx     _next_line_h+(WIDTH+1)
-        stx     val0+1
-        sta     _next_line_l+(WIDTH+1)
-        sta     val0
-
-        ; tree = 1,
-        lda     #1
-        sta     tree
-
-        ; col = WIDTH
-        lda     #<(WIDTH)
-        sta     col
-        ldx     #>(WIDTH)
-        stx     colh
-
-        ; Init the numerous patched locations
-        ; Worth the ugliness as there are 44
-        ; locations, and we run that path
-        ; 320*120*2 times so doing $nnnn,y
-        ; instead of ($nn), y we spare:
-        ; (320*120*2)*(2*44): 7 SECONDS
-        ; (and spend only 0.165s shifting
-        ; the high bytes, only 120*2 times)
-        lda     #>(_next_line_h+256)
-        sta     next0ha+2
-        sta     next0hb+2
-
-        sta     next1ha+2
-        sta     next1hb+2
-        sta     next1hc+2
-        sta     next1hd+2
-        sta     next1he+2
-        sta     next1hf+2
-        sta     next1hg+2
-        sta     next1hh+2
-        sta     next1hi+2
-
-        sta     next2ha+2
-        sta     next2hb+2
-        sta     next2hc+2
-        sta     next2hd+2
-        sta     next2he+2
-        sta     next2hf+2
-        sta     next2hg+2
-        sta     next2hh+2
-        sta     next2hi+2
-
-        sta     next3ha+2
-        sta     next3hb+2
-
-        lda     #>(_next_line_l+256)
-        sta     next0la+2
-        sta     next0lb+2
-
-        sta     next1la+2
-        sta     next1lb+2
-        sta     next1lc+2
-        sta     next1ld+2
-        sta     next1le+2
-        sta     next1lf+2
-        sta     next1lg+2
-        sta     next1lh+2
-        sta     next1li+2
-
-        sta     next2la+2
-        sta     next2lb+2
-        sta     next2lc+2
-        sta     next2ld+2
-        sta     next2le+2
-        sta     next2lf+2
-        sta     next2lg+2
-        sta     next2lh+2
-        sta     next2li+2
-
-        sta     next3la+2
-        sta     next3lb+2
-
-col_loop1:
+decode_col_loop:
         ; 320 loop, repeated twice, function
         ; called 120 times: every line here
         ; costs 153-400ms depending on the
         ; number of cycles.
 
         lda     col               ; Is col loop done?
-        bne     more_cols
-        ldx     colh
-        bne     more_cols
-
-        dec     pass           ; Is second pass done?
-        bmi     :+
-        jmp     next_pass         ; No, go do it
-:       jmp     all_passes_done
+        beq     check_col_high
 
 more_cols:
         ldy     tree
@@ -758,7 +652,7 @@ dest0a: sta     $FFFF,y
         SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
         SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
 
-        jmp     col_loop1
+        jmp     decode_col_loop
 
 tree_not_eight:
         ; huff_num = tree+1
@@ -791,7 +685,7 @@ dest0b: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2ld, next2hd, val0, $FF01, next1ld, next1hd, tk4
 
-        jmp     col_loop1
+        jmp     decode_col_loop
 
 tree_zero:
 nine_reps_loop:
@@ -819,15 +713,15 @@ check_nreps:
 nreps_check_done:
         stx     rep_loop
 
-        ldy     #$00
-        sty     rept
-
-        ;  data tree 1
+        ; set huff data tree 1
         ldx     #>(_huff_data+256)
         stx     _huff_numd
         stx     _huff_numd_h
 
+        ldx     #$00
 do_rep_loop:
+        stx     rept
+
         lda     col
         bne     declow2
         jsr     dec_buf_pages
@@ -877,16 +771,16 @@ rep_even:
         inx
         cpx     rep_loop
         beq     rep_loop_done
-        stx     rept
         jmp     do_rep_loop
+
 rep_loop_done:
         lda     nreps
         cmp     #9
         bne     nine_reps_loop_done
         jmp     nine_reps_loop
-nine_reps_loop_done:
 
-        jmp     col_loop1
+nine_reps_loop_done:
+        jmp     decode_col_loop
 
 all_passes_done:
         ; Advance rows
@@ -1105,6 +999,122 @@ store_next_hs:
         dec     wordcnt+1
         bpl     setup_curbuf_x_slow
 init_done:
+        rts
+.endproc
+
+.proc init_pass
+        tay
+        sty     _decode_row::dest0a+1
+        sty     _decode_row::dest0b+1
+        sty     _decode_row::dest0c+1
+        sty     _decode_row::dest0d+1
+        inx                       ; Start at page 2
+        stx     _decode_row::dest0a+2
+        stx     _decode_row::dest0b+2
+        stx     _decode_row::dest0c+2
+        stx     _decode_row::dest0d+2
+
+        iny
+        bne     :+
+        inx
+:       sty     _decode_row::dest1a+1
+        sty     _decode_row::dest1b+1
+        sty     _decode_row::dest1c+1
+        sty     _decode_row::dest1d+1
+        stx     _decode_row::dest1a+2
+        stx     _decode_row::dest1b+2
+        stx     _decode_row::dest1c+2
+        stx     _decode_row::dest1d+2
+
+        ;  for (r=0; r != 2; r++) {
+        ;  factor<<7, aslax7 inlined */
+        lda     _factor
+        sta     _decode_row::mult_factor1+1
+        sta     _decode_row::mult_factor2+1
+        sta     _decode_row::mult_factor3+1
+        sta     _decode_row::mult_factor4+1
+        lsr     a
+        tax
+        lda     #0
+        ror     a
+
+        ; next_line[WIDTH+1] = factor<<7
+        stx     _next_line_h+(WIDTH+1)
+        stx     val0+1
+        sta     _next_line_l+(WIDTH+1)
+        sta     val0
+
+        ; tree = 1,
+        lda     #1
+        sta     tree
+
+        ; col = WIDTH
+        lda     #<(WIDTH)
+        sta     col
+        ldx     #>(WIDTH)
+        stx     colh
+
+        ; Init the numerous patched locations
+        ; Worth the ugliness as there are 44
+        ; locations, and we run that path
+        ; 320*120*2 times so doing $nnnn,y
+        ; instead of ($nn), y we spare:
+        ; (320*120*2)*(2*44): 7 SECONDS
+        ; (and spend only 0.165s shifting
+        ; the high bytes, only 120*2 times)
+        lda     #>(_next_line_h+256)
+        sta     _decode_row::next0ha+2
+        sta     _decode_row::next0hb+2
+
+        sta     _decode_row::next1ha+2
+        sta     _decode_row::next1hb+2
+        sta     _decode_row::next1hc+2
+        sta     _decode_row::next1hd+2
+        sta     _decode_row::next1he+2
+        sta     _decode_row::next1hf+2
+        sta     _decode_row::next1hg+2
+        sta     _decode_row::next1hh+2
+        sta     _decode_row::next1hi+2
+
+        sta     _decode_row::next2ha+2
+        sta     _decode_row::next2hb+2
+        sta     _decode_row::next2hc+2
+        sta     _decode_row::next2hd+2
+        sta     _decode_row::next2he+2
+        sta     _decode_row::next2hf+2
+        sta     _decode_row::next2hg+2
+        sta     _decode_row::next2hh+2
+        sta     _decode_row::next2hi+2
+
+        sta     _decode_row::next3ha+2
+        sta     _decode_row::next3hb+2
+
+        lda     #>(_next_line_l+256)
+        sta     _decode_row::next0la+2
+        sta     _decode_row::next0lb+2
+
+        sta     _decode_row::next1la+2
+        sta     _decode_row::next1lb+2
+        sta     _decode_row::next1lc+2
+        sta     _decode_row::next1ld+2
+        sta     _decode_row::next1le+2
+        sta     _decode_row::next1lf+2
+        sta     _decode_row::next1lg+2
+        sta     _decode_row::next1lh+2
+        sta     _decode_row::next1li+2
+
+        sta     _decode_row::next2la+2
+        sta     _decode_row::next2lb+2
+        sta     _decode_row::next2lc+2
+        sta     _decode_row::next2ld+2
+        sta     _decode_row::next2le+2
+        sta     _decode_row::next2lf+2
+        sta     _decode_row::next2lg+2
+        sta     _decode_row::next2lh+2
+        sta     _decode_row::next2li+2
+
+        sta     _decode_row::next3la+2
+        sta     _decode_row::next3lb+2
         rts
 .endproc
 
