@@ -22,7 +22,7 @@
         .import       _next_line_l, _next_line_h
         .import       _div48_l
         .import       _dyndiv_l
-        .import       _shiftl4_l, _shiftl4_h
+        .import       _ushiftl4, _sshiftl4, _ushiftr4
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
@@ -59,16 +59,28 @@ rept             = _zp13
 .proc _init_shiftl4
         ldy     #$00
 
+        ; shift left 4 (signed)
 :       ldx     #0
         tya
         bpl     :+
         dex
 :       jsr     aslax4
-        sta     _shiftl4_l,y
+        sta     _ushiftl4,y
         txa
-        sta     _shiftl4_h,y
+        sta     _sshiftl4,y
         iny
         bne     :--
+
+        ; shift right 4
+:       tya
+        lsr
+        lsr
+        lsr
+        lsr
+        sta     _ushiftr4,y
+        iny
+        bne     :-
+
         rts
 .endproc
 
@@ -263,7 +275,7 @@ huff_data_done:
 
 .proc _consume_extra
         lda     #2
-        sta     repeats
+        sta     pass
 repeat_loop:
         lda     #1
         sta     tree
@@ -295,7 +307,7 @@ tree_not_zero_2:
 
         lda     col
         bne     col_loop2
-        jmp     check_c_loop
+        jmp     next_pass
 
 norm_huff:
         adc     #>(_huff_data+256)
@@ -308,7 +320,7 @@ norm_huff:
 
         lda     col
         bne     col_loop2
-        jmp     check_c_loop
+        jmp     next_pass
 
 tree_zero_2:
         lda     col
@@ -354,11 +366,12 @@ do_rep_loop_2:
 :       ldx     rept
         inx
         cpx     rep_loop
-        beq     rep_loop_2_done
         stx     rept
+        beq     rep_loop_2_done
+
         lda     col
         bne     do_rep_loop_2
-        beq     check_c_loop
+        beq     next_pass
 
 rep_loop_2_done:
         lda     nreps
@@ -366,15 +379,15 @@ rep_loop_2_done:
         beq     tree_zero_2
 
         lda     col
-        beq     check_c_loop
+        beq     next_pass
         jmp     col_loop2
 
-check_c_loop:
-        dec     repeats
-        beq     c_loop_done
+next_pass:
+        dec     pass
+        beq     :+
         jmp     repeat_loop
-c_loop_done:
-        rts
+
+:       rts
 .endproc
 
 .segment "CODE"
@@ -504,15 +517,15 @@ res_l:  sta     addr_res,y
 
 token:  ldx     #$FF
         clc
-        adc     _shiftl4_l,x
+        adc     _ushiftl4,x
 res_l:  sta     addr_res,y
         lda     tmp1
-        adc     _shiftl4_h,x
+        adc     _sshiftl4,x
 res_h:  sta     addr_res,y
         .endif
 .endmacro
 
-.macro INTERPOLATE_VAL_TOKEN val, addr2, l2, h2, addr3, l3, h3, res, token
+.macro INTERPOLATE_VAL_TOKEN val, addr2, l2, h2, addr3, l3, h3, res, token, divlow_patch
         clc
         lda     val
 l2:     adc     addr2,y
@@ -533,7 +546,7 @@ h3:     adc     addr3,y
 
         .ifblank token
         sta     res+1
-        sta     tmp1
+        sta     divlow_patch+1
         txa
         ror     a
         sta     res
@@ -544,10 +557,10 @@ h3:     adc     addr3,y
 
 token:  ldx     #$FF
         clc
-        adc     _shiftl4_l,x
+        adc     _ushiftl4,x
         sta     res
         lda     tmp1
-        adc     _shiftl4_h,x
+        adc     _sshiftl4,x
         sta     res+1
         .endif
 .endmacro
@@ -557,10 +570,10 @@ token:  ldx     #$FF
 .ifnblank token
         ldx     token
 .endif
-        lda     _shiftl4_l,x
+        lda     _ushiftl4,x
 l1:     adc     addr1,y
 l2:     sta     addr2,y
-        lda     _shiftl4_h,x
+        lda     _sshiftl4,x
 h1:     adc     addr1,y
 h2:     sta     addr2,y
 .endmacro
@@ -570,21 +583,21 @@ h2:     sta     addr2,y
 .ifnblank token
         ldx     token
 .endif
-        lda     _shiftl4_l,x
+        lda     _ushiftl4,x
         adc     val
         sta     val
-        lda     _shiftl4_h,x
+        lda     _sshiftl4,x
         adc     val+1
         sta     val+1
 .endmacro
 
 .proc _decode_row
         lda     #1
-        sta     repeats
-r_loop:
+        sta     pass
+next_pass:
         lda     _row_idx
         ldx     _row_idx+1
-        ldy     repeats
+        ldy     pass
         ;  logic inverted from C because here we dec R */
         bne     store_set
 store_plus_2:
@@ -711,6 +724,17 @@ col_loop1:
         ; costs 153-400ms depending on the
         ; number of cycles.
 
+        lda     col               ; Is col loop done?
+        bne     more_cols
+        ldx     colh
+        bne     more_cols
+
+        dec     pass           ; Is second pass done?
+        bmi     :+
+        jmp     next_pass         ; No, go do it
+:       jmp     all_passes_done
+
+more_cols:
         ldy     tree
         ldx     tree_huff_ctrl_map,y
         stx     _huff_numc
@@ -751,13 +775,7 @@ dest0a: sta     $FFFF,y
         SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
         SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
 
-        lda     col               ; is col loop done?
-        beq     :+
         jmp     col_loop1
-:       ldx     colh
-        beq     :+
-        jmp     col_loop1
-:       jmp     finish_col_loop
 
 tree_not_eight:
         ; huff_num = tree+1
@@ -790,13 +808,7 @@ dest0b: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2ld, next2hd, val0, $FF01, next1ld, next1hd, tk4
 
-        tya                   ; is col loop done?
-        beq     :+
         jmp     col_loop1
-:       ldx     colh
-        beq     :+
-        jmp     col_loop1
-:       jmp     finish_col_loop
 
 tree_zero:
 nine_reps_loop:
@@ -832,8 +844,8 @@ nreps_check_done:
         stx     _huff_numd
         stx     _huff_numd_h
 
-        lda     col
 do_rep_loop:
+        lda     col
         bne     declow2
         jsr     dec_buf_pages
 declow2:
@@ -842,16 +854,14 @@ declow2:
         sta     col
         tay
 
-        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1
-        ldx     tmp1
-divt1c: lda     _div48_l,x
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , divt1c
+divt1c: lda     _div48_l      ; Low byte patched by INTERPOLATE_VAL_TOKEN
 dest1c: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
 
-        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0
-        ldx     tmp1
-divt0c: lda     _div48_l,x
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , divt0c
+divt0c: lda     _div48_l
 dest0c: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
@@ -885,12 +895,6 @@ rep_even:
         cpx     rep_loop
         beq     rep_loop_done
         stx     rept
-        lda     col
-        beq     :+
-        jmp     do_rep_loop
-:       ldx     colh
-        beq     finish_col_loop
-        tay     ;  fix ZERO flag needed at do_rep_loop
         jmp     do_rep_loop
 rep_loop_done:
         lda     nreps
@@ -899,19 +903,9 @@ rep_loop_done:
         jmp     nine_reps_loop
 nine_reps_loop_done:
 
-        lda     col               ; is col loop done?
-        beq     :+
-        jmp     col_loop1
-:       ldx     colh
-        beq     finish_col_loop
         jmp     col_loop1
 
-finish_col_loop:
-        dec     repeats
-        bmi     r_loop_done
-        jmp     r_loop
-r_loop_done:
-
+all_passes_done:
         ; Advance rows
         clc
         lda     _row_idx
@@ -1059,17 +1053,12 @@ check_0x100:
         cmp     #10
         bcc     init_done
 
-:       stx     ptr2+1              ; Arbitrary multiplier, >> 4
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ror     a
-        lsr     ptr2+1
-        ldx     ptr2+1
-        ror     a
-        sta     ptr2                ; multiplier stored in ptr2/+1
+:       tay                         ; Arbitrary multiplier, >> 4
+        lda     _ushiftr4,y
+        ora     _ushiftl4,x
+        sta     ptr2
+        lda     _ushiftr4,x
+        sta     ptr2+1              ; multiplier stored in ptr2/+1
 
 slow_mults:                         ; and multiply
         ldy     #<USEFUL_DATABUF_SIZE
@@ -1093,12 +1082,12 @@ load_next_ls:
         clc
         eor     #$FF
         adc     #1
-        pha
+        sta     ab1+1
         txa
         eor     #$FF
         adc     #0
         tax
-        pla
+ab1:    lda     #$FF
         ; multiply
         jsr     mult16x16mid16_direct
         clc
@@ -1106,12 +1095,12 @@ load_next_ls:
         clc
         eor     #$FF
         adc     #1
-        pha
+        sta     ab2+1
         txa
         eor     #$FF
         adc     #0
         tax
-        pla
+ab2:    lda     #$FF
         jmp     set0
 posmult:
         jsr     mult16x16mid16_direct
@@ -1204,7 +1193,7 @@ init_done:
 tree:           .res 1
 nreps:          .res 1
 colh:           .res 1
-repeats:        .res 1
+pass:           .res 1
 incr:           .res 1
 code:           .res 1
 last_dyndiv:    .res 1

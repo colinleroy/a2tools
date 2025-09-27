@@ -20,7 +20,7 @@
         .export         _init_floppy_starter
         .export         _next_line_l, _next_line_h
         .export         _raw_image, _huff_ctrl, _huff_data
-        .export         _shiftl4_l, _shiftl4_h
+        .export         _ushiftl4, _sshiftl4, _ushiftr4
         .export         _div48_l
         .export         _dyndiv_l
         .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
@@ -35,8 +35,9 @@ CACHE_END = _cache + CACHE_SIZE
 _next_line_l:  .res        322
 free1:         .res        190
 
-_shiftl4_l:    .res        256
-_shiftl4_h:    .res        256
+_ushiftl4:    .res        256
+_sshiftl4:    .res        256
+_ushiftr4:      .res        256
 
 .assert <* = 0, error
 

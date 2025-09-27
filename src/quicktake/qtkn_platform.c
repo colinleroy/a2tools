@@ -9,23 +9,6 @@ extern uint16 val;
 extern uint8 factor;
 uint8 raw_image[RAW_IMAGE_SIZE];
 
-void init_shiftl4(void) {
-  uint8 c = 0;
-  do {
-    int8 sc = (int8)c;
-    if (sc >= 0) {
-      shiftl4p_l[c] = (sc<<4) & 0xFF;
-      shiftl4p_h[c] = (sc<<4) >> 8;
-      // printf("l4 p[%02X] = %04X\n", c, (uint16)(sc<<4));
-    } else {
-      shiftl4n_l[c-128] = ((int16)(sc<<4)) & 0xFF;
-      shiftl4n_h[c-128] = ((int16)(sc<<4)) >> 8;
-      // printf("l4 n[%02X] = %04X [%02X%02X]\n", c-128, (uint16)(sc<<4),
-      //        shiftl4n_h[c-128], shiftl4n_l[c-128]);
-    }
-  } while (++c);
-}
-
 #pragma code-name(push, "LC")
 void init_next_line(void) {
   uint16 i;
@@ -130,7 +113,6 @@ void init_top(void) {
   init_huff();
   init_div48();
   init_next_line();
-  init_shiftl4();
 }
 
 #pragma code-name(pop)
@@ -290,8 +272,10 @@ void decode_row(void) {
           if (rep_loop > 8) {
             rep_loop = 8;
           }
-          
-          for (rep = 0; rep < rep_loop && col > 0; rep++) {
+
+          printf("rep_loop %d\n", rep_loop);
+
+          for (rep = 0; rep < rep_loop; rep++) {
             col-=2;
 
             val1 = ((((val0 + next_line[col+2]) >> 1)
