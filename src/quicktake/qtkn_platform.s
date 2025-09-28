@@ -303,8 +303,7 @@ repeat_loop:
         sta     col
 
 discard_col_loop:
-        lda     col
-        beq     next_pass
+        beq     next_pass     ; A = col
 
         lda     tree
         asl
@@ -320,13 +319,12 @@ discard_col_loop:
         beq     tree_zero_2
 
 tree_not_zero_2:
-        dec     col
-
         cmp     #8
         bne     norm_huff
 
         jsr     _discard4datahuff8
 
+        dec     col
         jmp     discard_col_loop
 
 CTRL_REFILLER discard_fill, discard_rts
@@ -338,6 +336,7 @@ norm_huff:
         ldx     #4            ; Discard 4 tokens
         jsr     _discarddatahuff
 
+        dec     col
         jmp     discard_col_loop
 
 tree_zero_2:
@@ -380,11 +379,6 @@ check_nreps_2:
         lda     #>(_huff_data+256)
         sta     _huff_numdd
 
-        ; col -= rep_loop
-        lda     col
-        sec
-        sbc     rep_loop
-        sta     col
 
         ; rep_loop /= 2
         txa
@@ -392,7 +386,13 @@ check_nreps_2:
         beq     :+
         tax                   ; discard rep_loop/2 tokens
         jsr     _discarddatahuff
-:       jmp     discard_col_loop
+
+:       ; col -= rep_loop
+        lda     col
+        sec
+        sbc     rep_loop
+        sta     col
+        jmp     discard_col_loop
 
         rts
 .endproc
