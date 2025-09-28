@@ -954,9 +954,8 @@ load_next_ls:
         bcc     posmult
         ; reverse sign, less expensive than extending
         ; and doing a 16x24 mult
-        clc
         eor     #$FF
-        adc     #1
+        adc     #0
         sta     ab1+1
         txa
         eor     #$FF
@@ -1052,11 +1051,11 @@ init_done:
         stx     colh
 
         ; Init the numerous patched locations
-        ; Worth the ugliness as there are 44
+        ; Worth the ugliness as there are 54
         ; locations, and we run that path
         ; 320*120*2 times so doing $nnnn,y
         ; instead of ($nn), y we spare:
-        ; (320*120*2)*(2*44): 7 SECONDS
+        ; (320*120*2)*(2*54): 7 SECONDS
         ; (and spend only 0.165s shifting
         ; the high bytes, only 120*2 times)
         ldx     #>(_next_line_h+256)
