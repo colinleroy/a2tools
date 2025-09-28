@@ -711,7 +711,7 @@ nine_reps_loop:
         lda     col
         cmp     #3
         bcs     col_gt1a
-        lda     #1 ;  nreps */
+        ldx     #1 ;  nreps */
         jmp     check_nreps
 
 dechigh2:
