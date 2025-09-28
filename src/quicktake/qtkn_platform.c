@@ -3,7 +3,7 @@
 #include "qt-conv.h"
 
 static uint8 *dest;
-extern uint8 *row_idx, *row_idx_plus2;
+extern uint8 *row_idx;
 extern uint8 last;
 extern uint16 val;
 extern uint8 factor;
@@ -208,11 +208,8 @@ void decode_row(void) {
     val0 = ((int16)factor)<<7;
     next_line[WIDTH+1] = factor << 7;
 
-    if (r == 0) {
-      dest = row_idx;
-    } else {
-      dest = row_idx_plus2;
-    }
+    row_idx += WIDTH;
+    dest = row_idx;
 
     col = WIDTH;
     tree = 1;
@@ -302,6 +299,4 @@ void decode_row(void) {
       }
     }
   }
-  row_idx += (WIDTH*2);
-  row_idx_plus2 += (WIDTH*2);
 }

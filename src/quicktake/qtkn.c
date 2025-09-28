@@ -81,7 +81,7 @@ uint8 row;
 uint8 factor;
 uint8 last = 16;
 
-uint8 *row_idx, *row_idx_plus2;
+uint8 *row_idx;
 
 #pragma code-name(push, "LC")
 void qt_load_raw(uint16 top)
@@ -101,8 +101,7 @@ void qt_load_raw(uint16 top)
     }
   }
 
-  row_idx = raw_image;
-  row_idx_plus2 = raw_image + WIDTH;
+  row_idx = raw_image - WIDTH;
 
   for (row=0; row != BAND_HEIGHT; row+=2) {
     factor = getbits6();

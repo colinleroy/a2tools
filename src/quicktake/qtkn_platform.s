@@ -7,7 +7,7 @@
         .export       _init_next_line
         .export       _init_huff
 
-        .import       _row_idx, _row_idx_plus2
+        .import       _row_idx
 
         .import       _getdatahuff, _getdatahuff8
         .import       _bitbuf_refill
@@ -608,16 +608,16 @@ next_pass:
         bpl     :+
         jmp     all_passes_done
 
-:       lda     _row_idx
-        ldx     _row_idx+1
-        ldy     pass
-        ;  logic inverted from C because here we dec R */
-        bne     store_set
-store_plus_2:
-        lda     _row_idx_plus2
-        ldx     _row_idx_plus2+1
-
-store_set:
+:       ; Advance row
+        clc
+        lda     _row_idx
+        adc     #<(WIDTH)
+        sta     _row_idx
+        tay
+        lda     _row_idx+1
+        adc     #>(WIDTH)
+        sta     _row_idx+1
+        tax
         jsr     init_pass
 
 decode_col_loop:
@@ -802,21 +802,6 @@ nine_reps_loop_done:
         jmp     decode_col_loop
 
 all_passes_done:
-        ; Advance rows
-        clc
-        lda     _row_idx
-        adc     #<(WIDTH*2)
-        sta     _row_idx
-        lda     _row_idx+1
-        adc     #>(WIDTH*2)
-        sta     _row_idx+1
-
-        lda     _row_idx_plus2
-        adc     #<(WIDTH*2)
-        sta     _row_idx_plus2
-        lda     _row_idx_plus2+1
-        adc     #>(WIDTH*2)
-        sta     _row_idx_plus2+1
 
         rts
 .endproc
@@ -1016,7 +1001,6 @@ init_done:
 .endproc
 
 .proc init_pass
-        tay
         sty     _decode_row::dest0a+1
         sty     _decode_row::dest0b+1
         sty     _decode_row::dest0c+1
