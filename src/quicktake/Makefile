@@ -7,6 +7,9 @@ GENERAL_CFLAGS := \
 	--asm-define SERIAL_LOW_LEVEL_CONTROL \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+QTKN_DIVISION := APPROX_DIVISION
+#QTKN_DIVISION := PRECISE_DIVISION
+
 ifdef DEBUG_HD
 debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_HD=$(DEBUG_HD)
 endif
@@ -148,14 +151,16 @@ slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TAR
 	-DPROGRAM_NAME='"SLOWTAKE"' -DBUFFER_SIZE=2048 --asm-define BUFFER_SIZE=2048 \
 	--start-addr 0xC00 #One file buffer
 
+# 4 full tracks cache!
 qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
-qtknconv_CLCFLAGS = -D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
+# 3 full tracks cache
+qtknconv_CLCFLAGS = -D_CACHE_SIZE=12288 --asm-define CACHE_SIZE=12288 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000 \
-	--asm-define APPROX_DIVISION=1 \
+	--asm-define $(QTKN_DIVISION)=1 \
 
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
@@ -167,7 +172,8 @@ GCCCFLAGS = -D_CACHE_SIZE=8192 -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	$(shell sdl-config --cflags)
 qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645 -DFINAL_WIDTH=640
 
-qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320
+qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320 \
+	-D$(QTKN_DIVISION)=1
 
 jpegconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320
 

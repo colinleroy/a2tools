@@ -6,16 +6,14 @@
         .export       _init_shiftl4
         .export       _init_next_line
         .export       _init_huff
+        .export       tk1, tk2, tk3, tk4, got_4datahuff
 
         .import       _row_idx
 
-        .import       _getdatahuff, _getdatahuff8
+        .import       get4datatab
         .import       _bitbuf_refill
-        .import       _discarddatahuff, _discard4datahuff8
-        .import       _huff_numc, _huff_numc_h
-        .import       _huff_numd, _huff_numd_h
-        .import       _huff_numdd
         .import       _huff_data, _huff_ctrl, _src
+
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
         .import       _next_line_l, _next_line_h
@@ -34,26 +32,29 @@
 
         .importzp     _bitbuf, _vbits
         .importzp     tmp1, ptr2, tmp2, tmp3
-        .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp13
+        .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11
 
         .include      "qtkn_huffgetters.inc"
 WIDTH               = 320
 USEFUL_DATABUF_SIZE = 321
 
 ; ZP vars share locations when they can - they're usually limited to one function
-val0             = _zp2
-wordcnt          = _zp2
-genptr           = _zp2
-_x               = _zp2
+val0             = _zp2   ; word - _decode_row
+wordcnt          = _zp2   ; word - _init_divtable, _init_row
+genptr           = _zp2   ; word - _init_huff
 
-val1             = _zp4
-src_idx          = _zp4
+val1             = _zp4   ; word - _decode_row
+src_idx          = _zp4   ; word - _init_huff
 
-val              = _zp6
-rep_loop         = _zp6
+hval             = _zp6   ; word - _init_huff
+col              = _zp6   ; byte - _decode_row, _consume_extra
 
-col              = _zp7
-rept             = _zp13
+num_discard      = _zp8   ; byte - _consume_extra
+rept             = _zp9   ; byte - _decode_row
+tree             = _zp10  ; byte - _decode_row, _consume_extra
+colh             = _zp11  ; byte - _decode_row, _consume_extra
+
+                          ; _zp12-13 used by bitbuffer
 
 .proc _init_shiftl4
         ldy     #$00
@@ -124,8 +125,8 @@ rept             = _zp13
         bit     $C083               ; WR-enable LC
         bit     $C083               ; we patch things.
         lda     #0
-        sta     val
-        sta     val+1
+        sta     hval
+        sta     hval+1
         sta     src_idx
         sta     src_idx+1
         sta     huff_ctrl_bits+1
@@ -155,7 +156,7 @@ ctrl_huff_next:
         sbc     tmp1
         tay
 
-        lda     val                 ; code = val & 0xFF
+        lda     hval                 ; code = hval & 0xFF
         cpy     #0
         beq     ctrl_code_shifted
 :       lsr     a                   ; code >>= 8-numbits
@@ -194,10 +195,10 @@ huff_ctrl_bits:
         bcc     :+
         inc     genptr+1
 
-:       lda     val                 ; val += incr
+:       lda     hval                 ; hval += incr
         clc
         adc     incr
-        sta     val
+        sta     hval
         bcc     ctrl_huff_next
 
         lda     huff_ctrl_value+2
@@ -228,7 +229,7 @@ data_huff_next:
         sbc     tmp1
         tay
 
-        lda     val                 ; code = val & 0xFF
+        lda     hval                 ; code = hval & 0xFF
         cpy     #0
         beq     data_code_shifted
 :       lsr     a                   ; code >>= 8-numbits
@@ -267,10 +268,10 @@ huff_data_bits:
         bcc     :+
         inc     genptr+1
 
-:       lda     val                 ; val += incr
+:       lda     hval                 ; hval += incr
         clc
         adc     incr
-        sta     val
+        sta     hval
         bcc     data_huff_next
 
         lda     huff_data_value+2
@@ -312,8 +313,7 @@ discard_col_loop:
         adc     #1
         sta     huff_numc_h
 
-        ; jsr     _getctrlhuff
-        GETCTRLHUFF discard_fill, discard_rts
+        GETCTRLHUFF ctrl_discard_fill, ctrl_discard_rts
         sta     tree
 
         beq     tree_zero_2
@@ -322,19 +322,21 @@ tree_not_zero_2:
         cmp     #8
         bne     norm_huff
 
-        jsr     _discard4datahuff8
+        DISCARD4DATAHUFF9 data9_discard_fill, data9_discard_rts
 
         dec     col
         jmp     discard_col_loop
 
-CTRL_REFILLER discard_fill, discard_rts
+REFILLER data9_discard_fill, data9_discard_rts
+REFILLER ctrl_discard_fill, ctrl_discard_rts
+REFILLER data_discard_fill, data_discard_rts
 
 norm_huff:
         adc     #>(_huff_data+256)
-        sta     _huff_numdd
+        sta     discard_table
 
         ldx     #4            ; Discard 4 tokens
-        jsr     _discarddatahuff
+        DISCARDNDATAHUFF data_discard_fill,data_discard_rts,discard_table
 
         dec     col
         jmp     discard_col_loop
@@ -347,52 +349,53 @@ tree_zero_2:
         ldx     #1
         jmp     check_nreps_2
 
-col_gt1:
-        ;data tree 0
-        ldx     #>_huff_data
-        stx     _huff_numd
-        stx     _huff_numd_h
+REFILLER data0_refill, data0_rts
 
-        jsr     _getdatahuff
+col_gt1:
+        GETDATAHUFF _huff_data+0*256, data0_refill, data0_rts
         inx
 
 check_nreps_2:
-        stx     nreps
-
         cpx     #9
-        bcc     :+
+        bcc     store_nreps
 
         lda     col           ; nreps 9
         sec
         sbc     #8
         sta     col
 
-        ldx     #>(_huff_data+256)
-        stx     _huff_numdd
+        ldx     #>(_huff_data+1*256)
+        stx     discard_table2
         ldx     #4
-        jsr     _discarddatahuff
+        DISCARDNDATAHUFF data_discard_fill2,data_discard_rts2,discard_table2
         jmp     tree_zero_2   ; nreps == 9 so keep going
 
-:       stx     rep_loop      ; nreps <= 8
+REFILLER data_discard_fill2, data_discard_rts2
+
+store_nreps:
+        stx     rep_loop_sub+1      ; nreps <= 8
 
         ;data tree 1
-        lda     #>(_huff_data+256)
-        sta     _huff_numdd
-
+        lda     #>(_huff_data+1*256)
+        sta     discard_table3
 
         ; rep_loop /= 2
         txa
         lsr
-        beq     :+
+        beq     skip_discard
         tax                   ; discard rep_loop/2 tokens
-        jsr     _discarddatahuff
+        DISCARDNDATAHUFF data_discard_fill3,data_discard_rts3,discard_table3
 
-:       ; col -= rep_loop
+skip_discard:
+        ; col -= rep_loop
         lda     col
         sec
-        sbc     rep_loop
+rep_loop_sub:
+        sbc     #$FF
         sta     col
         jmp     discard_col_loop
+
+REFILLER data_discard_fill3, data_discard_rts3
 
         rts
 .endproc
@@ -461,13 +464,13 @@ ybck = *+1
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2
+
         lda     #48
         jsr     _init_divtable
         jmp     _init_next_line
 .endproc
 
 .macro SET_BUF_TREE_EIGHT mult_factor, address, low_label, high_label
-        jsr     _getdatahuff8
 mult_factor:
         ldx     #$FF
         jsr     mult8x8r16_direct
@@ -479,15 +482,14 @@ high_label:
         sta     address,y
 .endmacro
 
-.macro SET_VAL_TREE_EIGHT mult_factor, val, dest
-        jsr     _getdatahuff8
+.macro SET_VAL_TREE_EIGHT mult_factor, value, dest
         ldy     col
 dest:   sta     $FFFF,y
 mult_factor:
         ldx     #$FF
         jsr     mult8x8r16_direct
-        sta     val
-        stx     val+1
+        sta     value
+        stx     value+1
 .endmacro
 
 
@@ -512,7 +514,6 @@ h2:     adc     addr2,y
 
         .ifblank token
 res_h:  sta     addr_res,y
-        sta     tmp1
         txa
         ror     a
 res_l:  sta     addr_res,y
@@ -531,12 +532,12 @@ res_h:  sta     addr_res,y
         .endif
 .endmacro
 
-.macro INTERPOLATE_VAL_TOKEN val, addr2, l2, h2, addr3, l3, h3, res, token, divlow_patch
+.macro INTERPOLATE_VAL_TOKEN value, addr2, l2, h2, addr3, l3, h3, res, token, l4
         clc
-        lda     val
+        lda     value
 l2:     adc     addr2,y
         tax
-        lda     val+1
+        lda     value+1
 h2:     adc     addr2,y
         lsr     a
         sta     tmp1
@@ -545,20 +546,20 @@ h2:     adc     addr2,y
 
         clc
 l3:     adc     addr3,y
-        tax
+        sta     l4+1
         lda     tmp1
 h3:     adc     addr3,y
         lsr     a
 
         .ifblank token
         sta     res+1
-        sta     divlow_patch+1
-        txa
+        tax                    ; Final high byte in X
+l4:     lda     #$FF
         ror     a
         sta     res
         .else
         sta     tmp1          ; High byte in tmp1
-        txa
+l4:     lda     #$FF
         ror     a             ; Low byte in A
 
 token:  ldx     #$FF
@@ -568,6 +569,7 @@ token:  ldx     #$FF
         lda     tmp1
         adc     _sshiftl4,x
         sta     res+1
+        tax                  ; Final high byte in X
         .endif
 .endmacro
 
@@ -581,14 +583,14 @@ h1:     adc     addr1,y
 h2:     sta     addr2,y
 .endmacro
 
-.macro INCR_VAL_TOKEN val, divtable
+.macro INCR_VAL_TOKEN value, divtable
         clc
         lda     _ushiftl4,x
-        adc     val
-        sta     val
+        adc     value
+        sta     value
         lda     _sshiftl4,x
-        adc     val+1
-        sta     val+1
+        adc     value+1
+        sta     value+1
         sta     divtable+1
 .endmacro
 
@@ -613,7 +615,7 @@ next_pass:
         lda     _row_idx
         adc     #<(WIDTH)
         sta     _row_idx
-        tay
+        tay                   ; For init_pass
         lda     _row_idx+1
         adc     #>(WIDTH)
         sta     _row_idx+1
@@ -644,7 +646,7 @@ more_cols:
         bne     tree_not_zero
         jmp     tree_zero
 
-CTRL_REFILLER rowctrl, rowctrlret
+REFILLER rowctrl, rowctrlret
 
 dechigh:
         jsr     dec_buf_pages
@@ -660,43 +662,47 @@ declow:
 
         lda     tree
         cmp     #8
-        bne     tree_not_eight
+        beq     tree_eight
+        jmp     tree_not_eight
 
-        ;  tree == 8
+REFILLER data9a_fill, data9a_rts
+REFILLER data9b_fill, data9b_rts
+REFILLER data9c_fill, data9c_rts
+REFILLER data9d_fill, data9d_rts
+
+tree_eight:
+        ;  tree == 8 so get from "huff table" 9
+        GETDATAHUFF9 data9a_fill, data9a_rts
         SET_VAL_TREE_EIGHT mult_factor1, val1, dest1a
+
+        GETDATAHUFF9 data9b_fill, data9b_rts
         SET_VAL_TREE_EIGHT mult_factor2, val0, dest0a
 
+        GETDATAHUFF9 data9c_fill, data9c_rts
         SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
+
+        GETDATAHUFF9 data9d_fill, data9d_rts
         SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
 
         jmp     decode_col_loop
 
 tree_not_eight:
         ; huff_num = tree+1
-        adc     #>(_huff_data+256)
-        sta     _huff_numd
-        sta     _huff_numd_h
-
-        jsr     _getdatahuff
-        stx     tk1+1
-        jsr     _getdatahuff
-        stx     tk2+1
-        jsr     _getdatahuff
-        stx     tk3+1
-        jsr     _getdatahuff
-        stx     tk4+1
-
+        adc     #1
+        asl
+        sta     jump+1
+jump:
+        jmp     (get4datatab)
+got_4datahuff:
         ldy     col           ; Reload Y
 
-        INTERPOLATE_VAL_TOKEN val0, $FF02, next2lb, next2hb, $FF01, next1lb, next1hb, val1, tk1
-        tax
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2lb, next2hb, $FF01, next1lb, next1hb, val1, tk1, l4a
 divt1b: lda     _div48_l,x
 dest1b: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3la, next3ha, val1, $FF02, next2lc, next2hc, tk3
 
-        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lc, next1hc, $FF00, next0la, next0ha, val0, tk2
-        tax
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lc, next1hc, $FF00, next0la, next0ha, val0, tk2, l4b
 divt0b: lda     _div48_l,x
 dest0b: sta     $FFFF,y
 
@@ -718,27 +724,20 @@ dechigh2:
         jsr     dec_buf_pages
         jmp     declow2
 
+REFILLER data0_refill, data0_rts
 col_gt1a:
         ;  data tree 0
-        ldx     #>(_huff_data)
-        stx     _huff_numd
-        stx     _huff_numd_h
-
-        jsr     _getdatahuff
+        GETDATAHUFF _huff_data+0*256,data0_refill,data0_rts
         inx
 check_nreps:
-        stx     nreps
-
+        lda     #$2C          ; BIT
         cpx     #9
         bcc     nreps_check_done
+        lda     #$4C          ; JMP
         ldx     #8
 nreps_check_done:
-        stx     rep_loop
-
-        ; set huff data tree 1
-        ldx     #>(_huff_data+256)
-        stx     _huff_numd
-        stx     _huff_numd_h
+        stx     rep_loop_check+1
+        sta     rep_loop_done ; Patch end of loop to continue if nreps>=9
 
         ldx     #$00
 do_rep_loop:
@@ -752,14 +751,14 @@ declow2:
         dey
         sty     col
 
-        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , divt1c
-divt1c: lda     _div48_l      ; Low byte patched by INTERPOLATE_VAL_TOKEN, faster as there's no token
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , l4c
+divt1c: lda     _div48_l,x
 dest1c: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
 
-        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , divt0c
-divt0c: lda     _div48_l
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , l4d
+divt0c: lda     _div48_l,x
 dest0c: sta     $FFFF,y
 
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
@@ -768,8 +767,9 @@ dest0c: sta     $FFFF,y
         and     #1
         beq     rep_even
 
-        ; tk = getbithuff(8) << 4;
-        jsr     _getdatahuff
+        ; tk = gethuffdata(1) << 4;
+        GETDATAHUFF _huff_data+1*256,data1_refill,data1_rts
+        ; tk in X now
 
         ldy     col
 
@@ -788,17 +788,15 @@ dest0d: sta     $FFFF,y
 rep_even:
         ldx     rept
         inx
-        cpx     rep_loop
+rep_loop_check:
+        cpx     #$FF
         beq     rep_loop_done
         jmp     do_rep_loop
 
+REFILLER data1_refill, data1_rts
 rep_loop_done:
-        lda     nreps
-        cmp     #9
-        bne     nine_reps_loop_done
-        jmp     nine_reps_loop
+        jmp     nine_reps_loop    ; Patched with bit/jmp depending on whether nreps >= 9
 
-nine_reps_loop_done:
         jmp     decode_col_loop
 
 all_passes_done:
@@ -839,9 +837,6 @@ all_passes_done:
         cmp     #48
         beq     :+
         ldx     #>_dyndiv_l
-        stx     _init_divtable::build_table_n+2
-        stx     _init_divtable::build_table_o+2
-        stx     _init_divtable::build_table_u+2
         stx     _decode_row::divt0b+2
         stx     _decode_row::divt0c+2
         stx     _decode_row::divt0d+2
@@ -850,6 +845,9 @@ all_passes_done:
         stx     _decode_row::divt1d+2
         cmp     last_dyndiv
         beq     :+
+        stx     _init_divtable::build_table_n+2
+        stx     _init_divtable::build_table_o+2
+        stx     _init_divtable::build_table_u+2
         sta     last_dyndiv
         jsr     _init_divtable        ; Init current factor division table
 
@@ -862,9 +860,6 @@ small_val:                          ; Last is 8bit, do a small mult
         cpx     #48
         beq     :+
         lda     #>_dyndiv_l
-        sta     _init_divtable::build_table_n+2
-        sta     _init_divtable::build_table_o+2
-        sta     _init_divtable::build_table_u+2
         sta     _decode_row::divt0b+2
         sta     _decode_row::divt0c+2
         sta     _decode_row::divt0d+2
@@ -873,6 +868,9 @@ small_val:                          ; Last is 8bit, do a small mult
         sta     _decode_row::divt1d+2
         cpx     last_dyndiv
         beq     :+
+        sta     _init_divtable::build_table_n+2
+        sta     _init_divtable::build_table_o+2
+        sta     _init_divtable::build_table_u+2
         txa
         sta     last_dyndiv
         jsr     _init_divtable
@@ -999,6 +997,8 @@ init_done:
         rts
 .endproc
 
+.segment "LC"
+
 .proc init_pass
         sty     _decode_row::dest0a+1
         sty     _decode_row::dest0b+1
@@ -1034,7 +1034,7 @@ init_done:
         lda     #0
         ror     a
 
-        ; next_line[WIDTH+1] = factor<<7
+        ; val0 = next_line[WIDTH+1] = factor<<7
         stx     _next_line_h+(WIDTH+1)
         stx     val0+1
         sta     _next_line_l+(WIDTH+1)
@@ -1062,8 +1062,6 @@ init_done:
         lda     #>(_next_line_l+256)
         jmp     set_buf_pages
 .endproc
-
-.segment "LC"
 
 .proc dec_buf_pages
         dec     colh
@@ -1136,11 +1134,15 @@ init_done:
         rts
 .endproc
 
+; Scoped exports for bitbuffer
+tk1           = _decode_row::tk1
+tk2           = _decode_row::tk2
+tk3           = _decode_row::tk3
+tk4           = _decode_row::tk4
+got_4datahuff = _decode_row::got_4datahuff
+
 .segment "BSS"
 
-tree:           .res 1
-nreps:          .res 1
-colh:           .res 1
 pass:           .res 1
 incr:           .res 1
 code:           .res 1

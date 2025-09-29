@@ -11,11 +11,13 @@
         .import         _cache_end
         .import         _ifd
         .import         floppy_motor_on
+        .import         tk1, tk2, tk3, tk4
+
         .export         _bitbuf, _vbits, _bitbuf_refill
-        .export         _huff_numd, _huff_numd_h
-        .export         _huff_numdd
-        .export         _getbits6, _getdatahuff, _getdatahuff8
-        .export         _discarddatahuff, _discard4datahuff8
+        .export         _getbits6
+        .export         get4datatab
+        .import         got_4datahuff
+
         .export         _cache
         .export         _init_floppy_starter
         .export         _next_line_l, _next_line_h
@@ -23,8 +25,23 @@
         .export         _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
         .export         _div48_l
         .export         _dyndiv_l
-        .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
+        .importzp       _zp12, _zp13
+
+        .include        "qtkn_huffgetters.inc"
+
 cur_cache_ptr = _prev_ram_irq_vector
+
+.segment        "DATA"
+.align 256
+get4datatab:   .addr          _get4datahuff0
+               .addr          _get4datahuff1
+               .addr          _get4datahuff2
+               .addr          _get4datahuff3
+               .addr          _get4datahuff4
+               .addr          _get4datahuff5
+               .addr          _get4datahuff6
+               .addr          _get4datahuff7
+               .addr          _get4datahuff8
 
 .segment        "BSS"
 .align 256
@@ -51,9 +68,8 @@ _raw_image:   .res        (20*320)  ; Cool, this is aligned!
 .assert <* = 0, error
 _next_line_h:  .res        322
 
-_bitbuf     = _zp8
-readn       = _zp9
-_vbits      = _zp10
+_bitbuf     = _zp12
+_vbits      = _zp13
 motor_on:    .res 1
 
 ; ---------------------------------------------------------------
@@ -82,124 +98,156 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+REFILLER getbits6_refill, getbits6_refill_done
 ; Returns value in A
 _getbits6:
         lda    #0
         ldy    #6
         ldx     _vbits
 :       dex
-        bpl    :+
-        jsr    _bitbuf_refill
-:       asl    _bitbuf
+        bmi    getbits6_refill
+getbits6_refill_done:
+        asl    _bitbuf
         rol    a
         dey
-        bne    :--
-        stx     _vbits
-        rts
-
-data_refill:
-        jsr     _bitbuf_refill
-        jmp     data_cont
-
-; Returns value in X
-; _huff_data is a 256 bytes array with [0-127] containing the number of bits of each code,
-; as reading binary 10 is not the same as 010 for the Huffman encoding, and [128]-[255]
-; contains the value of each code.
-; There are multiple (aligned)huff arrays and the high byte addresses are patched by caller.
-_getdatahuff:
-        lda     #0            ; huff code = 0
-        tay                   ; numbits read = 0
-
-        ldx     _vbits        ; How many remaining bits in the buffer?
-:       iny                   ; Count read bit
-        dex                   ; Remove from buffer remaining
-        bmi     data_refill   ; Go refill buffer if empty - comes back to data_cont
-data_cont:
-        asl     _bitbuf       ; Get bit into carry
-        rol     a             ; Put it into huff code
-
-        sta     _huff_numd-1  ; Patch bitcheck address right below (the array is
-                              ; aligned, so that makes an ad-hoc tax / cpy $nnnn,x)
-
-_huff_numd = *+2              ; Is this code valid with this number of bits?
-        cpy     _huff_data    ; (for example, 10 is not the same as 010!)
-        bne    :-             ; Nope. Go read another bit
-
-        stx    _vbits         ; Valid code. Save remaining
-        tay                   ; And get value
-_huff_numd_h = *+2
-        ldx     _huff_data+128,y
-        rts
-
-discarddata_refill:
-        jsr     _bitbuf_refill
-        jmp     discarddata_cont
-
-; Returns nothing, discards X tokens
-_discarddatahuff:
-        stx     num_discard
-
-discard_token:
-        lda     #0             ; r = 0
-        tay                   ; n = 0
-
-        ldx     _vbits
-:       iny                   ; Read until valid code
-        dex
-        bmi     discarddata_refill
-discarddata_cont:
-        asl     _bitbuf
-        rol     a
-        sta     _huff_numdd-1 ; Patch bitcheck address
-                              ; cpy $nnnn,x is impossible so this is faster
-
-_huff_numdd = *+2             ; Get num bits
-        cpy     _huff_data
         bne    :-
-
         stx     _vbits
-
-        dec     num_discard
-        bne     discard_token
         rts
 
-huff8_refill:
-        jsr     _bitbuf_refill
-        jmp     huff8_cont
-; Returns value in A
-_getdatahuff8:
-        lda     #0             ; Read and consume 5 bits
-        ldy     #5
-        ldx     _vbits
-:       dex
-        bmi     huff8_refill
-huff8_cont:
-        asl     _bitbuf
-        rol     a
-        dey
-        bne     :-
+REFILLER refill0a,refill0a_done
+REFILLER refill0b,refill0b_done
+REFILLER refill0c,refill0c_done
+REFILLER refill0d,refill0d_done
+_get4datahuff0:
+        GETDATAHUFF _huff_data+0*256,refill0a,refill0a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+0*256,refill0b,refill0b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+0*256,refill0c,refill0c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+0*256,refill0d,refill0d_done
+        stx     tk4+1
+        jmp     got_4datahuff
 
-        stx     _vbits
-        tax
-        lda    _ushiftl3p4,x
-        rts
+REFILLER refill1a,refill1a_done
+REFILLER refill1b,refill1b_done
+REFILLER refill1c,refill1c_done
+REFILLER refill1d,refill1d_done
+_get4datahuff1:
+        GETDATAHUFF _huff_data+1*256,refill1a,refill1a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+1*256,refill1b,refill1b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+1*256,refill1c,refill1c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+1*256,refill1d,refill1d_done
+        stx     tk4+1
+        jmp     got_4datahuff
 
-; Returns nothing, discards 4 5-bit tokens
-; TODO: don't shift all bits, skip full bytes
-; Not too urgent as function is called ~30 times
-; and accounts for less than 20k cycles total
-_discard4datahuff8:
-        ldy     #20
-        ldx     _vbits
-:       dex
-        bpl     :+
-        jsr     _bitbuf_refill
-:       asl     _bitbuf
-        dey
-        bne     :--
-        stx     _vbits
+REFILLER refill2a,refill2a_done
+REFILLER refill2b,refill2b_done
+REFILLER refill2c,refill2c_done
+REFILLER refill2d,refill2d_done
+_get4datahuff2:
+        GETDATAHUFF _huff_data+2*256,refill2a,refill2a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+2*256,refill2b,refill2b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+2*256,refill2c,refill2c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+2*256,refill2d,refill2d_done
+        stx     tk4+1
+        jmp     got_4datahuff
 
-        rts
+REFILLER refill3a,refill3a_done
+REFILLER refill3b,refill3b_done
+REFILLER refill3c,refill3c_done
+REFILLER refill3d,refill3d_done
+_get4datahuff3:
+        GETDATAHUFF _huff_data+3*256,refill3a,refill3a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+3*256,refill3b,refill3b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+3*256,refill3c,refill3c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+3*256,refill3d,refill3d_done
+        stx     tk4+1
+        jmp     got_4datahuff
+
+REFILLER refill4a,refill4a_done
+REFILLER refill4b,refill4b_done
+REFILLER refill4c,refill4c_done
+REFILLER refill4d,refill4d_done
+_get4datahuff4:
+        GETDATAHUFF _huff_data+4*256,refill4a,refill4a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+4*256,refill4b,refill4b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+4*256,refill4c,refill4c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+4*256,refill4d,refill4d_done
+        stx     tk4+1
+        jmp     got_4datahuff
+
+REFILLER refill5a,refill5a_done
+REFILLER refill5b,refill5b_done
+REFILLER refill5c,refill5c_done
+REFILLER refill5d,refill5d_done
+_get4datahuff5:
+        GETDATAHUFF _huff_data+5*256,refill5a,refill5a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+5*256,refill5b,refill5b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+5*256,refill5c,refill5c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+5*256,refill5d,refill5d_done
+        stx     tk4+1
+        jmp     got_4datahuff
+
+REFILLER refill6a,refill6a_done
+REFILLER refill6b,refill6b_done
+REFILLER refill6c,refill6c_done
+REFILLER refill6d,refill6d_done
+_get4datahuff6:
+        GETDATAHUFF _huff_data+6*256,refill6a,refill6a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+6*256,refill6b,refill6b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+6*256,refill6c,refill6c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+6*256,refill6d,refill6d_done
+        stx     tk4+1
+        jmp     got_4datahuff
+
+REFILLER refill7a,refill7a_done
+REFILLER refill7b,refill7b_done
+REFILLER refill7c,refill7c_done
+REFILLER refill7d,refill7d_done
+_get4datahuff7:
+        GETDATAHUFF _huff_data+7*256,refill7a,refill7a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+7*256,refill7b,refill7b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+7*256,refill7c,refill7c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+7*256,refill7d,refill7d_done
+        stx     tk4+1
+        jmp     got_4datahuff
+
+REFILLER refill8a,refill8a_done
+REFILLER refill8b,refill8b_done
+REFILLER refill8c,refill8c_done
+REFILLER refill8d,refill8d_done
+_get4datahuff8:
+        GETDATAHUFF _huff_data+8*256,refill8a,refill8a_done
+        stx     tk1+1
+        GETDATAHUFF _huff_data+8*256,refill8b,refill8b_done
+        stx     tk2+1
+        GETDATAHUFF _huff_data+8*256,refill8c,refill8c_done
+        stx     tk3+1
+        GETDATAHUFF _huff_data+8*256,refill8d,refill8d_done
+        stx     tk4+1
+        jmp     got_4datahuff
 
 ; Must never destroy A or Y
 _bitbuf_refill:
@@ -268,6 +316,3 @@ abck = *+1
         lda     #$FF
         ldx     #7                ; Reload vbits
         rts
-
-.segment "BSS"
-num_discard:    .res 1
