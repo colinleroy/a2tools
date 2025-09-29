@@ -500,7 +500,8 @@ l2:     adc     addr2,y
         tax
         lda     val_a+1
 h2:     adc     addr2,y
-        lsr     a
+        cmp     #$80
+        ror     a
         sta     tmp1
         txa
         ror     a
@@ -510,7 +511,8 @@ h2:     adc     addr2,y
         tax
         lda     tmp1
         adc     val_b+1
-        lsr     a
+        cmp     #$80
+        ror     a
 
         .ifblank token
 res_h:  sta     addr_res,y
@@ -539,7 +541,8 @@ l2:     adc     addr2,y
         tax
         lda     value+1
 h2:     adc     addr2,y
-        lsr     a
+        cmp     #$80
+        ror     a
         sta     tmp1
         txa
         ror     a
@@ -549,7 +552,8 @@ l3:     adc     addr3,y
         sta     l4+1
         lda     tmp1
 h3:     adc     addr3,y
-        lsr     a
+        cmp     #$80
+        ror     a
 
         .ifblank token
         sta     res+1
