@@ -24,7 +24,11 @@ void init_div48(void) {
      * It is worth it to approximate those divisions HARD
      * by rounding the numerator to the nearest 256, in order
      * to have a size-appropriate table. */
+#ifdef APPROX_DIVISION
+    uint16 approx = (((r<<8)|0x80)*(65536/(48)))>>16;
+#else
     uint16 approx = ((r<<8)|0x80)/48;
+#endif
     if ((r<<8) & 0x8000) {
       div48_l[r] = 0;
       div48_h[r] = 0xFF;
@@ -44,7 +48,11 @@ void init_dyndiv(uint8 factor) {
   uint8 r = 0;
 
   do {
+#ifdef APPROX_DIVISION
+    uint16 approx = (((r<<8)|0x80)*(65536/(factor)))>>16;
+#else
     uint16 approx = ((r<<8)|0x80)/factor;
+#endif
     if ((r<<8) & 0x8000) {
       dyndiv_l[r] = 0;
       dyndiv_h[r] = 0xFF;
@@ -194,7 +202,7 @@ void init_row(void) {
 }
 
 #define SET_OUTPUT(offset, value) do {                                          \
-  dest[col+offset] = (factor == 48) ? div48_l[value>>8] : dyndiv_l[value>>8]; \
+  dest[col+offset] = (factor == 48) ? div48_l[((uint16)value)>>8] : dyndiv_l[((uint16)value)>>8]; \
 } while(0)
 
 void decode_row(void) {
