@@ -21,6 +21,7 @@ void main(int argc, char *argv[]) {
   int w, h, qt150;
   SDL_Surface *screen = NULL;
   int video_inited = 0;
+  int blink = 1;
 
 display:
   if (fp) {
@@ -95,18 +96,12 @@ display:
           sdl_set_pixel(screen, x*2+1, y*2+1, c, c, c);
         } else {
           off_t offset = y*w + x;
-          static int blink = 0;
-          int color = (blink ? c : c2);
-          blink = !blink;
-          printf("0x%04lX: Pixel differ at %d,%d: %u vs %u  ", offset, x, y, c, c2);
-          for (int k = abs(c-c2); k; k--) {
-            printf("*");
-          }
-          printf("\n");
-          sdl_set_pixel(screen, x*2, y*2, color, color/(1+abs(c2-c)), color);
-          sdl_set_pixel(screen, x*2+1, y*2, color, color/(1+abs(c2-c)), color);
-          sdl_set_pixel(screen, x*2, y*2+1, color, color/(1+abs(c2-c)), color);
-          sdl_set_pixel(screen, x*2+1, y*2+1, color, color/(1+abs(c2-c)), color);
+          int color = c2;
+          int highlight = blink ? abs(c2-c) : 0;
+          sdl_set_pixel(screen, x*2, y*2, color, color/(1+highlight), color);
+          sdl_set_pixel(screen, x*2+1, y*2, color, color/(1+highlight), color);
+          sdl_set_pixel(screen, x*2, y*2+1, color, color/(1+highlight), color);
+          sdl_set_pixel(screen, x*2+1, y*2+1, color, color/(1+highlight), color);
         }
       }
     }
@@ -193,6 +188,7 @@ display:
       if (e.key.keysym.sym == SDLK_ESCAPE) {
         exit(0);
       }
+      blink = !blink;
       goto display;
     }
     if (e.type == SDL_MOUSEMOTION) {
@@ -206,8 +202,13 @@ display:
       if (fp2) {
         fseek(fp2, offset, SEEK_SET);
         fread(&c2, 1, 1, fp2);
-        if (c != c2)
-          printf("0x%04lX: Pixel at %d,%d: %u vs %u\n", offset, x, y, c, c2);
+        if (c != c2) {
+          printf("0x%04lX: Pixel at %d,%d: %u vs %u |", offset, x, y, c, c2);
+          for (int k = abs(c-c2); k; k--) {
+            printf("*");
+          }
+          printf("\n");
+        }
         else
           printf("0x%04lX: Pixel at %d,%d: %u\n", offset, x, y, c);
       } else {
