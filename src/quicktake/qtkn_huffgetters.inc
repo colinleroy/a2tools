@@ -100,18 +100,35 @@ data9_rts:
         lda    _ushiftl3p4,x
 .endmacro
 
-.macro DISCARD4DATAHUFF9 data9_discard_fill, data9_discard_rts
+.macro DISCARD4DATAHUFF9
 ; Returns nothing, discards 4 5-bit tokens
-; TODO: don't shift all bits, skip full bytes
-; Not too urgent as function is called ~30 times
-; and accounts for less than 20k cycles total
-        ldy     #20
-        ldx     _vbits
-:       dex
-        bmi     data9_discard_fill
-data9_discard_rts:
-        asl     _bitbuf
+        lda     #20
+        sec
+        sbc     _vbits            ; Once this byte is finished we have A bits to discard
+        cmp     #16
+        bcc     :+                ; Discard one or two full bytes?
+        jsr     _bitbuf_refill    ; Discard a full byte,
+        sec
+        sbc     #8
+:       jsr     _bitbuf_refill    ; Discard another full byte,
+
+        jsr     _bitbuf_refill    ; Load the next one,
+
+        ldx     #8                ; Note we didn't consume the bit, which refill expects us to
+                                  ; so fix vbits from 7 to 8
+
+        sec                       ; Remove last discarded 8 bits from remaining
+        sbc     #8
+
+        beq     :++               ; Any bits left to discard?
+        tay
+
+        lda     _bitbuf           ; Load buffer to shift faster
+:       dex                       ; Discard the last bits, being sure we have
+        asl                       ; enough bits in the bitbuffer not to reload
         dey
         bne     :-
-        stx     _vbits
+        sta     _bitbuf
+:       stx     _vbits
+
 .endmacro

@@ -76,7 +76,7 @@ motor_on:    .res 1
 ; unsigned char __near__ __fastcall__ getbithuff (unsigned char n)
 ; ---------------------------------------------------------------
 
-.segment        "CODE"
+.segment "CODE"
 
 _init_floppy_starter:
         ldy     #0                      ; Init bitbuf (consider cache full at very start)
@@ -98,6 +98,11 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+; In data for alignment
+.segment        "DATA"
+.align 256
+
+BITHUFF_PAGE0_START = *
 REFILLER getbits6_refill, getbits6_refill_done
 ; Returns value in A
 _getbits6:
@@ -129,6 +134,10 @@ _get4datahuff0:
         stx     tk4+1
         jmp     got_4datahuff
 
+.assert >* = >BITHUFF_PAGE0_START, error
+.align 256
+BITHUFF_PAGE1_START = *
+
 REFILLER refill1a,refill1a_done
 REFILLER refill1b,refill1b_done
 REFILLER refill1c,refill1c_done
@@ -143,6 +152,10 @@ _get4datahuff1:
         GETDATAHUFF _huff_data+1*256,refill1d,refill1d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+.assert >* = >BITHUFF_PAGE1_START, error
+.align 256
+BITHUFF_PAGE2_START = *
 
 REFILLER refill2a,refill2a_done
 REFILLER refill2b,refill2b_done
@@ -159,6 +172,10 @@ _get4datahuff2:
         stx     tk4+1
         jmp     got_4datahuff
 
+.assert >* = >BITHUFF_PAGE2_START, error
+.align 256
+BITHUFF_PAGE3_START = *
+
 REFILLER refill3a,refill3a_done
 REFILLER refill3b,refill3b_done
 REFILLER refill3c,refill3c_done
@@ -173,6 +190,10 @@ _get4datahuff3:
         GETDATAHUFF _huff_data+3*256,refill3d,refill3d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+.assert >* = >BITHUFF_PAGE3_START, error
+.align 256
+BITHUFF_PAGE4_START = *
 
 REFILLER refill4a,refill4a_done
 REFILLER refill4b,refill4b_done
@@ -189,6 +210,10 @@ _get4datahuff4:
         stx     tk4+1
         jmp     got_4datahuff
 
+.assert >* = >BITHUFF_PAGE4_START, error
+.align 256
+BITHUFF_PAGE5_START = *
+
 REFILLER refill5a,refill5a_done
 REFILLER refill5b,refill5b_done
 REFILLER refill5c,refill5c_done
@@ -203,6 +228,10 @@ _get4datahuff5:
         GETDATAHUFF _huff_data+5*256,refill5d,refill5d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+.assert >* = >BITHUFF_PAGE5_START, error
+.align 256
+BITHUFF_PAGE6_START = *
 
 REFILLER refill6a,refill6a_done
 REFILLER refill6b,refill6b_done
@@ -219,6 +248,10 @@ _get4datahuff6:
         stx     tk4+1
         jmp     got_4datahuff
 
+.assert >* = >BITHUFF_PAGE6_START, error
+.align 256
+BITHUFF_PAGE7_START = *
+
 REFILLER refill7a,refill7a_done
 REFILLER refill7b,refill7b_done
 REFILLER refill7c,refill7c_done
@@ -234,6 +267,10 @@ _get4datahuff7:
         stx     tk4+1
         jmp     got_4datahuff
 
+.assert >* = >BITHUFF_PAGE7_START, error
+.align 256
+BITHUFF_PAGE8_START = *
+
 REFILLER refill8a,refill8a_done
 REFILLER refill8b,refill8b_done
 REFILLER refill8c,refill8c_done
@@ -248,6 +285,9 @@ _get4datahuff8:
         GETDATAHUFF _huff_data+8*256,refill8d,refill8d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+
+.assert >* = >BITHUFF_PAGE8_START, error
 
 ; Must never destroy A or Y
 _bitbuf_refill:

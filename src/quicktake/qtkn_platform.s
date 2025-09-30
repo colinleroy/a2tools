@@ -322,12 +322,11 @@ tree_not_zero_2:
         cmp     #8
         bne     norm_huff
 
-        DISCARD4DATAHUFF9 data9_discard_fill, data9_discard_rts
+        DISCARD4DATAHUFF9
 
         dec     col
         jmp     discard_col_loop
 
-REFILLER data9_discard_fill, data9_discard_rts
 REFILLER ctrl_discard_fill, ctrl_discard_rts
 REFILLER data_discard_fill, data_discard_rts
 
@@ -595,7 +594,11 @@ h2:     sta     addr2,y
         lda     _sshiftl4,x
         adc     value+1
         sta     value+1
-        sta     divtable+1
+        .ifblank divtable
+        tax
+        .else
+        sta    divtable+1
+        .endif
 .endmacro
 
 .proc _decode_row
@@ -671,8 +674,6 @@ declow:
 
 REFILLER data9a_fill, data9a_rts
 REFILLER data9b_fill, data9b_rts
-REFILLER data9c_fill, data9c_rts
-REFILLER data9d_fill, data9d_rts
 
 tree_eight:
         ;  tree == 8 so get from "huff table" 9
@@ -686,9 +687,13 @@ tree_eight:
         SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
 
         GETDATAHUFF9 data9d_fill, data9d_rts
+
         SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
 
         jmp     decode_col_loop
+
+REFILLER data9c_fill, data9c_rts
+REFILLER data9d_fill, data9d_rts
 
 tree_not_eight:
         ; huff_num = tree+1
@@ -732,6 +737,7 @@ REFILLER data0_refill, data0_rts
 col_gt1a:
         ;  data tree 0
         GETDATAHUFF _huff_data+0*256,data0_refill,data0_rts
+
         inx
 check_nreps:
         lda     #$2C          ; BIT
@@ -772,22 +778,25 @@ dest0c: sta     $FFFF,y
         beq     rep_even
 
         ; tk = gethuffdata(1) << 4;
+BITHUFF1a_START = *
         GETDATAHUFF _huff_data+1*256,data1_refill,data1_rts
         ; tk in X now
 
         ldy     col
 
-        ; Increment values by token (in X)
+        ; Increment next_line values by token (in X)
+        INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi
+        INCR_BUF_TOKEN $FF01, next1lh, next1hh, $FF01, next1li, next1hi
+
+        ; Increment values by token (in X) - preserve X on the first one
         INCR_VAL_TOKEN val1, divt1d
 divt1d: lda     _div48_l
 dest1d: sta     $FFFF,y
 
-        INCR_VAL_TOKEN val0, divt0d
-divt0d: lda     _div48_l
+        INCR_VAL_TOKEN val0
+divt0d: lda     _div48_l,x
 dest0d: sta     $FFFF,y
 
-        INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi
-        INCR_BUF_TOKEN $FF01, next1lh, next1hh, $FF01, next1li, next1hi
 
 rep_even:
         ldx     rept
@@ -798,6 +807,8 @@ rep_loop_check:
         jmp     do_rep_loop
 
 REFILLER data1_refill, data1_rts
+.assert >* = >BITHUFF1a_START, error
+
 rep_loop_done:
         jmp     nine_reps_loop    ; Patched with bit/jmp depending on whether nreps >= 9
 
