@@ -32,11 +32,78 @@ huff_numc_h = *+2
         lda     _huff_ctrl+256,x
 .endmacro
 
-.macro GETDATAHUFF HUFF_TABLE,filler_addr,rts_addr
+.macro GETDATAHUFF_REPVAL
+        ldy     #0
+        dec     _vbits        ; 1 bit
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Get bit into carry
+        bcc     :++           ; If first bit is 0, value is 0
+
+        iny
+        dec     _vbits        ; Second bit
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Get bit into carry
+        bcc     :+
+        iny
+
+:       ldx     huff_small_1,y
+.endmacro
+
+; Special for huff_data[2], where it's easy, 0 = 253 / 1 = 3
+.macro GETDATAHUFF1BIT HUFF_TABLE
+        lda     #253          ; huff code = 0
+
+        dec     _vbits        ; How many remaining bits in the buffer?
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Get bit into carry
+        bcc     :+
+        lda     #3
+:       tax
+.endmacro
+
+.macro GETDATAHUFF2BITS HUFF_TABLE
         lda     #0            ; huff code = 0
-        tay                   ; numbits read = 0
+        ldx     _vbits
+        dex                   ; First bit
+        bpl     :+
+        jsr     _bitbuf_refill
+
+        asl     _bitbuf       ; Get two bits faster now we're full
+        rol     a
+        asl     _bitbuf
+        rol     a
+        dex                   ; consume second bit
+        jmp     :+++
+
+:       asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
+
+        dex                   ; Second bit
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
+
+:       tay                   ; And get value
+        stx     _vbits
+        ldx     HUFF_TABLE,y
+.endmacro
+
+.macro GETDATAHUFF2BITSPLUS HUFF_TABLE,filler_addr,rts_addr
+        lda     #0            ; huff code = 0
+        ldy     #1            ; numbits read = 1
 
         ldx     _vbits        ; How many remaining bits in the buffer?
+        dex
+        bpl     :+
+        jsr     _bitbuf_refill
+:
+        asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
+
 :       iny                   ; Count read bit
         dex                   ; Remove from buffer remaining
         bmi     filler_addr   ; Go refill buffer if empty - comes back to data_cont
@@ -56,11 +123,36 @@ rts_addr:
         ldx     HUFF_TABLE+128,y
 .endmacro
 
-.macro DISCARDNDATAHUFF refiller_addr,rts_addr,table_label
-        stx     num_discard
+.macro GETDATAHUFF_NREPEATS filler_addr,rts_addr
+        GETDATAHUFF2BITSPLUS _huff_data+0*256,filler_addr,rts_addr
+.endmacro
 
+; No 0 value in these tables, no weird 0 prefix in codes,
+; we can just try to load a value without counting bits
+.macro GETDATAHUFF2BITSPLUS_SAFE HUFF_TABLE,filler_addr,rts_addr
+        lda     #0            ; huff code = 0
+
+        dec     _vbits        ; How many remaining bits in the buffer?
+        bpl     :+
+        jsr     _bitbuf_refill
 :
-        lda     #0             ; r = 0
+        asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
+
+:       dec     _vbits        ; Remove from buffer remaining
+        bmi     filler_addr   ; Go refill buffer if empty - comes back to rts_addr
+rts_addr:
+        asl     _bitbuf       ; Get bit into carry
+        rol     a             ; Put it into huff code
+        tay
+        ldx     HUFF_TABLE+128,y
+        beq    :-             ; Nope. Go read another bit
+.endmacro
+
+.macro DISCARDNDATAHUFF refiller_addr,rts_addr,table_label
+        sty     num_discard
+
+:       lda     #0            ; r = 0
         tay                   ; n = 0
 
         ldx     _vbits
@@ -83,7 +175,52 @@ table_label = *+2             ; Get num bits
         bne     :--
 .endmacro
 
-.macro GETDATAHUFF9 data9_fill, data9_rts
+.macro DISCARDNDATAHUFF_REPVAL
+        ldx     _vbits
+:       dex                   ; 1 bit
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Get bit into carry
+        bcc     :++           ; If first bit is 0, value is 0, no other bit to pull
+
+        dex                   ; Second bit
+        bpl     :+
+        jsr     _bitbuf_refill
+:       asl     _bitbuf       ; Discard bit
+
+:       dey
+        bne     :----
+        stx     _vbits
+.endmacro
+
+.macro DISCARDNBITS discardN_refill, discardN_rts
+        ldy     #4
+        ldx     _vbits
+:       dex
+        bmi     discardN_refill
+discardN_rts:
+        asl     _bitbuf       ; Discard bit
+        dey
+        bne     :-
+        stx     _vbits
+.endmacro
+
+.macro DISCARD8BITS
+        ldx     _vbits
+        ldy     eight_min_x,x
+
+        jsr     _bitbuf_refill
+        ldx     #8
+        cpy     #0
+        beq     :++
+:       dex                   ; No need to check for refill
+        asl     _bitbuf       ; Discard bit
+        dey
+        bne     :-
+:       stx     _vbits
+.endmacro
+
+.macro GETDATAHUFF_INIT data9_fill, data9_rts
         lda     #0             ; Read and consume 5 bits
         ldy     #5
         ldx     _vbits
@@ -100,7 +237,7 @@ data9_rts:
         lda    _ushiftl3p4,x
 .endmacro
 
-.macro DISCARD4DATAHUFF9
+.macro DISCARD4DATAHUFF_INIT
 ; Returns nothing, discards 4 5-bit tokens
         lda     #20
         sec

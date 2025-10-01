@@ -7,12 +7,19 @@
         .export       _init_next_line
         .export       _init_huff
         .export       tk1, tk2, tk3, tk4, got_4datahuff
+        .export       discard_col_loop
 
         .import       _row_idx
 
-        .import       get4datatab
+        .import       get_4datahuff_interpolate, discard4datahuff_interpolate
         .import       _bitbuf_refill
         .import       _huff_data, _huff_ctrl, _src
+
+        .import       huff_small_1
+        .import       huff_small_2
+        .import       huff_small_3
+        .import       huff_small_4
+        .import       huff_small_5
 
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
@@ -37,6 +44,7 @@
         .include      "qtkn_huffgetters.inc"
 WIDTH               = 320
 USEFUL_DATABUF_SIZE = 321
+DATA_INIT           = 8
 
 ; ZP vars share locations when they can - they're usually limited to one function
 val0             = _zp2   ; word - _decode_row
@@ -49,12 +57,11 @@ src_idx          = _zp4   ; word - _init_huff
 hval             = _zp6   ; word - _init_huff
 col              = _zp6   ; byte - _decode_row, _consume_extra
 
-num_discard      = _zp8   ; byte - _consume_extra
-rept             = _zp9   ; byte - _decode_row
-tree             = _zp10  ; byte - _decode_row, _consume_extra
-colh             = _zp11  ; byte - _decode_row, _consume_extra
+rept             = _zp8   ; byte - _decode_row
+tree             = _zp9  ; byte - _decode_row, _consume_extra
+colh             = _zp10  ; byte - _decode_row, _consume_extra
 
-                          ; _zp12-13 used by bitbuffer
+                          ; _zp11-13 used by bitbuffer
 
 .proc _init_shiftl4
         ldy     #$00
@@ -277,7 +284,7 @@ huff_data_bits:
         lda     huff_data_value+2
         clc
         adc     #1
-        cmp     #>(_huff_data+9*256)
+        cmp     #>(_huff_data+4*256)
         bcs     huff_data_done
         sta     huff_data_value+2
         inc     huff_data_bits+2
@@ -296,6 +303,8 @@ next_pass:
         dec     pass
         bne     repeat_loop
         rts
+
+REFILLER ctrl_discard_fill, ctrl_discard_rts
 
 repeat_loop:
         lda     #1
@@ -316,31 +325,20 @@ discard_col_loop:
         GETCTRLHUFF ctrl_discard_fill, ctrl_discard_rts
         sta     tree
 
-        beq     tree_zero_2
+        beq     data_repeat
 
-tree_not_zero_2:
+data_standard:
         cmp     #8
-        bne     norm_huff
+        bne     data_interpolate
 
-        DISCARD4DATAHUFF9
-
+        DISCARD4DATAHUFF_INIT
         dec     col
         jmp     discard_col_loop
 
-REFILLER ctrl_discard_fill, ctrl_discard_rts
-REFILLER data_discard_fill, data_discard_rts
+data_interpolate:
+        jmp     discard4datahuff_interpolate ; will loop back to discard_col_loop
 
-norm_huff:
-        adc     #>(_huff_data+256)
-        sta     discard_table
-
-        ldx     #4            ; Discard 4 tokens
-        DISCARDNDATAHUFF data_discard_fill,data_discard_rts,discard_table
-
-        dec     col
-        jmp     discard_col_loop
-
-tree_zero_2:
+data_repeat:
         lda     col
         cmp     #2
         bcs     col_gt1
@@ -351,7 +349,7 @@ tree_zero_2:
 REFILLER data0_refill, data0_rts
 
 col_gt1:
-        GETDATAHUFF _huff_data+0*256, data0_refill, data0_rts
+        GETDATAHUFF_NREPEATS data0_refill, data0_rts
         inx
 
 check_nreps_2:
@@ -363,27 +361,19 @@ check_nreps_2:
         sbc     #8
         sta     col
 
-        ldx     #>(_huff_data+1*256)
-        stx     discard_table2
-        ldx     #4
-        DISCARDNDATAHUFF data_discard_fill2,data_discard_rts2,discard_table2
-        jmp     tree_zero_2   ; nreps == 9 so keep going
-
-REFILLER data_discard_fill2, data_discard_rts2
+        ldy     #4
+        DISCARDNDATAHUFF_REPVAL
+        jmp     data_repeat   ; nreps == 9 so keep going
 
 store_nreps:
         stx     rep_loop_sub+1      ; nreps <= 8
-
-        ;data tree 1
-        lda     #>(_huff_data+1*256)
-        sta     discard_table3
 
         ; rep_loop /= 2
         txa
         lsr
         beq     skip_discard
-        tax                   ; discard rep_loop/2 tokens
-        DISCARDNDATAHUFF data_discard_fill3,data_discard_rts3,discard_table3
+        tay                   ; discard rep_loop/2 tokens
+        DISCARDNDATAHUFF_REPVAL
 
 skip_discard:
         ; col -= rep_loop
@@ -393,8 +383,6 @@ rep_loop_sub:
         sbc     #$FF
         sta     col
         jmp     discard_col_loop
-
-REFILLER data_discard_fill3, data_discard_rts3
 
         rts
 .endproc
@@ -469,7 +457,7 @@ ybck = *+1
         jmp     _init_next_line
 .endproc
 
-.macro SET_BUF_TREE_EIGHT mult_factor, address, low_label, high_label
+.macro INIT_BUF mult_factor, address, low_label, high_label
 mult_factor:
         ldx     #$FF
         jsr     mult8x8r16_direct
@@ -481,7 +469,7 @@ high_label:
         sta     address,y
 .endmacro
 
-.macro SET_VAL_TREE_EIGHT mult_factor, value, dest
+.macro INIT_VAL mult_factor, value, dest
         ldy     col
 dest:   sta     $FFFF,y
 mult_factor:
@@ -650,8 +638,8 @@ more_cols:
 
         sta     tree
 
-        bne     tree_not_zero
-        jmp     tree_zero
+        bne     data_standard
+        jmp     data_repeat
 
 REFILLER rowctrl, rowctrlret
 
@@ -659,7 +647,7 @@ dechigh:
         jsr     dec_buf_pages
         jmp     declow
 
-tree_not_zero:
+data_standard:
         ldy     col
         beq     dechigh
 declow:
@@ -668,40 +656,40 @@ declow:
         sty     col
 
         lda     tree
-        cmp     #8
-        beq     tree_eight
-        jmp     tree_not_eight
+        cmp     #DATA_INIT
+        beq     data_init
+        jmp     data_interpolate
 
 REFILLER data9a_fill, data9a_rts
 REFILLER data9b_fill, data9b_rts
 
-tree_eight:
+data_init:
         ;  tree == 8 so get from "huff table" 9
-        GETDATAHUFF9 data9a_fill, data9a_rts
-        SET_VAL_TREE_EIGHT mult_factor1, val1, dest1a
+        GETDATAHUFF_INIT data9a_fill, data9a_rts
+        INIT_VAL mult_factor1, val1, dest1a
 
-        GETDATAHUFF9 data9b_fill, data9b_rts
-        SET_VAL_TREE_EIGHT mult_factor2, val0, dest0a
+        GETDATAHUFF_INIT data9b_fill, data9b_rts
+        INIT_VAL mult_factor2, val0, dest0a
 
-        GETDATAHUFF9 data9c_fill, data9c_rts
-        SET_BUF_TREE_EIGHT mult_factor3, $FF02, next2la, next2ha
+        GETDATAHUFF_INIT data9c_fill, data9c_rts
+        INIT_BUF mult_factor3, $FF02, next2la, next2ha
 
-        GETDATAHUFF9 data9d_fill, data9d_rts
+        GETDATAHUFF_INIT data9d_fill, data9d_rts
 
-        SET_BUF_TREE_EIGHT mult_factor4, $FF01, next1la, next1ha
+        INIT_BUF mult_factor4, $FF01, next1la, next1ha
 
         jmp     decode_col_loop
 
 REFILLER data9c_fill, data9c_rts
 REFILLER data9d_fill, data9d_rts
 
-tree_not_eight:
-        ; huff_num = tree+1
-        adc     #1
+data_interpolate:
+        ; huff_num = tree+1, but get_4datahuff_interpolate doesn't include trees 0/1
+        ; as tree+1 always >= 2
         asl
         sta     jump+1
 jump:
-        jmp     (get4datatab)
+        jmp     (get_4datahuff_interpolate)
 got_4datahuff:
         ldy     col           ; Reload Y
 
@@ -719,13 +707,13 @@ dest0b: sta     $FFFF,y
 
         jmp     decode_col_loop
 
-tree_zero:
+data_repeat:
 nine_reps_loop:
         ldx     colh
-        bne     col_gt1a
+        bne     col_gt2
         lda     col
         cmp     #3
-        bcs     col_gt1a
+        bcs     col_gt2
         ldx     #1 ;  nreps */
         jmp     check_nreps
 
@@ -734,9 +722,9 @@ dechigh2:
         jmp     declow2
 
 REFILLER data0_refill, data0_rts
-col_gt1a:
+col_gt2:
         ;  data tree 0
-        GETDATAHUFF _huff_data+0*256,data0_refill,data0_rts
+        GETDATAHUFF_NREPEATS data0_refill,data0_rts
 
         inx
 check_nreps:
@@ -778,8 +766,7 @@ dest0c: sta     $FFFF,y
         beq     rep_even
 
         ; tk = gethuffdata(1) << 4;
-BITHUFF1a_START = *
-        GETDATAHUFF _huff_data+1*256,data1_refill,data1_rts
+        GETDATAHUFF_REPVAL
         ; tk in X now
 
         ldy     col
@@ -805,9 +792,6 @@ rep_loop_check:
         cpx     #$FF
         beq     rep_loop_done
         jmp     do_rep_loop
-
-REFILLER data1_refill, data1_rts
-.assert >* = >BITHUFF1a_START, error
 
 rep_loop_done:
         jmp     nine_reps_loop    ; Patched with bit/jmp depending on whether nreps >= 9
@@ -1155,6 +1139,7 @@ tk2           = _decode_row::tk2
 tk3           = _decode_row::tk3
 tk4           = _decode_row::tk4
 got_4datahuff = _decode_row::got_4datahuff
+discard_col_loop = _consume_extra::discard_col_loop
 
 .segment "BSS"
 

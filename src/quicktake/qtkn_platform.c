@@ -83,8 +83,8 @@ void init_huff(void) {
     code >>= 8-numbits;
     huff_ctrl[h][code] = src[src_idx+1];
     huff_ctrl[l][code] = numbits;
-    // printf("huff_ctrl[%d][%.*b] = %d (r%d)\n",
-    //        l, numbits, code, src[src_idx+1], numbits);
+    printf("huff_ctrl[%d][%.*b] = %d (r%d)\n",
+           l, numbits, code, src[src_idx+1], numbits);
 
     if (val >> 8 != (val+incr) >> 8) {
       l += 2;
@@ -95,7 +95,7 @@ void init_huff(void) {
 
   l = 0;
   h = 1;
-  for (; l < 9; src_idx += 2) {
+  for (; l < 4; src_idx += 2) {
     uint8 code = val & 0xFF;
     uint8 numbits, incr;
     numbits = src[src_idx];
@@ -104,7 +104,9 @@ void init_huff(void) {
     code >>= 8-numbits;
     huff_data[l][code+128] = src[src_idx+1];
     huff_data[l][code] = numbits;
-    // printf("huff_data[%d][%.*b] = %d (%d bits)\n", l, numbits, code, src[src_idx+1], numbits);
+    printf("huff_data[%d][%.*b] = %d (%d bits), src_idx %d (%d/%d)\n",
+           l, numbits, code, src[src_idx+1], numbits, src_idx,
+           src[src_idx], src[src_idx+1]);
 
     if (val >> 8 != (val+incr) >> 8) {
       l++;
@@ -132,21 +134,22 @@ void consume_extra(void) {
       tree = getctrlhuff(tree*2);
       if (tree) {
         col--;
-        if (tree == 8) {
-          getdatahuff8();
-          getdatahuff8();
-          getdatahuff8();
-          getdatahuff8();
+        if (tree == DATA_INIT) {
+          getdatahuff_init();
+          getdatahuff_init();
+          getdatahuff_init();
+          getdatahuff_init();
         } else {
-          getdatahuff(tree+1);
-          getdatahuff(tree+1);
-          getdatahuff(tree+1);
-          getdatahuff(tree+1);
+          /* Fetches from huff tables 2+ */
+          getdatahuff_interpolate(tree+1);
+          getdatahuff_interpolate(tree+1);
+          getdatahuff_interpolate(tree+1);
+          getdatahuff_interpolate(tree+1);
         }
       } else {
         do {
           if (col > 1) {
-            nreps = getdatahuff(0) + 1;
+            nreps = getdatahuff_nrepeats() + 1;
           } else {
             nreps = 1;
           }
@@ -159,7 +162,7 @@ void consume_extra(void) {
           col -= rep_loop;
           rep_loop /= 2;
           while (rep_loop--) {
-            getdatahuff(1);
+            getdatahuff_rep_val();
           }
 
         } while (nreps == 9);
@@ -228,24 +231,25 @@ void decode_row(void) {
       if (tree) {
         col-=2;
 
-        if (tree == 8) {
-          tmp8 = (uint8) getdatahuff8();
+        if (tree == DATA_INIT) {
+          tmp8 = (uint8) getdatahuff_init();
           dest[col+1] = tmp8;
           val1 = tmp8 * factor;
 
-          tmp8 = (uint8) getdatahuff8();
+          tmp8 = (uint8) getdatahuff_init();
           dest[col+0] = tmp8;
           val0 = tmp8 * factor;
 
-          tmp8 = (uint8) getdatahuff8();
+          tmp8 = (uint8) getdatahuff_init();
           next_line[col+2] = tmp8 * factor;
-          tmp8 = (uint8) getdatahuff8();
+          tmp8 = (uint8) getdatahuff_init();
           next_line[col+1] = tmp8 * factor;
         } else {
-          tk1 = ((int8)getdatahuff(tree+1)) << 4;
-          tk2 = ((int8)getdatahuff(tree+1)) << 4;
-          tk3 = ((int8)getdatahuff(tree+1)) << 4;
-          tk4 = ((int8)getdatahuff(tree+1)) << 4;
+          /* Here tree+1 is in the range 2+ as tree != 0 */
+          tk1 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
+          tk2 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
+          tk3 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
+          tk4 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
 
           val1 = ((((val0 + next_line[col+2]) >> 1)
                   + next_line[col+1]) >> 1)
@@ -267,7 +271,7 @@ void decode_row(void) {
         }
       } else {
         do {
-          nreps = (col > 2) ? getdatahuff(0) + 1 : 1;
+          nreps = (col > 2) ? getdatahuff_nrepeats() + 1 : 1;
           rep_loop = nreps;
           if (rep_loop > 8) {
             rep_loop = 8;
@@ -291,7 +295,7 @@ void decode_row(void) {
                                 + val0) >> 1);
 
             if (rep & 1) {
-              tk = ((int8)getdatahuff(1)) << 4;
+              tk = ((int8)getdatahuff_rep_val()) << 4;
               //e
               val1 += tk;
               SET_OUTPUT(1, val1);
