@@ -251,23 +251,15 @@ void decode_row(void) {
           tk3 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
           tk4 = ((int8)getdatahuff_interpolate(tree+1)) << 4;
 
-          val1 = ((((val0 + next_line[col+2]) >> 1)
-                  + next_line[col+1]) >> 1)
-                  + tk1;
+          val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1) + tk1;
           SET_OUTPUT(1, val1);
 
-          next_line[col+2] = ((((val0 + next_line[col+3]) >> 1)
-                              + val1) >> 1)
-                              + tk3;
+          next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1) + tk3;
 
-          val0 = ((((val1 + next_line[col+1]) >> 1)
-                  + next_line[col+0]) >> 1)
-                  + tk2;
+          val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1) + tk2;
           SET_OUTPUT(0, val0);
 
-          next_line[col+1] = ((((val1 + next_line[col+2]) >> 1)
-                              + val0) >> 1)
-                              + tk4;
+          next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1) + tk4;
         }
       } else {
         do {
@@ -280,19 +272,15 @@ void decode_row(void) {
           for (rep = 0; rep < rep_loop; rep++) {
             col-=2;
 
-            val1 = ((((val0 + next_line[col+2]) >> 1)
-                    + next_line[col+1]) >> 1);
+            val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
             SET_OUTPUT(1, val1);
 
-            next_line[col+2] = ((((val0 + next_line[col+3]) >> 1)
-                                + val1) >> 1);
+            next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
 
-            val0 = ((((val1 + next_line[col+1]) >> 1)
-                    + next_line[col+0]) >> 1);
+            val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
             SET_OUTPUT(0, val0);
 
-            next_line[col+1] = ((((val1 + next_line[col+2]) >> 1)
-                                + val0) >> 1);
+            next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
 
             if (rep & 1) {
               tk = ((int8)getdatahuff_rep_val()) << 4;

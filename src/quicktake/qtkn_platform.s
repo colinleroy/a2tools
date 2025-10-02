@@ -589,12 +589,13 @@ h2:     sta     addr2,y
         .endif
 .endmacro
 
+; Decode a pair of rows (but only keep the first one)
 .proc _decode_row
-        lda     #2
+        lda     #2            ; two passes to do
         sta     pass
 
-        ldx     #0
-        stx     colh
+        ldx     #0            ; Cheat and set col high byte to zero so 
+        stx     colh          ; we drop into next_pass at first iteration
 
 check_col_high:               ; Column loop high byte check
         ldx     colh          ; Out of main loop for performance
@@ -605,8 +606,7 @@ next_pass:
         bpl     :+
         jmp     all_passes_done
 
-:       ; Advance row
-        clc
+:       clc                   ; Advance row in output buffer
         lda     _row_idx
         adc     #<(WIDTH)
         sta     _row_idx
@@ -627,31 +627,37 @@ decode_col_loop:
         beq     check_col_high
 
 more_cols:
+
+        ; Get "control" huff value from the last one (1 initially)
         lda     tree
         asl
-        adc     #>_huff_ctrl
+        adc     #>_huff_ctrl        ; Patch the inlined decoder below
         sta     huff_numc
         adc     #1
         sta     huff_numc_h
 
+        ; Get the new value
         GETCTRLHUFF rowctrl, rowctrlret
 
         sta     tree
 
-        bne     data_standard
-        jmp     data_repeat
+        bne     data_standard       ; not 0 ? => "standard" data
+        jmp     data_repeat         ; 0 ? => "repeat" data
 
+; Out of main codepath, bitbuffer refiller for GETCTRLHUFF
 REFILLER rowctrl, rowctrlret, #7
 
+; Out of main codepath, pages decrementer when col reaches 256 (from 320)
 dechigh:
         jsr     dec_buf_pages
         jmp     declow
 
+; "Standard" data handler
 data_standard:
         ldy     col
         beq     dechigh
 declow:
-        dey
+        dey                         ; col -= 2
         dey
         sty     col
 
@@ -660,79 +666,96 @@ declow:
         beq     data_init
         jmp     data_interpolate
 
+; Out of main codepath refillers
 REFILLER data9a_fill, data9a_rts, #7
 REFILLER data9b_fill, data9b_rts, #7
 
+; "init": Set values directly from 5 bits codes
 data_init:
-        ;  tree == 8 so get from "huff table" 9
         GETDATAHUFF_INIT data9a_fill, data9a_rts
+        ; val1 = code*factor
         INIT_VAL mult_factor1, val1, dest1a
 
         GETDATAHUFF_INIT data9b_fill, data9b_rts
+        ; val0 = code*factor
         INIT_VAL mult_factor2, val0, dest0a
 
         GETDATAHUFF_INIT data9c_fill, data9c_rts
+        ; next_line[col+2] = code*factor
         INIT_BUF mult_factor3, $FF02, next2la, next2ha
 
         GETDATAHUFF_INIT data9d_fill, data9d_rts
-
+        ; next_line[col+1] = code*factor
         INIT_BUF mult_factor4, $FF01, next1la, next1ha
 
+        ; Done for these two columns
         jmp     decode_col_loop
 
+; Out of main codepath refillers
 REFILLER data9c_fill, data9c_rts, #7
 REFILLER data9d_fill, data9d_rts, #7
 
+; "interpolate": Get values from data Huffman tables, do average them with surrounding pixels
 data_interpolate:
-        ; huff_num = tree+1, but get_4datahuff_interpolate doesn't include trees 0/1
-        ; as tree+1 always >= 2
-        asl
+        asl                   ; A is "tree" aka the current Huffman table to use
         sta     jump+1
-jump:
-        jmp     (get_4datahuff_interpolate)
-got_4datahuff:
-        ldy     col           ; Reload Y
 
+jump:   ; Will get four tokens and store them in tk1-4, in code, below
+        jmp     (get_4datahuff_interpolate)
+
+got_4datahuff:
+        ldy     col           ; Reload col=Y, it got destroyed by Huffman decoders
+
+        ; Mind that the order counts, as next_line[col+2] depends on the previous loop's val0.
+
+        ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1) + tk1;
         INTERPOLATE_VAL_TOKEN val0, $FF02, next2lb, next2hb, $FF01, next1lb, next1hb, val1, tk1, l4a
-divt1b: lda     _div48_l,x
+divt1b: lda     _div48_l,x    ; Store to output buffer
 dest1b: sta     $FFFF,y
 
+        ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1) + tk3;
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3la, next3ha, val1, $FF02, next2lc, next2hc, tk3
 
+        ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1) + tk2;
         INTERPOLATE_VAL_TOKEN val1, $FF01, next1lc, next1hc, $FF00, next0la, next0ha, val0, tk2, l4b
-divt0b: lda     _div48_l,x
+divt0b: lda     _div48_l,x    ; Store to output buffer
 dest0b: sta     $FFFF,y
 
+        ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1) + tk4;
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2ld, next2hd, val0, $FF01, next1ld, next1hd, tk4
 
+        ; Done for this pair of columns
         jmp     decode_col_loop
 
+; "Repeat" data. 
 data_repeat:
 nine_reps_loop:
-        ldx     colh
+        ldx     colh          ; Check whether col > 2
         bne     col_gt2
         lda     col
         cmp     #3
         bcs     col_gt2
-        ldx     #1 ;  nreps */
+        ldx     #1            ; If not, 1 repeat only
         jmp     check_nreps
 
+; Out of main codepath decrementer
 dechigh2:
         jsr     dec_buf_pages
         jmp     declow2
 
+; Out of main codepath refiller for Huffman decoder
 REFILLER data0_refill, data0_rts, #7
 col_gt2:
-        ;  data tree 0
+        ; col > 2, get number of repeats from data
         GETDATAHUFF_NREPEATS data0_refill,data0_rts
 
-        inx
+        inx                   ; and add one.
 check_nreps:
-        lda     #$2C          ; BIT
-        cpx     #9
+        lda     #$2C          ; BIT - prepare end-of-loop patching
+        cpx     #9            ; if repeats >= 9, we'll loop again until it's not
         bcc     nreps_check_done
         lda     #$4C          ; JMP
-        ldx     #8
+        ldx     #8            ; but we'll repeat 8 times, not 9.
 nreps_check_done:
         stx     rep_loop_check+1
         sta     rep_loop_done ; Patch end of loop to continue if nreps>=9
@@ -745,31 +768,36 @@ do_rep_loop:
         beq     dechigh2
 
 declow2:
-        dey
+        dey                   ; col -= 2
         dey
         sty     col
 
+        ; Same as earlier, order is important.
+        ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
         INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , l4c
-divt1c: lda     _div48_l,x
-dest1c: sta     $FFFF,y
+divt1c: lda     _div48_l,x    ; Store to output buffer while we're at it.
+dest1c: sta     $FFFF,y       ; Annoyingly this is 8 cycles lost if repeat is odd
 
+        ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
         INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
 
+        ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
         INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , l4d
-divt0c: lda     _div48_l,x
-dest0c: sta     $FFFF,y
+divt0c: lda     _div48_l,x    ; Same. It's better to lose these 16 cycles than to
+dest0c: sta     $FFFF,y       ; test for evenness, for now.
 
+        ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
         INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
 
-        lda     rept
+        lda     rept          ; rep & 1 ? if rep is odd,
         and     #1
         beq     rep_even
 
         ; tk = gethuffdata(1) << 4;
-        GETDATAHUFF_REPVAL
+        GETDATAHUFF_REPVAL    ; we patch the values we just computed with this token.
         ; tk in X now
 
-        ldy     col
+        ldy     col           ; Reload col...
 
         ; Increment next_line values by token (in X)
         INCR_BUF_TOKEN $FF02, next2lh, next2hh, $FF02, next2li, next2hi
@@ -777,7 +805,7 @@ dest0c: sta     $FFFF,y
 
         ; Increment values by token (in X) - preserve X on the first one
         INCR_VAL_TOKEN val1, divt1d
-divt1d: lda     _div48_l
+divt1d: lda     _div48_l      ; Store the updated values into output buffer
 dest1d: sta     $FFFF,y
 
         INCR_VAL_TOKEN val0
@@ -786,7 +814,7 @@ dest0d: sta     $FFFF,y
 
 
 rep_even:
-        ldx     rept
+        ldx     rept          ; rep++
         inx
 rep_loop_check:
         cpx     #$FF
@@ -794,7 +822,7 @@ rep_loop_check:
         jmp     do_rep_loop
 
 rep_loop_done:
-        jmp     nine_reps_loop    ; Patched with bit/jmp depending on whether nreps >= 9
+        jmp     nine_reps_loop; Patched with bit/jmp depending on whether nreps >= 9
 
         jmp     decode_col_loop
 
@@ -815,7 +843,7 @@ all_passes_done:
         stx     store_next_hf+2
         stx     store_next_hs+2
 
-        ldx     #>_div48_l
+        ldx     #>_div48_l          ; Presume factor is 48, set division table
         stx     _decode_row::divt0b+2
         stx     _decode_row::divt0c+2
         stx     _decode_row::divt0d+2
@@ -827,28 +855,28 @@ all_passes_done:
         cpy     #18
         bcs     small_val
 
-        lda     _val_from_last,y    ; no, 16x8 mult
+        lda     _val_from_last,y    ; no, do a 16x8 mult
         ldx     _val_hi_from_last,y
         jsr     pushax
         lda     _factor
-        sta     _last
+        sta     _last               ; Update last while we're at it
 
         cmp     #48
         beq     :+
-        ldx     #>_dyndiv_l
+        ldx     #>_dyndiv_l         ; Factor not 48, update division table pointers
         stx     _decode_row::divt0b+2
         stx     _decode_row::divt0c+2
         stx     _decode_row::divt0d+2
         stx     _decode_row::divt1b+2
         stx     _decode_row::divt1c+2
         stx     _decode_row::divt1d+2
-        cmp     last_dyndiv
+        cmp     last_dyndiv         ; Factor different than last one,
         beq     :+
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2
         sta     last_dyndiv
-        jsr     _init_divtable        ; Init current factor division table
+        jsr     _init_divtable      ; Rebuild current factor division table
 
 :       jsr     tosmula0
         jmp     check_multiplier
@@ -856,7 +884,7 @@ all_passes_done:
 small_val:                          ; Last is 8bit, do a small mult
         ldx     _factor
         stx     _last
-        cpx     #48
+        cpx     #48                 ; Set division table for new factor
         beq     :+
         lda     #>_dyndiv_l
         sta     _decode_row::divt0b+2
@@ -874,67 +902,60 @@ small_val:                          ; Last is 8bit, do a small mult
         sta     last_dyndiv
         jsr     _init_divtable
 
-:       lda     _val_from_last,y    ; yes, 8x8 mult
+:       lda     _val_from_last,y    ; and multiply
         jsr     mult8x8r16_direct
 
 check_multiplier:
         cpx     #$0F                ; is multiplier 0xFF?
-        bne     check_0x100         ; Check before shifting
-        cmp     #$F0
-        bcc     check_0x100
+        bne     check_0x100         ; Check before shifting it
+        cmp     #$F0                ; as ((tmp*0xFF) >> 8) is also ((tmp<<8 - tmp) >> 8)
+        bcc     check_0x100         ; and in turn (tmp - (tmp>>8)), which is much faster.
 
-mult_0xFF:
-        ldy     #<USEFUL_DATABUF_SIZE
+mult_0xFF:                          ; It is!
+        ldx     #<USEFUL_DATABUF_SIZE
         lda     #>USEFUL_DATABUF_SIZE
-        sta     wordcnt+1
+        sta     wordcnt             ; Number of pages
 
 setup_curbuf_x_ff:
-        ; load
-        dey
-        sty     wordcnt
-load_next_hf:
-        ldx     $FF00,y
-load_next_lf:
-        lda     $FF00,y
-        ; tmp32 in AX
-        stx     tmp1                ; Store to subtract
-        sec
-        sbc     tmp1                ; subtract high word from low : -(tmp>>8)
-        bcs     store_next_lf
         dex
 
-store_next_lf:
-        sta     $FF00,y
-        txa
+load_next_lf:
+        lda     $FF00,x             ; Low byte of next_line[x] in A,
+        sec
+load_next_hf:
+        sbc     $FF00,x             ; Subtract high byte from low : -(tmp>>8)
+        bcs     store_next_lf
 store_next_hf:
-        sta     $FF00,y
+        dec     $FF00,x             ; Decrement high byte if needed
 
-        cpy     #0
+store_next_lf:
+        sta     $FF00,x             ; Update low byte
+
+        cpx     #0
         bne     setup_curbuf_x_ff
         dec     load_next_hf+2
         dec     load_next_lf+2
         dec     store_next_hf+2
         dec     store_next_lf+2
-        dec     wordcnt+1
+        dec     wordcnt
         bpl     setup_curbuf_x_ff
         rts
 
 check_0x100:
-        cpx     #10                 ; or 0x100?
-        bne     :+
+        cpx     #10                 ; or 0x100? in which case we have nothing to do
+        bne     :+                  ; as ((tmp*0x100) >> 8) = ((tmp<<8)>>8) = tmp
         cmp     #10
         bcc     init_done
 
-:       tay                         ; Arbitrary multiplier, >> 4
+:       tay                         ; No luck. Arbitrary multiplier, shift it >> 4
         lda     _ushiftr4,y
         ora     _ushiftl4,x
         sta     ptr2
         lda     _ushiftr4,x
         sta     ptr2+1              ; multiplier stored in ptr2/+1
 
-slow_mults:                         ; and multiply
+slow_mults:                         ; and multiply next_line[], slowly
         ldy     #<USEFUL_DATABUF_SIZE
-        sty     wordcnt
         lda     #>USEFUL_DATABUF_SIZE
         sta     wordcnt+1
 
@@ -950,28 +971,29 @@ load_next_ls:
         cpx     #$80
         bcc     posmult
         ; reverse sign, less expensive than extending
-        ; and doing a 16x24 mult
+        ; and doing a 16x24 mult, especially since it rarely happens,
+        ; only on badly underexposed pictures apparently
         eor     #$FF
-        adc     #0
-        sta     ab1+1
+        adc     #0            ; Carry set by cpx already
+        tay
         txa
         eor     #$FF
         adc     #0
         tax
-ab1:    lda     #$FF
+        tya
         ; multiply
         jsr     mult16x16mid16_direct
         clc
-        adc     #1
+        adc     #1            ; And reverse sign back
         clc
         eor     #$FF
         adc     #1
-        sta     ab2+1
+        tay
         txa
         eor     #$FF
         adc     #0
         tax
-ab2:    lda     #$FF
+        tya
         jmp     set0
 posmult:
         jsr     mult16x16mid16_direct
@@ -999,6 +1021,7 @@ init_done:
 .segment "LC"
 
 .proc init_pass
+        ; Set the output buffer pointers (even columns)
         sty     _decode_row::dest0a+1
         sty     _decode_row::dest0b+1
         sty     _decode_row::dest0c+1
@@ -1009,6 +1032,7 @@ init_done:
         stx     _decode_row::dest0c+2
         stx     _decode_row::dest0d+2
 
+        ; and odd columns
         iny
         bne     :+
         inx
@@ -1021,17 +1045,19 @@ init_done:
         stx     _decode_row::dest1c+2
         stx     _decode_row::dest1d+2
 
-        ;  for (r=0; r != 2; r++) {
-        ;  factor<<7, aslax7 inlined */
         lda     _factor
+        ; Hardcode the factor for next loop, faster to spend 16 cycles there
+        ; and avoid 320*4*2 cycles reloading it on each column
         sta     _decode_row::mult_factor1+1
         sta     _decode_row::mult_factor2+1
         sta     _decode_row::mult_factor3+1
         sta     _decode_row::mult_factor4+1
-        lsr     a
-        tax
-        lda     #0
-        ror     a
+
+        ; factor<<7: 00000000 ABCDEFGH becomes 0ABCDEFG H0000000
+        lsr     a                   ; shift low byte >>1, (lose low bit to carry),
+        tax                         ; move what remains to high byte (0ABCDEFG)
+        lda     #0                  ; reinit low byte to zero,
+        ror     a                   ; put initial low bit back to high bit of low byte
 
         ; val0 = next_line[WIDTH+1] = factor<<7
         stx     _next_line_h+(WIDTH+1)
@@ -1063,6 +1089,7 @@ init_done:
 .endproc
 
 .proc dec_buf_pages
+        ; Decrement output buffer pointers by one page,
         dec     colh
         dec     _decode_row::dest0a+2
         dec     _decode_row::dest0b+2
@@ -1073,12 +1100,14 @@ init_done:
         dec     _decode_row::dest1c+2
         dec     _decode_row::dest1d+2
 
+        ; Load next_line[] first pages addresses,
         ldx     #>(_next_line_h)
         lda     #>(_next_line_l)
         ; Fallthrough to set_buf_pages
 .endproc
 
 .proc set_buf_pages
+        ; Store it everywhere
         stx     _decode_row::next0ha+2
         stx     _decode_row::next0hb+2
 

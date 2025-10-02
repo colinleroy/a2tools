@@ -24,7 +24,7 @@ read_bit:
 rts_addr:
         asl     _bitbuf
         rol     a
-        sta     bitscheckc+1    ; Patch bitcheck address
+        sta     bitscheckc+1  ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
 
 bitscheckc:
@@ -63,15 +63,15 @@ huff_numc_h = *+2
 
 ; Special for huff_data[2], where it's easy, 0 = 253 / 1 = 3
 .macro GETDATAHUFF1BIT HUFF_TABLE, refill_addr, rts_addr
-        lda     #253          ; huff code = 0
 
         dec     _vbits        ; How many remaining bits in the buffer?
         bmi     refill_addr
 rts_addr:
         asl     _bitbuf       ; Get bit into carry
+        ldx     #253          ; huff code = 0 value = 253
         bcc     :+
-        lda     #3
-:       tax
+        ldx     #3
+:
 .endmacro
 
 .macro GETDATAHUFF2BITS HUFF_TABLE, refillA_addr, rtsA_addr
