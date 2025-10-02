@@ -304,7 +304,7 @@ next_pass:
         bne     repeat_loop
         rts
 
-REFILLER ctrl_discard_fill, ctrl_discard_rts
+REFILLER ctrl_discard_fill, ctrl_discard_rts, #7
 
 repeat_loop:
         lda     #1
@@ -346,7 +346,7 @@ data_repeat:
         ldx     #1
         jmp     check_nreps_2
 
-REFILLER data0_refill, data0_rts
+REFILLER data0_refill, data0_rts, #7
 
 col_gt1:
         GETDATAHUFF_NREPEATS data0_refill, data0_rts
@@ -641,7 +641,7 @@ more_cols:
         bne     data_standard
         jmp     data_repeat
 
-REFILLER rowctrl, rowctrlret
+REFILLER rowctrl, rowctrlret, #7
 
 dechigh:
         jsr     dec_buf_pages
@@ -660,8 +660,8 @@ declow:
         beq     data_init
         jmp     data_interpolate
 
-REFILLER data9a_fill, data9a_rts
-REFILLER data9b_fill, data9b_rts
+REFILLER data9a_fill, data9a_rts, #7
+REFILLER data9b_fill, data9b_rts, #7
 
 data_init:
         ;  tree == 8 so get from "huff table" 9
@@ -680,8 +680,8 @@ data_init:
 
         jmp     decode_col_loop
 
-REFILLER data9c_fill, data9c_rts
-REFILLER data9d_fill, data9d_rts
+REFILLER data9c_fill, data9c_rts, #7
+REFILLER data9d_fill, data9d_rts, #7
 
 data_interpolate:
         ; huff_num = tree+1, but get_4datahuff_interpolate doesn't include trees 0/1
@@ -721,7 +721,7 @@ dechigh2:
         jsr     dec_buf_pages
         jmp     declow2
 
-REFILLER data0_refill, data0_rts
+REFILLER data0_refill, data0_rts, #7
 col_gt2:
         ;  data tree 0
         GETDATAHUFF_NREPEATS data0_refill,data0_rts

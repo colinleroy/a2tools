@@ -1,7 +1,13 @@
 
-.macro REFILLER filler_addr,rts_addr
+.macro REFILLER filler_addr,rts_addr, NBITS, store
 filler_addr:
         jsr     _bitbuf_refill
+        .ifnblank NBITS
+        ldx     NBITS
+        .endif
+        .ifnblank store
+        stx     _vbits
+        .endif
         jmp     rts_addr
 .endmacro
 
@@ -34,57 +40,60 @@ huff_numc_h = *+2
 
 .macro GETDATAHUFF_REPVAL
         ldy     #0
-        dec     _vbits        ; 1 bit
+        ldx     _vbits        ; 1 bit
+        dex
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
 :       asl     _bitbuf       ; Get bit into carry
         bcc     :++           ; If first bit is 0, value is 0
 
         iny
-        dec     _vbits        ; Second bit
+        dex                   ; Second bit
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
 :       asl     _bitbuf       ; Get bit into carry
         bcc     :+
         iny
 
-:       ldx     huff_small_1,y
+:       stx     _vbits
+        ldx     huff_small_1,y
 .endmacro
 
 ; Special for huff_data[2], where it's easy, 0 = 253 / 1 = 3
-.macro GETDATAHUFF1BIT HUFF_TABLE
+.macro GETDATAHUFF1BIT HUFF_TABLE, refill_addr, rts_addr
         lda     #253          ; huff code = 0
 
         dec     _vbits        ; How many remaining bits in the buffer?
-        bpl     :+
-        jsr     _bitbuf_refill
-:       asl     _bitbuf       ; Get bit into carry
+        bmi     refill_addr
+rts_addr:
+        asl     _bitbuf       ; Get bit into carry
         bcc     :+
         lda     #3
 :       tax
 .endmacro
 
-.macro GETDATAHUFF2BITS HUFF_TABLE
+.macro GETDATAHUFF2BITS HUFF_TABLE, refillA_addr, rtsA_addr
         lda     #0            ; huff code = 0
         ldx     _vbits
         dex                   ; First bit
         bpl     :+
         jsr     _bitbuf_refill
-
+        ldx     #6            ; consume two bits
         asl     _bitbuf       ; Get two bits faster now we're full
         rol     a
         asl     _bitbuf
         rol     a
-        dex                   ; consume second bit
-        jmp     :+++
+        jmp     :++
 
 :       asl     _bitbuf       ; Get bit into carry
         rol     a             ; Put it into huff code
 
         dex                   ; Second bit
-        bpl     :+
-        jsr     _bitbuf_refill
-:       asl     _bitbuf       ; Get bit into carry
+        bmi     refillA_addr
+rtsA_addr:
+        asl     _bitbuf       ; Get bit into carry
         rol     a             ; Put it into huff code
 
 :       tay                   ; And get value
@@ -100,6 +109,7 @@ huff_numc_h = *+2
         dex
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
 :
         asl     _bitbuf       ; Get bit into carry
         rol     a             ; Put it into huff code
@@ -135,6 +145,8 @@ rts_addr:
         dec     _vbits        ; How many remaining bits in the buffer?
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
+        stx     _vbits
 :
         asl     _bitbuf       ; Get bit into carry
         rol     a             ; Put it into huff code
@@ -180,12 +192,14 @@ table_label = *+2             ; Get num bits
 :       dex                   ; 1 bit
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
 :       asl     _bitbuf       ; Get bit into carry
         bcc     :++           ; If first bit is 0, value is 0, no other bit to pull
 
         dex                   ; Second bit
         bpl     :+
         jsr     _bitbuf_refill
+        ldx     #7
 :       asl     _bitbuf       ; Discard bit
 
 :       dey
@@ -206,18 +220,16 @@ discardN_rts:
 .endmacro
 
 .macro DISCARD8BITS
-        ldx     _vbits
-        ldy     eight_min_x,x
+        ldx     _vbits        ; Won't change
+        ldy     eight_min_x,x ; Must skip in new byte
 
         jsr     _bitbuf_refill
-        ldx     #8
         cpy     #0
         beq     :++
-:       dex                   ; No need to check for refill
-        asl     _bitbuf       ; Discard bit
+:       asl     _bitbuf       ; Discard bit
         dey
         bne     :-
-:       stx     _vbits
+:
 .endmacro
 
 .macro GETDATAHUFF_INIT data9_fill, data9_rts
@@ -251,8 +263,7 @@ data9_rts:
 
         jsr     _bitbuf_refill    ; Load the next one,
 
-        ldx     #8                ; Note we didn't consume the bit, which refill expects us to
-                                  ; so fix vbits from 7 to 8
+        ldx     #8                ; Note we didn't consume the bit
 
         sec                       ; Remove last discarded 8 bits from remaining
         sbc     #8

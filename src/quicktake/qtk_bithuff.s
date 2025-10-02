@@ -119,7 +119,7 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
-REFILLER discardN_fill, discardN_rts
+REFILLER discardN_fill, discardN_rts, #7
 
 discard4datahuff_interpolate:
         ldy     #4
@@ -145,9 +145,9 @@ discard_variable:             ; tree > 5, so discard unknown number of bits * 4
         dec     col
         jmp     discard_col_loop
 
-REFILLER data_discard_fill, data_discard_rts
+REFILLER data_discard_fill, data_discard_rts, #7
 
-REFILLER getfactor_refill, getfactor_refill_done
+REFILLER getfactor_refill, getfactor_refill_done, #7
 ; Returns value in A
 _getfactor:
         lda    #0
@@ -165,52 +165,76 @@ getfactor_refill_done:
 
 _cant_happen: brk
 
+REFILLER refill2a,refill2a_done, #7, store
+REFILLER refill2b,refill2b_done, #7, store
+
 _get4datahuff2:
-        GETDATAHUFF1BIT huff_small_2
+        GETDATAHUFF1BIT huff_small_2, refill2a,refill2a_done
         stx     tk1+1
-        GETDATAHUFF1BIT huff_small_2
+        GETDATAHUFF1BIT huff_small_2, refill2b,refill2b_done
         stx     tk2+1
-        GETDATAHUFF1BIT huff_small_2
+        GETDATAHUFF1BIT huff_small_2, refill2c,refill2c_done
         stx     tk3+1
-        GETDATAHUFF1BIT huff_small_2
+        GETDATAHUFF1BIT huff_small_2, refill2d,refill2d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+REFILLER refill2c,refill2c_done, #7, store
+REFILLER refill2d,refill2d_done, #7, store
+
+REFILLER refill3a,refill3a_done, #7
+REFILLER refill3b,refill3b_done, #7
 
 _get4datahuff3:
-        GETDATAHUFF2BITS huff_small_3
+        GETDATAHUFF2BITS huff_small_3, refill3a,refill3a_done
         stx     tk1+1
-        GETDATAHUFF2BITS huff_small_3
+        GETDATAHUFF2BITS huff_small_3, refill3b,refill3b_done
         stx     tk2+1
-        GETDATAHUFF2BITS huff_small_3
+        GETDATAHUFF2BITS huff_small_3, refill3c,refill3c_done
         stx     tk3+1
-        GETDATAHUFF2BITS huff_small_3
+        GETDATAHUFF2BITS huff_small_3, refill3d,refill3d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+REFILLER refill3c,refill3c_done, #7
+REFILLER refill3d,refill3d_done, #7
+
+REFILLER refill4a,refill4a_done, #7
+REFILLER refill4b,refill4b_done, #7
 
 _get4datahuff4:
-        GETDATAHUFF2BITS huff_small_4
+        GETDATAHUFF2BITS huff_small_4, refill4a,refill4a_done
         stx     tk1+1
-        GETDATAHUFF2BITS huff_small_4
+        GETDATAHUFF2BITS huff_small_4, refill4b,refill4b_done
         stx     tk2+1
-        GETDATAHUFF2BITS huff_small_4
+        GETDATAHUFF2BITS huff_small_4, refill4c,refill4c_done
         stx     tk3+1
-        GETDATAHUFF2BITS huff_small_4
+        GETDATAHUFF2BITS huff_small_4, refill4d,refill4d_done
         stx     tk4+1
         jmp     got_4datahuff
+
+REFILLER refill4c,refill4c_done, #7
+REFILLER refill4d,refill4d_done, #7
+
+REFILLER refill5a,refill5a_done, #7
+REFILLER refill5b,refill5b_done, #7
 
 _get4datahuff5:
-        GETDATAHUFF2BITS huff_small_5
+        GETDATAHUFF2BITS huff_small_5, refill5a,refill5a_done
         stx     tk1+1
-        GETDATAHUFF2BITS huff_small_5
+        GETDATAHUFF2BITS huff_small_5, refill5b,refill5b_done
         stx     tk2+1
-        GETDATAHUFF2BITS huff_small_5
+        GETDATAHUFF2BITS huff_small_5, refill5c,refill5c_done
         stx     tk3+1
-        GETDATAHUFF2BITS huff_small_5
+        GETDATAHUFF2BITS huff_small_5, refill5d,refill5d_done
         stx     tk4+1
         jmp     got_4datahuff
 
-REFILLER refill6a,refill6a_done
-REFILLER refill6b,refill6b_done
+REFILLER refill5c,refill5c_done, #7
+REFILLER refill5d,refill5d_done, #7
+
+REFILLER refill6a,refill6a_done, #7, store
+REFILLER refill6b,refill6b_done, #7, store
 
 _get4datahuff6:
         GETDATAHUFF2BITSPLUS_SAFE _huff_data+1*256,refill6a,refill6a_done
@@ -223,11 +247,11 @@ _get4datahuff6:
         stx     tk4+1
         jmp     got_4datahuff
 
-REFILLER refill6c,refill6c_done
-REFILLER refill6d,refill6d_done
+REFILLER refill6c,refill6c_done, #7, store
+REFILLER refill6d,refill6d_done, #7, store
 
-REFILLER refill7a,refill7a_done
-REFILLER refill7b,refill7b_done
+REFILLER refill7a,refill7a_done, #7, store
+REFILLER refill7b,refill7b_done, #7, store
 
 _get4datahuff7:
         GETDATAHUFF2BITSPLUS_SAFE _huff_data+2*256,refill7a,refill7a_done
@@ -240,11 +264,11 @@ _get4datahuff7:
         stx     tk4+1
         jmp     got_4datahuff
 
-REFILLER refill7c,refill7c_done
-REFILLER refill7d,refill7d_done
+REFILLER refill7c,refill7c_done, #7, store
+REFILLER refill7d,refill7d_done, #7, store
 
-REFILLER refill8a,refill8a_done
-REFILLER refill8b,refill8b_done
+REFILLER refill8a,refill8a_done, #7, store
+REFILLER refill8b,refill8b_done, #7, store
 
 _get4datahuff8:
         GETDATAHUFF2BITSPLUS_SAFE _huff_data+3*256,refill8a,refill8a_done
@@ -257,17 +281,14 @@ _get4datahuff8:
         stx     tk4+1
         jmp     got_4datahuff
 
-REFILLER refill8c,refill8c_done
-REFILLER refill8d,refill8d_done
+REFILLER refill8c,refill8c_done, #7, store
+REFILLER refill8d,refill8d_done, #7, store
 
 ; Must never destroy A or Y
 _bitbuf_refill:
 cache_read = *+1
         ldx     $FFFF             ; 4
         stx     _bitbuf           ; 7
-
-        ldx     #7                ; 9
-        stx     _vbits            ; 12
 
         inc     cache_read        ; 17
         beq     inc_cache_high    ; 19  20
@@ -282,7 +303,6 @@ inc_cache_high:
         ; drive restarts
         cpx     #(>CACHE_END)-4   ;     29
         bcs     start_floppy_motor;     31  32
-        ldx     #7                ; Reload vbits
         rts
 
 start_floppy_motor:
@@ -290,7 +310,6 @@ start_floppy_motor:
 
         cpx     #(>CACHE_END)
         beq     do_read
-        ldx     #7                ; Reload vbits
         rts
 do_read:
         sty     ybck
@@ -325,5 +344,4 @@ ybck = *+1
         ldy     #$FF
 abck = *+1
         lda     #$FF
-        ldx     #7                ; Reload vbits
         rts
