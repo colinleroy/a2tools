@@ -26,8 +26,8 @@
         .export         _next_line_l, _next_line_h
         .export         _raw_image, _huff_ctrl, _huff_data
         .export         _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
-        .export         _div48_l
-        .export         _dyndiv_l
+        .export         _div48
+        .export         _dyndiv
 
         .export         huff_small_1
         .export         huff_small_2
@@ -80,8 +80,8 @@ _ushiftr4:     .res        256
 
 _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (4*256)
-_div48_l:     .res        256
-_dyndiv_l:    .res        256
+_div48:       .res        256
+_dyndiv:      .res        256
 .assert <* = 0, error
 _raw_image:   .res        (20*320)  ; Cool, this is aligned!
 .assert <* = 0, error

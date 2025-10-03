@@ -24,8 +24,8 @@
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
         .import       _next_line_l, _next_line_h
-        .import       _div48_l
-        .import       _dyndiv_l
+        .import       _div48
+        .import       _dyndiv
         .import       _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
@@ -447,7 +447,7 @@ ybck = *+1
 .proc _init_top
         jsr     _init_huff
         jsr     _init_shiftl4
-        ldx     #>_div48_l
+        ldx     #>_div48
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2
@@ -710,7 +710,7 @@ got_4datahuff:
 
         ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1) + tk1;
         INTERPOLATE_VAL_TOKEN val0, $FF02, next2lb, next2hb, $FF01, next1lb, next1hb, val1, tk1, l4a
-divt1b: lda     _div48_l,x    ; Store to output buffer
+divt1b: lda     _div48,x    ; Store to output buffer
 dest1b: sta     $FFFF,y
 
         ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1) + tk3;
@@ -718,7 +718,7 @@ dest1b: sta     $FFFF,y
 
         ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1) + tk2;
         INTERPOLATE_VAL_TOKEN val1, $FF01, next1lc, next1hc, $FF00, next0la, next0ha, val0, tk2, l4b
-divt0b: lda     _div48_l,x    ; Store to output buffer
+divt0b: lda     _div48,x    ; Store to output buffer
 dest0b: sta     $FFFF,y
 
         ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1) + tk4;
@@ -775,7 +775,7 @@ declow2:
         ; Same as earlier, order is important.
         ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
         INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , l4c
-divt1c: lda     _div48_l,x    ; Store to output buffer while we're at it.
+divt1c: lda     _div48,x    ; Store to output buffer while we're at it.
 dest1c: sta     $FFFF,y       ; Annoyingly this is 8 cycles lost if repeat is odd
 
         ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
@@ -783,7 +783,7 @@ dest1c: sta     $FFFF,y       ; Annoyingly this is 8 cycles lost if repeat is od
 
         ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
         INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , l4d
-divt0c: lda     _div48_l,x    ; Same. It's better to lose these 16 cycles than to
+divt0c: lda     _div48,x    ; Same. It's better to lose these 16 cycles than to
 dest0c: sta     $FFFF,y       ; test for evenness, for now.
 
         ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
@@ -805,11 +805,11 @@ dest0c: sta     $FFFF,y       ; test for evenness, for now.
 
         ; Increment values by token (in X) - preserve X on the first one
         INCR_VAL_TOKEN val1, divt1d
-divt1d: lda     _div48_l      ; Store the updated values into output buffer
+divt1d: lda     _div48      ; Store the updated values into output buffer
 dest1d: sta     $FFFF,y
 
         INCR_VAL_TOKEN val0
-divt0d: lda     _div48_l,x
+divt0d: lda     _div48,x
 dest0d: sta     $FFFF,y
 
 
@@ -1131,7 +1131,7 @@ init_done:
         beq     set_div48
 
 set_dyndiv:
-        ldx     #>_dyndiv_l         ; Factor not 48, update division table pointers
+        ldx     #>_dyndiv         ; Factor not 48, update division table pointers
         cmp     last_dyndiv         ; Factor different than last one,
         beq     factor_done
         stx     _init_divtable::build_table_n+2
@@ -1139,11 +1139,11 @@ set_dyndiv:
         stx     _init_divtable::build_table_u+2
         sta     last_dyndiv
         jsr     _init_divtable      ; Rebuild current factor division table
-        ldx     #>_dyndiv_l
+        ldx     #>_dyndiv
         jmp     factor_done
 
 set_div48:
-        ldx     #>_div48_l          ; Presume factor is 48, set division table
+        ldx     #>_div48            ; Set /48 division table
 
 factor_done:
         stx     _decode_row::divt0b+2
