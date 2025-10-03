@@ -38,27 +38,24 @@ huff_numc_h = *+2
         lda     _huff_ctrl+256,x
 .endmacro
 
-.macro GETDATAHUFF_REPVAL
+.macro GETDATAHUFF_REPVAL filler_addr,rts_addr
         ldy     #0
-        ldx     _vbits        ; 1 bit
-        dex
-        bpl     :+
-        jsr     _bitbuf_refill
-        ldx     #7
-:       asl     _bitbuf       ; Get bit into carry
-        bcc     :++           ; If first bit is 0, value is 0
+        dec     _vbits        ; 1 bit
+        bmi     filler_addr
+rts_addr:
+        asl     _bitbuf       ; Get bit into carry
+        bcc     :++           ; If first bit is 0, don't get a second one
 
         iny
-        dex                   ; Second bit
+        dec     _vbits        ; Second bit
         bpl     :+
         jsr     _bitbuf_refill
         ldx     #7
+        stx     _vbits
 :       asl     _bitbuf       ; Get bit into carry
         bcc     :+
         iny
-
-:       stx     _vbits
-        ldx     huff_small_1,y
+:       ldx     huff_small_1,y
 .endmacro
 
 ; Special for huff_data[2], where it's easy, 0 = 253 / 1 = 3

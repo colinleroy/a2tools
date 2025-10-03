@@ -81,6 +81,9 @@ uint8 __fastcall__ getctrlhuff (uint8 huff_num) {
 }
 
 uint8 __fastcall__ getdatahuff_rep_val (void) {
+  /* 0 => 0,
+     10 => 2,
+     11 => 254 */
   if (getbit() == 0) {
     return 0;
   }

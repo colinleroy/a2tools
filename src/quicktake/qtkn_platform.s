@@ -794,7 +794,7 @@ dest0c: sta     $FFFF,y       ; test for evenness, for now.
         beq     rep_even
 
         ; tk = gethuffdata(1) << 4;
-        GETDATAHUFF_REPVAL    ; we patch the values we just computed with this token.
+        GETDATAHUFF_REPVAL repval_refill, repval_rts   ; we patch the values we just computed with this token.
         ; tk in X now
 
         ldy     col           ; Reload col...
@@ -820,6 +820,8 @@ rep_loop_check:
         cpx     #$FF
         beq     rep_loop_done
         jmp     do_rep_loop
+
+REFILLER repval_refill, repval_rts, #7, store
 
 rep_loop_done:
         jmp     nine_reps_loop; Patched with bit/jmp depending on whether nreps >= 9
