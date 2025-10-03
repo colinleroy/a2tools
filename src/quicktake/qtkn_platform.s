@@ -843,13 +843,7 @@ all_passes_done:
         stx     store_next_hf+2
         stx     store_next_hs+2
 
-        ldx     #>_div48_l          ; Presume factor is 48, set division table
-        stx     _decode_row::divt0b+2
-        stx     _decode_row::divt0c+2
-        stx     _decode_row::divt0d+2
-        stx     _decode_row::divt1b+2
-        stx     _decode_row::divt1c+2
-        stx     _decode_row::divt1d+2
+        jsr     init_factor
 
         ldy     _last               ; is last 8bits?
         cpy     #18
@@ -859,50 +853,15 @@ all_passes_done:
         ldx     _val_hi_from_last,y
         jsr     pushax
         lda     _factor
-        sta     _last               ; Update last while we're at it
-
-        cmp     #48
-        beq     :+
-        ldx     #>_dyndiv_l         ; Factor not 48, update division table pointers
-        stx     _decode_row::divt0b+2
-        stx     _decode_row::divt0c+2
-        stx     _decode_row::divt0d+2
-        stx     _decode_row::divt1b+2
-        stx     _decode_row::divt1c+2
-        stx     _decode_row::divt1d+2
-        cmp     last_dyndiv         ; Factor different than last one,
-        beq     :+
-        stx     _init_divtable::build_table_n+2
-        stx     _init_divtable::build_table_o+2
-        stx     _init_divtable::build_table_u+2
-        sta     last_dyndiv
-        jsr     _init_divtable      ; Rebuild current factor division table
-
-:       jsr     tosmula0
+        sta     _last
+        jsr     tosmula0
         jmp     check_multiplier
 
 small_val:                          ; Last is 8bit, do a small mult
-        ldx     _factor
-        stx     _last
-        cpx     #48                 ; Set division table for new factor
-        beq     :+
-        lda     #>_dyndiv_l
-        sta     _decode_row::divt0b+2
-        sta     _decode_row::divt0c+2
-        sta     _decode_row::divt0d+2
-        sta     _decode_row::divt1b+2
-        sta     _decode_row::divt1c+2
-        sta     _decode_row::divt1d+2
-        cpx     last_dyndiv
-        beq     :+
-        sta     _init_divtable::build_table_n+2
-        sta     _init_divtable::build_table_o+2
-        sta     _init_divtable::build_table_u+2
-        txa
-        sta     last_dyndiv
-        jsr     _init_divtable
-
-:       lda     _val_from_last,y    ; and multiply
+        ldy     _last               ; Reload last
+        ldx     _val_from_last,y    ; and multiply
+        lda     _factor
+        sta     _last
         jsr     mult8x8r16_direct
 
 check_multiplier:
@@ -1022,6 +981,9 @@ init_done:
 
 .proc init_pass
         ; Set the output buffer pointers (even columns)
+        ; Low byte has to be set as we move in the
+        ; output buffer by 320 at a time, it won't
+        ; stay zero.
         sty     _decode_row::dest0a+1
         sty     _decode_row::dest0b+1
         sty     _decode_row::dest0c+1
@@ -1045,15 +1007,8 @@ init_done:
         stx     _decode_row::dest1c+2
         stx     _decode_row::dest1d+2
 
-        lda     _factor
-        ; Hardcode the factor for next loop, faster to spend 16 cycles there
-        ; and avoid 320*4*2 cycles reloading it on each column
-        sta     _decode_row::mult_factor1+1
-        sta     _decode_row::mult_factor2+1
-        sta     _decode_row::mult_factor3+1
-        sta     _decode_row::mult_factor4+1
-
         ; factor<<7: 00000000 ABCDEFGH becomes 0ABCDEFG H0000000
+        lda     _factor
         lsr     a                   ; shift low byte >>1, (lose low bit to carry),
         tax                         ; move what remains to high byte (0ABCDEFG)
         lda     #0                  ; reinit low byte to zero,
@@ -1162,6 +1117,44 @@ init_done:
         rts
 .endproc
 
+.proc init_factor
+        ; Hardcode the factor for next loop, faster to spend 16 cycles there
+        ; and avoid 320*4*2 cycles reloading it on each column
+        lda     _factor
+
+        sta     _decode_row::mult_factor1+1
+        sta     _decode_row::mult_factor2+1
+        sta     _decode_row::mult_factor3+1
+        sta     _decode_row::mult_factor4+1
+
+        cmp     #48
+        beq     set_div48
+
+set_dyndiv:
+        ldx     #>_dyndiv_l         ; Factor not 48, update division table pointers
+        cmp     last_dyndiv         ; Factor different than last one,
+        beq     factor_done
+        stx     _init_divtable::build_table_n+2
+        stx     _init_divtable::build_table_o+2
+        stx     _init_divtable::build_table_u+2
+        sta     last_dyndiv
+        jsr     _init_divtable      ; Rebuild current factor division table
+        ldx     #>_dyndiv_l
+        jmp     factor_done
+
+set_div48:
+        ldx     #>_div48_l          ; Presume factor is 48, set division table
+
+factor_done:
+        stx     _decode_row::divt0b+2
+        stx     _decode_row::divt0c+2
+        stx     _decode_row::divt0d+2
+        stx     _decode_row::divt1b+2
+        stx     _decode_row::divt1c+2
+        stx     _decode_row::divt1d+2
+
+        rts
+.endproc
 ; Scoped exports for bitbuffer
 tk1           = _decode_row::tk1
 tk2           = _decode_row::tk2
