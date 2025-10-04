@@ -20,14 +20,6 @@
 
         .include         "fcntl.inc"
 
-.macro UPDATE_BRANCH from, to
-        .assert (to-from-2) >= -128, error
-        .assert (to-from-2) <= 127, error
-        lda     #<(to-from-2)
-        sta     from+1
-
-.endmacro
-
 ; Defines
 
 BAND_HEIGHT   = 20
@@ -36,21 +28,6 @@ BAND_HEIGHT   = 20
 SCRATCH_WIDTH = 768
 SCRATCH_HEIGHT= (BAND_HEIGHT + 2)
 RAW_IMAGE_SIZE= (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
-
-; the column (X coord) loop is divided into an outer loop
-; and an inner loop. the inner loop iterates over columns
-; using the Y register so is limited to 255 pixels; as we
-; need to iterate over 320 or 640 columns, the outer X
-; loop shifts indexes by the inner loop len. We choose to
-; iterate over 160 pixels in the inner loop as it is a
-; multiple of 320 and 640 and makes bound checks simpler
-; and faster.
-; The algorithm will basically iterate in this way:
-; for row = 20; row; row--
-;  for outer_x = 4; outer_x; outer_x--
-;   for Y = 0; Y != 160; Y++
-;    ... handle pixel...
-INNER_X_LOOP_LEN    = 160
 
 .segment        "DATA"
 
@@ -165,37 +142,37 @@ IDX        = _raw_image + (2*SCRATCH_WIDTH)
 IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
 
 .macro INC_HIGH_PAGES
-        ldx     I0+2
-        inx
-        stx     I0+2
-        stx     I1+2
-        stx     I2+2
-        stx     I3+2
-        stx     I4+2
-        stx     I5+2
+        txa
+        adc     I0+2
+        sta     I0+2
+        sta     I1+2
+        sta     I2+2
+        sta     I3+2
+        sta     I4+2
+        sta     I5+2
 
-        ldx     IB1+2
-        inx
-        stx     IB1+2
-        stx     IB2+2
-        stx     IB3+2
-        stx     IB4+2
-        stx     IB5+2
-        stx     IB6+2
+        txa
+        adc     IB1+2
+        sta     IB1+2
+        sta     IB2+2
+        sta     IB3+2
+        sta     IB4+2
+        sta     IB5+2
+        sta     IB6+2
 
-        ldx     IFC1+2
-        inx
-        stx     IFC1+2
-        stx     IFC2+2
+        txa
+        adc     IFC1+2
+        sta     IFC1+2
+        sta     IFC2+2
 .endmacro
 
 .macro INC_FIRST_ROW_PAGES
-        ldx     IBFR1+2
-        inx
-        stx     IBFR1+2
-        stx     IBFR2+2
-        stx     IBFR3+2
-        stx     IBFR4+2
+        txa
+        adc     IBFR1+2
+        sta     IBFR1+2
+        sta     IBFR2+2
+        sta     IBFR3+2
+        sta     IBFR4+2
 .endmacro
 
 .macro SET_HIGH_PAGES
@@ -250,9 +227,6 @@ pgbar_state:
 motor_on:
         .res        2
 
-loops:  .res        1
-first_row: .res     1
-
 ; Zero page pointers and variables
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
@@ -260,13 +234,26 @@ cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
 row               = _zp2                 ; Current row, 1 byte
 
 loop              = _zp4
-first_col         = _zp6
+loops             = _zp5
+row_page_inc      = _zp6
 
 ln_val            = _zp12                 ; Last low nibble computed value
 hn_val            = _zp13                 ; Last high nibble computed value
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
+
+.macro SET_BRANCH val, label
+        lda     val
+        sta     label
+.endmacro
+
+.macro UPDATE_BRANCH from, to
+        .assert (to-from-2) >= -128, error
+        .assert (to-from-2) <= 127, error
+        lda     #<(to-from-2)
+        sta     from+1
+.endmacro
 
 .segment        "CODE"
 
@@ -321,11 +308,14 @@ top:
         jsr     set_cache_data          ; Initialize cache things
 
         ldx     #80
+        ldy     #2
         lda     _width                  ; How many outer loops per row ?
         cmp     #<640
         bne     :+
         ldx     #160
+        ldy     #1
 :       stx     loops
+        sty     row_page_inc
 
         ; Init the second line + 2 bytes of buffer with grey
         lda     #<(_raw_image+SCRATCH_WIDTH)
@@ -341,8 +331,9 @@ top:
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row
 
-        lda     #$FF                    ; Set first row
-        sta     first_row
+        ; Activate high_nibble_special - bcc
+        SET_BRANCH #$90, high_nibble_special
+        SET_BRANCH #$90, low_nibble_special
 
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     row_loop
@@ -375,8 +366,6 @@ row_loop:                               ; Row loop
 I0:     lda     IDX+0                   ; Remember previous value before shifting
         sta     ln_val                  ; index
 
-        lda     #$FF                    ; Re-enable first col handler
-        sta     first_col
         lda     I0+2                    ; Set first col pointers
         sta     IFC1+2
         sta     IFC2+2
@@ -407,7 +396,7 @@ handle_byte:
 gstep_high_neg:
         ; High nibble
 IB1:    lda     IDX_BEHIND,y
-        clc
+        ;clc
         adc     ln_val
         ror
         clc
@@ -453,9 +442,35 @@ clamp_high_nibble_high:
         clc
         jmp     store_hn_val
 
+; ----------------------------------
+first_row_handler_high:
+IBFR1:  sta     IDX_BEHIND+2,y
+IBFR2:  sta     IDX_BEHIND+4,y
+
+first_pixel_handler:
+        bcs     std_col_handler_high    ; Patched
+        sta     IDX+1,y
+        sta     IDX,y
+        sta     IDX+SCRATCH_WIDTH
+        SET_BRANCH #$90, first_pixel_handler
+        jmp     do_low_nibble
+
+first_col_handler:
+IFC1:   sta     IDX+1,y
+IFC2:   sta     IDX,y
+IFFC1:  sta     IDX+SCRATCH_WIDTH
+        SET_BRANCH #$B0, high_nibble_special
+        jmp     do_low_nibble
+
+first_row_handler_low:
+IBFR3:  sta     IDX_BEHIND+6,y
+IBFR4:  sta     IDX_BEHIND+4,y
+        jmp     std_col_handler_low
+; ----------------------------------
+
 gstep_high_pos:
 IB3:    lda     IDX_BEHIND,y
-        clc
+        ;clc
         adc     ln_val
         ror
         clc
@@ -469,21 +484,8 @@ store_hn_val:
         sta     hn_val
 I1:     sta     IDX+2,y
 
-first_row_handler_high:
-        bit     first_row
-        bpl     first_col_handler
-IBFR1:  sta     IDX_BEHIND+2,y
-IBFR2:  sta     IDX_BEHIND+4,y
-
-first_col_handler:
-        bit     first_col
-        bpl     std_col_handler_high
-IFC1:   sta     IDX+1,y
-IFC2:   sta     IDX,y
-IFFC1:  sta     IDX+SCRATCH_WIDTH
-        lda     #$00
-        sta     first_col
-        jmp     do_low_nibble
+high_nibble_special:
+        bcc     first_row_handler_high  ; patched
 
 std_col_handler_high:
         adc     ln_val
@@ -494,7 +496,7 @@ I2:     sta     IDX+1,y
 do_low_nibble:
         ; Low nibble
 IB5:    lda     IDX_BEHIND+2,y
-        clc
+        ;clc
         adc     hn_val
         ror
         clc
@@ -511,11 +513,8 @@ IB6:    adc     IDX_BEHIND+4,y
 store_ln_val:
 I3:     sta     IDX+4,y
 
-first_row_handler_low:
-        bit     first_row
-        bpl     std_col_handler_low
-IBFR3:   sta     IDX_BEHIND+6,y
-IBFR4:   sta     IDX_BEHIND+4,y
+low_nibble_special:
+        bcc     first_row_handler_low   ; Patched
 
 std_col_handler_low:
         adc     hn_val
@@ -527,7 +526,7 @@ I4:     sta     IDX+3,y
         beq     end_of_row
 
         tya                             ; Increment col
-        clc
+        ;clc
         adc     #4
         tay
         bcs     inc_idx_high
@@ -541,27 +540,39 @@ clamp_low_nibble:
         jmp     store_ln_val
 
 inc_idx_high:
+        ldx     #1
+        clc
         INC_HIGH_PAGES
-        bit     first_row
-        bpl     :+
+inc_first_row_handler:
+        bit     col_loop
         INC_FIRST_ROW_PAGES
-:       jmp     col_loop
+        jmp     col_loop
 
 end_of_row:
         lda     ln_val
 I5:     sta     IDX+6,y
 
-        lda     #$00
-        sta     first_row
-
+        ldx     row_page_inc
         INC_HIGH_PAGES
-        ldx     _width
-        cpx     #<640
-        beq     :+
-        INC_HIGH_PAGES                  ; Double increment for 320 width images
-:       dec     row
 
+        ; Re-enable special handler for first_col
+        SET_BRANCH #$90, high_nibble_special
+        UPDATE_BRANCH high_nibble_special, first_col_handler
+
+        dec     row
         beq     band_done
+
+next_row_handler:
+        bit     row_loop
+
+        ; Deactivate first_row handler for low nibble
+        SET_BRANCH #$B0, low_nibble_special
+        ; Deactivate first row pointers update
+        lda     #$4C
+        sta     inc_first_row_handler
+        ; And ourself
+        sta     next_row_handler
+
         jmp     row_loop
 
 ; ------
