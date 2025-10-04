@@ -58,16 +58,16 @@ uint8 raw_image[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
 void __fastcall__ reset_bitbuff (void) {
 }
 
+static uint8 *idx = raw_image + (2 * SCRATCH_WIDTH);
+#define idx_behind (idx-SCRATCH_WIDTH+1)
 void qt_load_raw(uint16 top)
 {
-  register uint8 *idx;
-#define idx_behind (idx-SCRATCH_WIDTH+1)
 
   register uint8 at_very_first_col;
   register uint8 row;
   register int16 val;
-  uint8 ln_val, hn_val;
-  uint8 loop, loops;
+  uint8 ln_val, hn_val, next_ln_val;
+  uint8 loop;
 
   /* First band: init variables */
   if (top == 0) {
@@ -82,45 +82,42 @@ void qt_load_raw(uint16 top)
      */
     last_two_lines = raw_image + (BAND_HEIGHT * SCRATCH_WIDTH);
 
+    next_ln_val = 0x80;
+
     /* Init the second line + 1 bytes of buffer with grey. */
     memset (raw_image+SCRATCH_WIDTH, 0x80, SCRATCH_WIDTH + 1);
   } else {
+    idx = raw_image + (2 * SCRATCH_WIDTH);
     /* Shift the last band's last line, plus 1 pixels,
      * to second line of the new band. */
     memcpy(raw_image+SCRATCH_WIDTH, last_two_lines+SCRATCH_WIDTH, SCRATCH_WIDTH + 1);
   }
 
-  /* We start at line 2. */
-  idx = raw_image + (2 * SCRATCH_WIDTH);
-
-  loops = width/4;
-
   /* In reality we do rows from 0 to BAND_HEIGHT, but decrementing is faster
    * and the only use of the variable is to check for oddity, so nothing
    * changes */
   for (row = BAND_HEIGHT; row != 0; row--) {
-    uint16 x, offset;
-
+    uint16 x;
+printf("row_loop\n");
     /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
-      offset = x = 1;
+      x = 1;
       pgbar_state+=2;
       progress_bar(-1, -1, 80*22, pgbar_state, height);
     } else {
-      offset = x = 0;
+      x = 0;
     }
 
-    // idx = src;
-
     /* Initial set of the value two columns behind */
-    ln_val = idx[0];
+    ln_val = next_ln_val;
 
     at_very_first_col = 1;
 
-    loop = 0;
+    loop = width/4;
     /* First pass */
-    while (loop++ != loops) {
+    while (1) {
       uint8 high_nibble, low_nibble;
+
       if (cur_cache_ptr == cache_end) {
         read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
       }
@@ -143,7 +140,6 @@ void qt_load_raw(uint16 top)
 
       /* Cache it for next loop before shifting */
       hn_val = val;
-
       (idx+2)[x] = val;
 
       /* Same for the first line of the image */
@@ -155,14 +151,13 @@ void qt_load_raw(uint16 top)
       /* At first columns, we have to set scratch values for the next line.
        * We'll need them in the second pass */
       if (at_very_first_col) {
-        (idx+1)[x] = (idx+SCRATCH_WIDTH)[0] = (idx)[x] = val;
+        next_ln_val = (idx+1)[x] = (idx)[x] = val;
         at_very_first_col = 0;
       } else {
         (idx+1)[x] = (val + ln_val) >> 1;
       }
 
       /* Do low nibble with indexes shifted 2 */
-
       val = (((((idx_behind+2)[x]               // row-1, col-1
               + hn_val) >> 1)
               + (idx_behind+4)[x]) >> 1) // row-1, col+1
@@ -175,9 +170,7 @@ void qt_load_raw(uint16 top)
 
       /* Cache it for next loop before shifting */
       ln_val = val;
-
       (idx+4)[x] = val;
-      (idx+3)[x] = (val + hn_val) >> 1;
 
       /* Same for the first line of the image */
       if (at_very_first_row) {
@@ -185,20 +178,27 @@ void qt_load_raw(uint16 top)
         (idx_behind+6)[x] = (idx_behind+4)[x] = val;
       }
 
+      (idx+3)[x] = (ln_val + hn_val) >> 1;
+
+      loop--;
+      if (loop == 0) {
+        break;
+      }
+
       x += 4;
+      /* Mimic Y register for clarity */
       if (x > 256) {
         x = x % 256;
         idx += 256;
       }
     }
-    (idx+2)[x] = val;
+    (idx+6)[x] = ln_val;
 
     if (width == 320) {
       idx += 512;
     } else {
       idx += 256;
     }
-    printf("row %d idx %p behind %p\n", row, idx, idx_behind);
 
     at_very_first_row = 0;
   }

@@ -143,8 +143,7 @@ IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
 
 .macro INC_HIGH_PAGES
         txa
-        adc     I0+2
-        sta     I0+2
+        adc     I1+2
         sta     I1+2
         sta     I2+2
         sta     I3+2
@@ -159,11 +158,6 @@ IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
         sta     IB4+2
         sta     IB5+2
         sta     IB6+2
-
-        txa
-        adc     IFC1+2
-        sta     IFC1+2
-        sta     IFC2+2
 .endmacro
 
 .macro INC_FIRST_ROW_PAGES
@@ -177,7 +171,6 @@ IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
 
 .macro SET_HIGH_PAGES
         lda     #>IDX
-        sta     I0+2
         sta     I1+2
         sta     I2+2
         sta     I3+2
@@ -197,9 +190,6 @@ IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
         sta     IBFR2+2
         sta     IBFR3+2
         sta     IBFR4+2
-
-        lda     #>(IDX+SCRATCH_WIDTH)
-        sta     IFFC1+2
 .endmacro
 
 ; QTKT file magic
@@ -363,15 +353,13 @@ not_top:                                ; Subsequent bands
         sty     row
 
 row_loop:                               ; Row loop
-I0:     lda     IDX+0                   ; Remember previous value before shifting
+next_ln_val:
+        lda     #$80
         sta     ln_val                  ; index
 
-        lda     I0+2                    ; Set first col pointers
+        lda     I1+2                    ; Set first col pointers
         sta     IFC1+2
         sta     IFC2+2
-        clc
-        adc     #>SCRATCH_WIDTH
-        sta     IFFC1+2
 
         lda     loops
         sta     loop
@@ -451,14 +439,14 @@ first_pixel_handler:
         bcs     std_col_handler_high    ; Patched
         sta     IDX+1,y
         sta     IDX,y
-        sta     IDX+SCRATCH_WIDTH
+        sta     next_ln_val+1
         SET_BRANCH #$90, first_pixel_handler
         jmp     do_low_nibble
 
 first_col_handler:
 IFC1:   sta     IDX+1,y
 IFC2:   sta     IDX,y
-IFFC1:  sta     IDX+SCRATCH_WIDTH
+        sta     next_ln_val+1
         SET_BRANCH #$B0, high_nibble_special
         jmp     do_low_nibble
 
