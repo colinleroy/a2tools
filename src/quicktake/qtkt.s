@@ -187,9 +187,9 @@ IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
         inx
         stx     IFC1+2
         stx     IFC2+2
+.endmacro
 
-        inc     IFFC1+2
-
+.macro INC_FIRST_ROW_PAGES
         ldx     IBFR1+2
         inx
         stx     IBFR1+2
@@ -377,6 +377,12 @@ I0:     lda     IDX+0                   ; Remember previous value before shiftin
 
         lda     #$FF                    ; Re-enable first col handler
         sta     first_col
+        lda     I0+2                    ; Set first col pointers
+        sta     IFC1+2
+        sta     IFC2+2
+        clc
+        adc     #>SCRATCH_WIDTH
+        sta     IFFC1+2
 
         lda     loops
         sta     loop
@@ -536,7 +542,10 @@ clamp_low_nibble:
 
 inc_idx_high:
         INC_HIGH_PAGES
-        jmp     col_loop
+        bit     first_row
+        bpl     :+
+        INC_FIRST_ROW_PAGES
+:       jmp     col_loop
 
 end_of_row:
         lda     ln_val
