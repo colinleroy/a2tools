@@ -388,7 +388,8 @@ skip_to_start:
               cycles += 1;
             }
           } else if ((op_addr & 0xff00) != (param_addr & 0xff00)
-                   && is_instruction_condbranch(instr)) {
+                   && is_instruction_condbranch(instr)
+                   && cycles == 3) {
               /* cost for conditional branches with page crossing */
               cycles += 1;
           }

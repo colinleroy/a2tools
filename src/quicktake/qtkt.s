@@ -532,7 +532,6 @@ inc_idx_high:
         clc
         INC_HIGH_PAGES
 inc_first_row_handler:
-        bit     col_loop
         INC_FIRST_ROW_PAGES
         jmp     col_loop
 
@@ -558,6 +557,10 @@ next_row_handler:
         ; Deactivate first row pointers update
         lda     #$4C
         sta     inc_first_row_handler
+        lda     #<col_loop
+        sta     inc_first_row_handler+1
+        lda     #>col_loop
+        sta     inc_first_row_handler+2
         ; And ourself
         sta     next_row_handler
 
