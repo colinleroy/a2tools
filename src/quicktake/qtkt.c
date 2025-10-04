@@ -58,6 +58,9 @@ uint8 raw_image[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
 void __fastcall__ reset_bitbuff (void) {
 }
 
+size_t bytes_read = 0;
+int full_reads, last_read;
+uint8 next_ln_val;
 static uint8 *idx = raw_image + (2 * SCRATCH_WIDTH);
 #define idx_behind (idx-SCRATCH_WIDTH+1)
 void qt_load_raw(uint16 top)
@@ -66,12 +69,21 @@ void qt_load_raw(uint16 top)
   register uint8 at_very_first_col;
   register uint8 row;
   register int16 val;
-  uint8 ln_val, hn_val, next_ln_val;
+  uint8 ln_val, hn_val;
   uint8 loop;
 
   /* First band: init variables */
   if (top == 0) {
     reset_bitbuff();
+
+    if (width == 640) {
+      full_reads = ((640*480/4)/CACHE_SIZE);
+      last_read = ((640*480/4)%CACHE_SIZE) + 1024;
+    } else {
+      full_reads = ((320*240/4)/CACHE_SIZE);
+      last_read = ((320*240/4)%CACHE_SIZE) + 1024;
+    }
+    printf("Full reads needed = %d\n", full_reads);
 
     at_very_first_row = 1;
     pgbar_state = 0;
@@ -98,7 +110,6 @@ void qt_load_raw(uint16 top)
    * changes */
   for (row = BAND_HEIGHT; row != 0; row--) {
     uint16 x;
-printf("row_loop\n");
     /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
       x = 1;
@@ -119,7 +130,14 @@ printf("row_loop\n");
       uint8 high_nibble, low_nibble;
 
       if (cur_cache_ptr == cache_end) {
-        read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
+        full_reads--;
+        if (full_reads == 0) {
+          printf("Doing small read\n");
+          read(ifd, cur_cache_ptr = cache, last_read);
+        } else {
+          printf("Doing full read\n");
+          read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
+        }
       }
 
       high_nibble = *(cur_cache_ptr++);
@@ -201,5 +219,6 @@ printf("row_loop\n");
     }
 
     at_very_first_row = 0;
+    printf("total read %lu, pos in cache %lu\n", bytes_read, cur_cache_ptr-cache_start);
   }
 }

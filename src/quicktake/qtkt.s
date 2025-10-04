@@ -38,7 +38,7 @@ _model:
 _cache_start:
         .addr        _cache
 
-.segment        "RODATA"
+.segment        "LC"
 .align 256
 ; gstep correction (value byte for high nibble)
 high_nibble_gstep_low:
@@ -217,6 +217,12 @@ pgbar_state:
 motor_on:
         .res        2
 
+; How many full reads before end of data
+full_reads:
+        .res        1
+last_read:
+        .res        2
+
 ; Zero page pointers and variables
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
@@ -284,7 +290,11 @@ fill_cache:
         ; Push count (CACHE_SIZE)
         lda     #<CACHE_SIZE
         ldx     #>CACHE_SIZE
-        jmp     _read
+        dec     full_reads
+        bne     :+
+        lda     last_read
+        ldx     last_read+1
+:       jmp     _read
 
 ; Main loop, decodes a band
 _qt_load_raw:
@@ -297,6 +307,15 @@ top:
         sta     pgbar_state             ; Zero progress bar (A=0 here)
         jsr     set_cache_data          ; Initialize cache things
 
+        ; Compute how many full reads
+        ; and the size of the last read
+        lda     #((320*240/4)/CACHE_SIZE)
+        sta     full_reads
+        lda     #<(((320*240/4) .mod CACHE_SIZE)+1024)
+        sta     last_read
+        lda     #>(((320*240/4) .mod CACHE_SIZE)+1024)
+        sta     last_read+1
+
         ldx     #80
         ldy     #2
         lda     _width                  ; How many outer loops per row ?
@@ -304,6 +323,13 @@ top:
         bne     :+
         ldx     #160
         ldy     #1
+        lda     #((640*480/4)/CACHE_SIZE)
+        sta     full_reads
+        lda     #<(((640*480/4) .mod CACHE_SIZE)+1024)
+        sta     last_read
+        lda     #>(((640*480/4) .mod CACHE_SIZE)+1024)
+        sta     last_read+1
+
 :       stx     loops
         sty     row_page_inc
 
@@ -557,12 +583,11 @@ next_row_handler:
         ; Deactivate first row pointers update
         lda     #$4C
         sta     inc_first_row_handler
+        sta     next_row_handler
         lda     #<col_loop
         sta     inc_first_row_handler+1
         lda     #>col_loop
         sta     inc_first_row_handler+2
-        ; And ourself
-        sta     next_row_handler
 
         jmp     row_loop
 
