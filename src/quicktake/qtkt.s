@@ -33,9 +33,8 @@
 BAND_HEIGHT   = 20
 ; QTKT algorithm relies on two pixels "borders" around the
 ; image to simplify bound checking.
-SCRATCH_PAD   = 4
-SCRATCH_WIDTH = (640 + SCRATCH_PAD + 1)
-SCRATCH_HEIGHT= (BAND_HEIGHT + SCRATCH_PAD)
+SCRATCH_WIDTH = 768
+SCRATCH_HEIGHT= (BAND_HEIGHT + 2)
 RAW_IMAGE_SIZE= (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
 ; the column (X coord) loop is divided into an outer loop
@@ -169,8 +168,6 @@ START_INDEXES = *
 idx_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
-        ; We want to make sure no idx low byte == $00 so we can decrement it to compute idx_one
-        .assert (_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2)) .mod $100 <> $00,error
         .endrep
 
 .assert >* = >START_INDEXES, error ; we switched a page
@@ -178,6 +175,18 @@ idx_low:
 idx_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
+        .endrep
+
+idx_one_low:
+        .repeat BAND_HEIGHT+1,row
+        .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
+        .endrep
+
+.assert >* = >START_INDEXES, error ; we switched a page
+; Index offsets for start of each row (high byte)
+idx_one_high:
+        .repeat BAND_HEIGHT+1,row
+        .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
         .endrep
 
 .assert >* = >START_INDEXES, error ; we switched a page
@@ -215,7 +224,7 @@ model_str:
         .byte        $31,$30,$30,$00
 
 .segment        "BSS"
-.align 1024
+.align 256
 ; Disk cache
 _cache:
         .res        CACHE_SIZE,$00
@@ -223,7 +232,7 @@ _cache:
 .align 256
 ; Destination buffer for the band (8bpp grayscale)
 _raw_image:
-        .res        RAW_IMAGE_SIZE,$00
+        .res        RAW_IMAGE_SIZE
 
 ; No need to align anymore
 
@@ -382,9 +391,9 @@ row_loop:                               ; Row loop
         stx     idx+1
         stx     store_idx_min2_first_col+2
 
-        sec
-        sbc     #1
+        lda     idx_one_low,y               ; Set indexes (Y = row there)
         sta     idx_one
+        ldx     idx_one_high,y
         stx     idx_one+1
 
         lda     idx_forward_low,y
@@ -603,14 +612,14 @@ shift_indexes:                          ; Yes so shift indexes for next inner lo
         adc     idx                     ; Adding INNER_X_LOOP_LEN-1 because
         sta     idx                     ; carry is set by the previous cpy
         bcc     :+
-        inc     idx+1                   ; Don't clear carry, for idx_one
-
+        inc     idx+1
 :       dec     cur_row_loop            ; Are we at end of line?
         beq     end_of_row              ; If so, no need to update idx_one and idx_behind
 
-        tax
-        dex
-        stx     idx_one                 ; idx_one = idx-1
+:       clc
+        tya                             ; Y = INNER_X_LOOP_LEN
+        adc     idx_one
+        sta     idx_one
         bcc     :+
         inc     idx_one+1
         clc
@@ -654,7 +663,7 @@ row_done:
 clamp_high_nibble_high:
         lda     #$FF
         clc
-        bcc     high_nibble_special_pos    ; Back to main loop
+        jmp     high_nibble_special_pos    ; Back to main loop
 
 clamp_low_nibble:
         eor     #$FF                     ; => 00 if negative, FE if positive
