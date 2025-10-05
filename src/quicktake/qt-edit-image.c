@@ -424,8 +424,12 @@ start_edit:
         cputs("; C: Crop");
       else
         cputs("; C: Fit - Up/down: Adjust crop");
-    } else if (angle == 0 && !(src_width % 320)) {
-      cputs("; C: Reframe");
+    } else if (angle == 0) {
+      if (!(src_width % 320)) {
+        cputs("; C: Reframe");
+      } else {
+        cputs("; C: Uncrop");
+      }
     }
     cprintf("\r\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\r\n",
            auto_level ? "off":"on",
@@ -463,9 +467,14 @@ start_edit:
             histogram_equalize();
             return 1;
           case 'c':
-            if (angle == 0 && !(src_width % 320)) {
-              cropping = 1;
-              goto crop_again;
+            if (angle == 0) {
+              if (!(src_width % 320)) {
+                cropping = 1;
+                goto crop_again;
+              } else {
+                init_text();
+                qt_convert_image(ofname);
+              }
             } else {
               resize = !resize;
               if (resize) {
