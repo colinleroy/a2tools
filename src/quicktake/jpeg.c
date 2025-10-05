@@ -957,9 +957,9 @@ void qt_load_raw(uint16 top)
     status = pjpeg_decode_init();
 
     if (status) {
-      cprintf("pjpeg_decode_init() failed with status %u\r\n", status);
+      cputs("pjpeg_decode_init() failed\r\n");
       if (status == PJPG_UNSUPPORTED_MODE) {
-        cprintf("Progressive JPEG files are not supported.\r\n");
+        cputs("Progressive JPEG files are not supported.\r\n");
       }
       return;
     }
@@ -973,7 +973,7 @@ void qt_load_raw(uint16 top)
 
     if (status) {
        if (status != PJPG_NO_MORE_BLOCKS) {
-        cprintf("pjpeg_decode_mcu() failed with status %u\r\n", status);
+        cputs("pjpeg_decode_mcu() failed\r\n");
         return;
        }
        break;

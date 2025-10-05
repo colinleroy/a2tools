@@ -63,6 +63,8 @@ colh             = _zp10  ; byte - _decode_row, _consume_extra
 
                           ; _zp11-13 used by bitbuffer
 
+.segment "LC"
+
 .proc _init_shiftl4
         ldy     #$00
 
@@ -101,8 +103,6 @@ colh             = _zp10  ; byte - _decode_row, _consume_extra
 
         rts
 .endproc
-
-.segment "LC"
 
 .proc _init_next_line
         lda     #<_next_line_l
@@ -293,6 +293,66 @@ huff_data_done:
         rts
 .endproc
 
+
+; Expects genptr to point to table
+; factor in A
+.proc _init_divtable
+        bit     $C083
+        bit     $C083
+        sta     abck
+        stx     xbck
+        sty     ybck
+        sta     fact+1
+
+        lda     #0
+        sta     wordcnt
+
+:       ldx     wordcnt
+        lda     #$80
+.ifndef APPROX_DIVISION
+        jsr     pushax
+fact:   lda     #$FF
+        jsr     tosdiva0
+.else
+fact:   ldy     #$FF
+        jsr     approx_div16x8_direct
+.endif
+        ldy     wordcnt
+        bmi     overflows_neg     ; stop if signed < 0
+build_table_n:
+        sta     $FF00,y
+        txa
+        bne     overflows         ; Stop if result > 256
+        inc     wordcnt
+        bne     :-
+        jmp     done
+
+overflows:                        ; Fill the rest
+        lda     #$FF
+build_table_o:
+:       sta     $FF00,y
+        iny
+        bmi     overflows_neg
+        bne     :-
+
+overflows_neg:
+        lda     #$00
+build_table_u:
+:       sta     $FF00,y
+        iny
+        bne     :-
+
+done:
+abck = *+1
+        lda     #$FF
+xbck = *+1
+        ldx     #$FF
+ybck = *+1
+        ldy     #$FF
+
+        rts
+.endproc
+
 .segment "CODE"
 
 .proc _consume_extra
@@ -383,63 +443,6 @@ rep_loop_sub:
         sbc     #$FF
         sta     col
         jmp     discard_col_loop
-
-        rts
-.endproc
-
-; Expects genptr to point to table
-; factor in A
-.proc _init_divtable
-        sta     abck
-        stx     xbck
-        sty     ybck
-        sta     fact+1
-
-        lda     #0
-        sta     wordcnt
-
-:       ldx     wordcnt
-        lda     #$80
-.ifndef APPROX_DIVISION
-        jsr     pushax
-fact:   lda     #$FF
-        jsr     tosdiva0
-.else
-fact:   ldy     #$FF
-        jsr     approx_div16x8_direct
-.endif
-        ldy     wordcnt
-        bmi     overflows_neg     ; stop if signed < 0
-build_table_n:
-        sta     $FF00,y
-        txa
-        bne     overflows         ; Stop if result > 256
-        inc     wordcnt
-        bne     :-
-        jmp     done
-
-overflows:                        ; Fill the rest
-        lda     #$FF
-build_table_o:
-:       sta     $FF00,y
-        iny
-        bmi     overflows_neg
-        bne     :-
-
-overflows_neg:
-        lda     #$00
-build_table_u:
-:       sta     $FF00,y
-        iny
-        bne     :-
-
-done:
-abck = *+1
-        lda     #$FF
-xbck = *+1
-        ldx     #$FF
-ybck = *+1
-        ldy     #$FF
 
         rts
 .endproc

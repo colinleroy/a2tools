@@ -103,7 +103,7 @@ void qt_load_raw(uint16 top)
     init_top();
 
     if (width != 320) {
-      cprintf("Unsupported format\r\n");
+      cputs("Unsupported format\r\n");
       exit(1);
     }
   }

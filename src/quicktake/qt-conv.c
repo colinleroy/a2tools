@@ -72,11 +72,6 @@ static const char *ifname;
 #pragma code-name (push, "LC")
 
 #ifndef JPEGCONV
-void __fastcall__ src_file_seek(uint32 off) {
-  lseek(ifd, off, SEEK_SET);
-  read(ifd, (cur_cache_ptr = cache_start), CACHE_SIZE);
-}
-
 static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
@@ -103,17 +98,14 @@ static uint8 identify(const char *name)
 /* INIT */
   height = width = 0;
 
-  #ifdef QTKTCONV
-  read(ifd, cache_start, 768);
-  #else
   read(ifd, cache_start, CACHE_SIZE);
-  #endif
   
-  cprintf("Decompressing ");
+  cputs("Decompressing ");
   if (!memcmp (cache_start, magic, 4)) {
-    cprintf("QT%s", model);
+    cputs("QT");
+    cputs(model);
   } else {
-    cprintf("- Invalid file.\r\n");
+    cputs("- Invalid file.\r\n");
     return -1;
   }
 
@@ -124,21 +116,18 @@ static uint8 identify(const char *name)
     height = src_file_get_uint16();
     width  = src_file_get_uint16();
 
-    cprintf(" image %s (%dx%d)...\r\n", name, width, height);
+    cputs(" image ");
+    cputs((char *)name);
+    cputs("...\r\n");
 
     /* Skip those */
     src_file_get_uint16();
     src_file_get_uint16();
 
-#ifdef QTKTCONV
-    lseek(ifd, src_file_get_uint16() == 30 ? 738 : 736, SEEK_SET);
-    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
-#else
     if (src_file_get_uint16() == 30)
       cur_cache_ptr = cache_start + (738);
     else
       cur_cache_ptr = cache_start + (736);
-#endif
 
     if (!memcmp(cache_start, QTKN_MAGIC, 4)) {
       width = 320;
@@ -149,7 +138,9 @@ static uint8 identify(const char *name)
 #ifdef JPEGCONV
   if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
-    cprintf(" image %s (640x480)...\r\n", name);
+    cputs(" image ");
+    cputs((char *)name);
+    cputs("...\r\n");
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
     cur_cache_ptr = cache_start;
@@ -194,71 +185,56 @@ static void build_scale_table(const char *ofname) {
   uint8 row, col;
   uint16 xoff, prev_xoff;
 
-  if (width == 640) {
-    effective_width = crop_end_x - crop_start_x;
-    switch (effective_width) {
-      case 640:
-        scaling_factor = 4;
-        scaled_band_height = (BAND_HEIGHT * 4 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 4 / 10);
-        break;
-      case 320:
-        scaling_factor = 8;
-        scaled_band_height = (BAND_HEIGHT * 8 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
-        effective_width = 321; /* Prevent re-cropping from menu */
-        break;
-      case 512:
-        scaling_factor = 5;
-        scaled_band_height = (BAND_HEIGHT * 5 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 5 / 10);
-        last_band = crop_start_y + 380;
-        last_band_crop = 2; /* 4, scaled */
-        break;
-      case 256:
-        scaling_factor = 10;
-        scaled_band_height = (BAND_HEIGHT * 10 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
-        last_band = crop_start_y + 180;
-        last_band_crop = 12;
-        break;
-      default:
-        goto unsup_width;
-    }
-  } else if (width == 320) {
+  effective_width = crop_end_x - crop_start_x;
+  if (width == 320) {
     /* Crop boundaries are 640x480 bound, divide them */
     crop_start_x /= 2;
     crop_end_x   /= 2;
     crop_start_y /= 2;
     crop_end_y   /= 2;
-    effective_width = crop_end_x - crop_start_x;
-    switch (effective_width) {
-      case 320:
-        scaling_factor = 8;
-        scaled_band_height = (BAND_HEIGHT * 8 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
-        break;
-      case 256:
-        scaling_factor = 10;
-        scaled_band_height = (BAND_HEIGHT * 10 / 10);
-        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
-        last_band = crop_start_y + 180;
-        last_band_crop = 12;
-        break;
-      case 128:
-        cprintf("Can not reframe 128x96 zone of 320x240 image.\r\n"
-               "Please try again with less zoom.\r\n");
-        /* Reset effective width to go back where we were */
-        effective_width = 320;
+    effective_width /= 2;
+  }
+
+  switch (effective_width) {
+    case 640:
+      scaling_factor = 4;
+      scaled_band_height = (BAND_HEIGHT * 4 / 10);
+      output_write_len = FILE_WIDTH * (BAND_HEIGHT * 4 / 10);
+      break;
+    case 320:
+      scaling_factor = 8;
+      scaled_band_height = (BAND_HEIGHT * 8 / 10);
+      output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
+      if (width == 640) {
+        effective_width = 321; /* Prevent re-cropping from menu */
+      }
+      break;
+    case 512:
+      scaling_factor = 5;
+      scaled_band_height = (BAND_HEIGHT * 5 / 10);
+      output_write_len = FILE_WIDTH * (BAND_HEIGHT * 5 / 10);
+      last_band = crop_start_y + 380;
+      last_band_crop = 2; /* 4, scaled */
+      break;
+    case 256:
+      scaling_factor = 10;
+      scaled_band_height = (BAND_HEIGHT * 10 / 10);
+      output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
+      last_band = crop_start_y + 180;
+      last_band_crop = 12;
+      break;
+    case 128:
+      cputs("Can not reframe 128x96 zone of 320x240 image.\r\n"
+             "Please try again with less zoom.\r\n");
+      /* Reset effective width to go back where we were */
+      effective_width = 320;
 reload:
-        cgetc();
-        reload_menu(ofname);
-        break;
-      default:
-unsup_width:
-        cprintf("Unsupported width %d\r\n", effective_width);
-        goto reload;
-    }
+      cgetc();
+      reload_menu(ofname);
+      break;
+    default:
+      cputs("Unsupported width.\r\n");
+      goto reload;
   }
 
   col = 0;
@@ -452,7 +428,13 @@ static void reload_menu(const char *filename) {
   reopen_start_device();
 
   if (filename) {
+    #ifndef __CC65__
     sprintf(buffer, "%s %d", filename, effective_width);
+    #else
+    strcpy(buffer, filename);
+    strcat(buffer, " ");
+    strcat(buffer, utoa(effective_width, buffer+sizeof(buffer)-5, 10));
+    #endif
     exec("slowtake", buffer);
   } else {
     exec("slowtake", NULL);
@@ -469,7 +451,9 @@ int main (int argc, const char **argv)
 #ifdef __CC65__
   reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
-  cprintf("Free memory: %zu/%zuB\r\n", _heapmaxavail(), _heapmemavail());
+  cputs("Free memory: ");
+  cputs(utoa(_heapmaxavail(), ofname, 10));
+  cputs(" bytes\r\n");
 #endif
 
   if (argc < 6) {
@@ -487,8 +471,10 @@ int main (int argc, const char **argv)
 
 try_again:
   if ((ifd = open (ifname, O_RDONLY)) < 0) {
-    cprintf("Please reinsert the disk containing %s,\r\n"
-           "or press Escape to cancel.\r\n", ifname);
+    cputs("Please reinsert the disk containing ");
+    cputs((char *)ifname);
+    cputs(",\r\n"
+          "or press Escape to cancel.\r\n");
     if (cgetc() == CH_ESC)
       goto out;
     else
@@ -514,7 +500,9 @@ try_again:
   #endif
 
   if (ofd < 0) {
-    cprintf("Can't open %s\r\n", TMP_NAME);
+    cputs("Can't open\r\n");
+    cputs(TMP_NAME);
+    cgetc();
     exit(0);
   }
 
