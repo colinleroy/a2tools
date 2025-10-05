@@ -51,9 +51,8 @@ static const int16 gstep[16] =
  * two pixels on a 25th line because they are re-
  * used at the start of the next band.
  */
-#define SCRATCH_WIDTH RAW_WIDTH
-#define SCRATCH_HEIGHT (BAND_HEIGHT + 4)
-uint8 raw_image[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
+#define SCRATCH_HEIGHT (BAND_HEIGHT + 1)
+uint8 raw_image[(SCRATCH_HEIGHT-1) * RAW_WIDTH + 644];
 
 void __fastcall__ reset_bitbuff (void) {
 }
@@ -61,8 +60,8 @@ void __fastcall__ reset_bitbuff (void) {
 size_t bytes_read = 0;
 int full_reads, last_read;
 uint8 next_ln_val;
-static uint8 *idx = raw_image + (2 * SCRATCH_WIDTH);
-#define idx_behind (idx-SCRATCH_WIDTH+1)
+static uint8 *idx = raw_image + (RAW_WIDTH);
+#define idx_behind (idx-RAW_WIDTH+1)
 void qt_load_raw(uint16 top)
 {
 
@@ -92,17 +91,17 @@ void qt_load_raw(uint16 top)
      * from the end of the previous band to the start of
      * the new one.
      */
-    last_two_lines = raw_image + (BAND_HEIGHT * SCRATCH_WIDTH);
+    last_two_lines = raw_image + ((BAND_HEIGHT-1) * RAW_WIDTH);
 
     next_ln_val = 0x80;
 
     /* Init the second line + 1 bytes of buffer with grey. */
-    memset (raw_image+SCRATCH_WIDTH, 0x80, SCRATCH_WIDTH + 1);
+    memset (raw_image, 0x80, RAW_WIDTH + 1);
   } else {
-    idx = raw_image + (2 * SCRATCH_WIDTH);
+    idx = raw_image + (RAW_WIDTH);
     /* Shift the last band's last line, plus 1 pixels,
      * to second line of the new band. */
-    memcpy(raw_image+SCRATCH_WIDTH, last_two_lines+SCRATCH_WIDTH, SCRATCH_WIDTH + 1);
+    memcpy(raw_image, last_two_lines+RAW_WIDTH, RAW_WIDTH + 1);
   }
 
   /* In reality we do rows from 0 to BAND_HEIGHT, but decrementing is faster

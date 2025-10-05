@@ -153,7 +153,8 @@ slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TAR
 
 # 4 full tracks cache!
 qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
-	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=768 \
+	-DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 \
+	-DRAW_WIDTH=768 --asm-define RAW_WIDTH=768 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
 # 3.5 tracks cache
@@ -170,7 +171,7 @@ GCCCFLAGS = -D_CACHE_SIZE=8192 -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
 	-fno-omit-frame-pointer \
 	$(shell sdl-config --cflags)
-qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=768 -DFINAL_WIDTH=640
+qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 -DRAW_WIDTH=768 -DFINAL_WIDTH=640
 
 qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320 \
 	-D$(QTKN_DIVISION)=1

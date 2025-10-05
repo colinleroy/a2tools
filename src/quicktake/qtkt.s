@@ -25,9 +25,8 @@
 BAND_HEIGHT   = 20
 ; QTKT algorithm relies on two pixels "borders" around the
 ; image to simplify bound checking.
-SCRATCH_WIDTH = 768
-SCRATCH_HEIGHT= (BAND_HEIGHT + 2)
-RAW_IMAGE_SIZE= (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
+SCRATCH_HEIGHT= (BAND_HEIGHT + 1)
+RAW_IMAGE_SIZE= ((SCRATCH_HEIGHT-1) * RAW_WIDTH + 644)
 
 .segment        "DATA"
 
@@ -138,8 +137,8 @@ low_nibble_gstep_high:
 ; gstep correction sign byte for high nibble is derived from high nibble's high bit
 ; in the main loop so no array.
 
-IDX        = _raw_image + (2*SCRATCH_WIDTH)
-IDX_BEHIND = (IDX-SCRATCH_WIDTH+1)
+IDX        = _raw_image + RAW_WIDTH
+IDX_BEHIND = (IDX-RAW_WIDTH+1)
 
 .macro INC_HIGH_PAGES
         txa
@@ -237,7 +236,7 @@ ln_val            = _zp12                 ; Last low nibble computed value
 hn_val            = _zp13                 ; Last high nibble computed value
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
-LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
+LAST_TWO_LINES = _raw_image + ((BAND_HEIGHT-1) * RAW_WIDTH)
 
 .macro SET_BRANCH val, label
         lda     val
@@ -334,14 +333,14 @@ top:
         sty     row_page_inc
 
         ; Init the second line + 2 bytes of buffer with grey
-        lda     #<(_raw_image+SCRATCH_WIDTH)
-        ldx     #>(_raw_image+SCRATCH_WIDTH)
+        lda     #<(_raw_image)
+        ldx     #>(_raw_image)
         jsr     pushax
         lda     #$80
         ldx     #$00
         jsr     pushax
-        lda     #<(SCRATCH_WIDTH + 1)
-        ldx     #>(SCRATCH_WIDTH + 1)
+        lda     #<(RAW_WIDTH + 1)
+        ldx     #>(RAW_WIDTH + 1)
         jsr     _memset
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
@@ -365,14 +364,14 @@ not_top:                                ; Subsequent bands
 
         SET_HIGH_PAGES
 
-        lda     #<(_raw_image+SCRATCH_WIDTH)
-        ldx     #>(_raw_image+SCRATCH_WIDTH)
+        lda     #<(_raw_image)
+        ldx     #>(_raw_image)
         jsr     pushax
-        lda     #<(LAST_TWO_LINES+SCRATCH_WIDTH)
-        ldx     #>(LAST_TWO_LINES+SCRATCH_WIDTH)
+        lda     #<(LAST_TWO_LINES+RAW_WIDTH)
+        ldx     #>(LAST_TWO_LINES+RAW_WIDTH)
         jsr     pushax
-        lda     #<(SCRATCH_WIDTH + 1)
-        ldx     #>(SCRATCH_WIDTH + 1)
+        lda     #<(RAW_WIDTH + 1)
+        ldx     #>(RAW_WIDTH + 1)
         jsr     _memcpy
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
