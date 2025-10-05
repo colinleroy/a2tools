@@ -308,12 +308,12 @@ top:
 
         ; Compute how many full reads
         ; and the size of the last read
-        lda     #((320*240/4)/CACHE_SIZE)
-        sta     full_reads
-        lda     #<(((320*240/4) .mod CACHE_SIZE)+1024)
-        sta     last_read
-        lda     #>(((320*240/4) .mod CACHE_SIZE)+1024)
-        sta     last_read+1
+        ; lda     #((320*240/4)/CACHE_SIZE)
+        ; sta     full_reads
+        ; lda     #<(((320*240/4) .mod CACHE_SIZE)+1024)
+        ; sta     last_read
+        ; lda     #>(((320*240/4) .mod CACHE_SIZE)+1024)
+        ; sta     last_read+1
 
         ldx     #80
         ldy     #2
@@ -324,10 +324,12 @@ top:
         ldy     #1
         lda     #((640*480/4)/CACHE_SIZE)
         sta     full_reads
-        lda     #<(((640*480/4) .mod CACHE_SIZE)+1024)
+        lda     #<(((640*480/4) .mod CACHE_SIZE))
         sta     last_read
-        lda     #>(((640*480/4) .mod CACHE_SIZE)+1024)
+        lda     #>(((640*480/4) .mod CACHE_SIZE))
         sta     last_read+1
+        lda     #$F0          ; BEQ - allow cache refill
+        sta     no_cache_read
 
 :       stx     loops
         sty     row_page_inc
@@ -426,6 +428,10 @@ IB2:    adc     IDX_BEHIND+2,y
 inc_cache_high:
         inc     cache_read+1
 
+no_cache_read:
+        .assert CACHE_SIZE >= 19200, error ; the following trick wouldn't work otherwise
+        bne     handle_byte
+
         ; Check for cache almost-end and restart floppy
         ; Consider we have time to handle 1kB while the
         ; drive restarts
@@ -438,6 +444,7 @@ start_floppy_motor:
 :       ; Check for cache end and refill cache
         cpx     #>CACHE_END
         bne     handle_byte
+
         pha
         sty     tmp1                    ; Backup index
         jsr     fill_cache

@@ -8,6 +8,8 @@
 
         .importzp             tmp1, ptr1
 
+.segment "LC"
+
 _check_floppy:
         ldx     #$00
         stx     floppy_motor_on

@@ -71,6 +71,7 @@ static const char *ifname;
 
 #pragma code-name (push, "LC")
 
+#ifndef JPEGCONV
 void __fastcall__ src_file_seek(uint32 off) {
   lseek(ifd, off, SEEK_SET);
   read(ifd, (cur_cache_ptr = cache_start), CACHE_SIZE);
@@ -79,16 +80,11 @@ void __fastcall__ src_file_seek(uint32 off) {
 static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
-  if (cur_cache_ptr == cache_end) {
-    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
-  }
   ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
-  if (cur_cache_ptr == cache_end) {
-    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
-  }
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
 }
+#endif
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -107,8 +103,12 @@ static uint8 identify(const char *name)
 /* INIT */
   height = width = 0;
 
+  #ifdef QTKTCONV
+  read(ifd, cache_start, 768);
+  #else
   read(ifd, cache_start, CACHE_SIZE);
-
+  #endif
+  
   cprintf("Decompressing ");
   if (!memcmp (cache_start, magic, 4)) {
     cprintf("QT%s", model);
@@ -117,6 +117,7 @@ static uint8 identify(const char *name)
     return -1;
   }
 
+#ifndef JPEGCONV
   /* For Quicktake 1x0 */
   if (!memcmp(cache_start, QTKT_MAGIC, 3)) {
     cur_cache_ptr = cache_start + WH_OFFSET;
@@ -129,22 +130,31 @@ static uint8 identify(const char *name)
     src_file_get_uint16();
     src_file_get_uint16();
 
+#ifdef QTKTCONV
+    lseek(ifd, src_file_get_uint16() == 30 ? 738 : 736, SEEK_SET);
+    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
+#else
     if (src_file_get_uint16() == 30)
       cur_cache_ptr = cache_start + (738);
     else
       cur_cache_ptr = cache_start + (736);
+#endif
 
     if (!memcmp(cache_start, QTKN_MAGIC, 4)) {
       width = 320;
       height = 240;
     }
-  } else if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
+  }
+#endif
+#ifdef JPEGCONV
+  if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     cprintf(" image %s (640x480)...\r\n", name);
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
     cur_cache_ptr = cache_start;
   }
+#endif
   return 0;
 }
 

@@ -152,31 +152,37 @@ slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TAR
 	--start-addr 0xC00 #One file buffer
 
 # 4 full tracks cache!
-qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
+qtktconv_CLCFLAGS = -D_CACHE_SIZE=19200 --asm-define CACHE_SIZE=19200 \
 	-DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 \
 	-DRAW_WIDTH=768 --asm-define RAW_WIDTH=768 \
+	-DQTKTCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
 # 3.5 tracks cache
 qtknconv_CLCFLAGS = -D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
+	-DQTKNCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000 \
 	--asm-define $(QTKN_DIVISION)=1 \
 
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
+	-DJPEGCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
-GCCCFLAGS = -D_CACHE_SIZE=8192 -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
+GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
 	-fno-omit-frame-pointer \
 	$(shell sdl-config --cflags)
-qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 -DRAW_WIDTH=768 -DFINAL_WIDTH=640
+qtktconv_GCCCFLAGS = -D_CACHE_SIZE=19200 -DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 -DRAW_WIDTH=768 \
+	-DFINAL_WIDTH=640 -DQTKTCONV=1
 
-qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320 \
+qtknconv_GCCCFLAGS = -D_CACHE_SIZE=14336 -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
+	-DFINAL_WIDTH=320 -DQTKNCONV=1 \
 	-D$(QTKN_DIVISION)=1
 
-jpegconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 -DFINAL_WIDTH=320
+jpegconv_GCCCFLAGS = -D_CACHE_SIZE=14336 -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
+	-DFINAL_WIDTH=320 -DJPEGCONV=1
 
 GCCLDFLAGS = $(shell sdl-config --libs)
 

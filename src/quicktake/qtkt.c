@@ -54,9 +54,6 @@ static const int16 gstep[16] =
 #define SCRATCH_HEIGHT (BAND_HEIGHT + 1)
 uint8 raw_image[(SCRATCH_HEIGHT-1) * RAW_WIDTH + 644];
 
-void __fastcall__ reset_bitbuff (void) {
-}
-
 size_t bytes_read = 0;
 int full_reads, last_read;
 uint8 next_ln_val;
@@ -73,14 +70,12 @@ void qt_load_raw(uint16 top)
 
   /* First band: init variables */
   if (top == 0) {
-    reset_bitbuff();
-
     if (width == 640) {
       full_reads = ((640*480/4)/CACHE_SIZE);
-      last_read = ((640*480/4)%CACHE_SIZE) + 1024;
+      last_read = ((640*480/4)%CACHE_SIZE);
     } else {
       full_reads = ((320*240/4)/CACHE_SIZE);
-      last_read = ((320*240/4)%CACHE_SIZE) + 1024;
+      last_read = ((320*240/4)%CACHE_SIZE);
     }
     printf("Full reads needed = %d\n", full_reads);
 
@@ -131,10 +126,10 @@ void qt_load_raw(uint16 top)
       if (cur_cache_ptr == cache_end) {
         full_reads--;
         if (full_reads == 0) {
-          printf("Doing small read\n");
+          printf("Doing small read %d\n", last_read);
           read(ifd, cur_cache_ptr = cache, last_read);
         } else {
-          printf("Doing full read\n");
+          printf("Doing full read %d\n", CACHE_SIZE);
           read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
         }
       }
