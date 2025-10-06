@@ -100,11 +100,8 @@ static uint8 identify(const char *name)
 
   read(ifd, cache_start, CACHE_SIZE);
   
-  cputs("Decompressing ");
-  if (!memcmp (cache_start, magic, 4)) {
-    cputs("QT");
-    cputs(model);
-  } else {
+  cputsxy(0, 0, "Decompressing image ");
+  if (memcmp (cache_start, magic, 4)) {
     cputs("- Invalid file.\r\n");
     return -1;
   }
@@ -116,7 +113,6 @@ static uint8 identify(const char *name)
     height = src_file_get_uint16();
     width  = src_file_get_uint16();
 
-    cputs(" image ");
     cputs((char *)name);
     cputs("...\r\n");
 
@@ -451,7 +447,9 @@ int main (int argc, const char **argv)
 #ifdef __CC65__
   reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
-  cputs("Free memory: ");
+  cputsxy(0, 23, "Quicktake ");
+  cputs(model);
+  cputs(" for Apple II decoder - Free memory: ");
   cputs(utoa(_heapmaxavail(), ofname, 10));
   cputs(" bytes\r\n");
 #endif
@@ -483,12 +481,14 @@ try_again:
 
 #ifdef __CC65__
   check_floppy();
-  clrscr();
+  gotoxy (0, 5);
 #endif
 
   if (identify(ifname) != 0) {
     goto out;
   }
+
+  cputsxy(0, 7, "Initializing    \r\n");
 
   strcpy (ofname, ifname);
 
@@ -509,15 +509,21 @@ try_again:
   bzero(raw_image, RAW_IMAGE_SIZE);
   build_scale_table(ofname);
 
-  progress_bar(0, 1, 80*22, 0, height);
+  progress_bar(0, 8, 80, 0, height);
 
   for (h = 0; h < crop_end_y; h += BAND_HEIGHT) {
+    cputsxy(0, 7, "Decoding    \r\n");
+    progress_bar(0, 8, 80, h, crop_end_y);
+
     qt_load_raw(h);
-    if (h >= crop_start_y)
+    if (h >= crop_start_y) {
+      cputsxy(0, 7, "Scaling      \r\n");
       write_raw(h);
+    }
   }
 
-  progress_bar(-1, -1, 80*22, height, height);
+  cputsxy(0, 7, "Finalizing      \r\n");
+  progress_bar(0, 8, 80, height, height);
 
   close(ifd);
   close(ofd);
@@ -541,9 +547,8 @@ try_again:
   }
 
 #ifdef __CC65__
-  clrscr();
 #endif
-  cputs("Done.");
+  cputsxy(0, 7, "Done.           ");
 
   reload_menu(ofname);
 #ifndef __CC65__

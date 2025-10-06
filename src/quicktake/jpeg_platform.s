@@ -609,29 +609,16 @@ rx13h = ptr4+1
         sta    rx4h
 
         ; x5
-        clc
         lda    _gCoeffBuf+2,y
         sta    rx5l
         lda    _gCoeffBuf+3,y
         sta    rx5h
 
         ; x30
-        clc
         lda    _gCoeffBuf,y
-        adc    _gCoeffBuf+8,y
         sta    rx30l
         lda    _gCoeffBuf+1,y
-        adc    _gCoeffBuf+9,y
         sta    rx30h
-
-        ; x31
-        sec
-        lda    _gCoeffBuf,y
-        sbc    _gCoeffBuf+8,y
-        sta    rx31l
-        lda    _gCoeffBuf+1,y
-        sbc    _gCoeffBuf+9,y
-        sta    rx31h
 
         ; x13
         lda    _gCoeffBuf+4,y
@@ -720,29 +707,30 @@ rx17h = *+1
         tay
         lda    rx5h
         sbc    rx7h
+
         ; res3 = imul_b1_b3(x15) - res2;
         tax
         jsr    _imul_b1_b3
         sec
 rres2l = *+1
         sbc    #$FF
-        sta    rres3l
         tay
         txa
 rres2h = *+1
         sbc    #$FF
-        sta    rres3h
         tax
 
-        ; *(rowSrc_1) = res3 + x31 - x32;
+        ; *(rowSrc_1) = res3 + x30 - x32;
         tya
         clc
-rx31l = *+1
+rx30l = *+1
         adc    #$FF
+        sta    res3x30l
         tay
         txa
-rx31h = *+1
+rx30h = *+1
         adc    #$FF
+        sta    res3x30h
         tax
 
         tya
@@ -774,26 +762,17 @@ rres1h = *+1
         sbc    tmp2
         tax
 
-        ; *(rowSrc_2) = x24 + x30 + res3 - x13;
+        ; *(rowSrc_2) = res3x30l + x24 - x13;
         clc
         tya
-rx30l = *+1
+res3x30l = *+1
         adc    #$FF
         tay
         txa
-rx30h = *+1
+res3x30h = *+1
         adc    #$FF
         tax
 
-        tya
-        clc
-rres3l = *+1
-        adc    #$FF
-        tay
-        txa
-rres3h = *+1
-        adc    #$FF
-        tax
         tya
 
         sec
@@ -805,12 +784,12 @@ rres3h = *+1
         sbc    rx13h
         sta    _gCoeffBuf+5,y
 
-        ; *(rowSrc_3) = x31 + x32 - res2;
+        ; *(rowSrc_3) = x30 + x32 - res2;
         clc
-        lda    rx31l
+        lda    rx30l
         adc    rx32l
         sta    tmp1
-        lda    rx31h
+        lda    rx30h
         adc    rx32h
         tax
         lda    tmp1
@@ -1021,9 +1000,9 @@ cres2h = *+1
         txa
         adc     cx30h
         tax
-        tya
 
         sec
+        tya
         sbc     cres2l
         tay
         txa
@@ -1088,7 +1067,7 @@ cres1h = *+1
         clc
         tya
         adc     cx30l
-        tya
+        tay
         txa
         adc     cx30h
         tax

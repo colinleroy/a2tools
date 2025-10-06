@@ -21,6 +21,8 @@
         .export         discard4datahuff_interpolate
         .import         discard_col_loop
 
+        .import         _cputsxy, pushax
+
         .export         _cache
         .export         _init_floppy_starter
         .export         _next_line_l, _next_line_h
@@ -37,6 +39,7 @@
 
         .importzp       _zp6, _zp11, _zp12, _zp13
 
+        .include        "apple2.inc"
         .include        "qtkn_huffgetters.inc"
 
 cur_cache_ptr = _prev_ram_irq_vector
@@ -59,8 +62,11 @@ huff_small_3:  .byte          239, 251, 5, 17
 huff_small_4:  .byte          249, 2, 9, 18
 huff_small_5:  .byte          238, 247, 254, 7
 
-eight_min_x:   .byte 8, 7, 6, 5
-four_min_x:    .byte 4, 3, 2, 1, 0
+eight_min_x:   .byte          8, 7, 6, 5
+four_min_x:    .byte          4, 3, 2, 1, 0
+
+_reading_str: .byte          "Reading     ", $0D, $0A, $00
+_decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
 .segment        "BSS"
 .align 256
@@ -314,6 +320,14 @@ start_floppy_motor:
 do_read:
         sty     ybck
         sta     abck
+
+        ldx     #0
+        lda     #7
+        jsr     pushax
+        lda     #<_reading_str
+        ldx     #>_reading_str
+        jsr     _cputsxy
+
         ; Push read fd
         jsr     decsp4
         ldy     #$03
@@ -339,6 +353,14 @@ do_read:
         lda     #<CACHE_SIZE
         ldx     #>CACHE_SIZE
         jsr     _read
+
+        ldx     #0
+        lda     #7
+        jsr     pushax
+        lda     #<_decoding_str
+        ldx     #>_decoding_str
+        jsr     _cputsxy
+
         clc
 ybck = *+1
         ldy     #$FF

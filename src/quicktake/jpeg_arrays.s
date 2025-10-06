@@ -191,11 +191,12 @@ START_LAST_ARRAYS = *
   .byte  $7C
   .byte  $7E
 .endproc
+; Not the same order as the C implementation
 .proc _ZAG_Coeff_work
   .byte $1, $1, $1, $1, $1, $1, $1, $1
-  .byte $1, $1, $0, $1, $1, $1, $0, $0
-  .byte $0, $1, $1, $0, $0, $0, $0, $0
-  .byte $1, $0, $0, $0, $0, $0, $0, $0
+  .byte $0, $0, $0, $0, $0, $0, $0, $0
+  .byte $0, $0, $0, $0, $0, $0, $0, $0
+  .byte $0, $0, $0, $0, $0, $0, $0, $0
   .byte $0, $0, $0, $0, $0, $0, $0, $0
   .byte $0, $0, $0, $0, $0, $0, $0, $0
   .byte $0, $0, $0, $0, $0, $0, $0, $0

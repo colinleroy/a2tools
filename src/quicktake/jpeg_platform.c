@@ -221,6 +221,9 @@ nextIdctRowsLoop:
        rowSrc_5 = rowSrc + 5;
        rowSrc_6 = rowSrc + 6;
        rowSrc_7 = rowSrc + 7;
+      printf("%04X %04X %04X %04X %04X %04X %04X %04X\n",
+        *rowSrc, *rowSrc_1, *rowSrc_2, *rowSrc_3,
+        *rowSrc_4, *rowSrc_5, *rowSrc_6, *rowSrc_7);
       if (*rowSrc_1 != 0 || *rowSrc_2 != 0 || *rowSrc_3 != 0)
         goto full_idct_rows;
        // Short circuit the 1D IDCT if only the DC component is non-zero
@@ -235,24 +238,25 @@ nextIdctRowsLoop:
          x7  = *(rowSrc_3);               /* two uses */
          x4  = -*(rowSrc_3);              /* two uses */
          x5  = *(rowSrc_1);               /* 4 */
-         x30 = *(rowSrc) + *(rowSrc_4);   /* 2 */
-         x31 = *(rowSrc) - *(rowSrc_4);   /* 2 */
+         x30 = *(rowSrc);                 /* 2 */
          x13 = *(rowSrc_2);               /* 4 */
 
          x17 = x5 + x7;
+         *(rowSrc) = x30 + x13 + x17;
+
          x32 = imul_b1_b3(x13) - x13;
+
          res1 = imul_b5(x4 - x5);
-         res2 = imul_b4(x5) - res1;
-         res2 = res2 - x17;
+         res2 = imul_b4(x5) - res1 - x17;
          x15 = x5 - x7;
          res3 = imul_b1_b3(x15) - res2;
 
+         *(rowSrc_1) = (res3 + x30) - x32;
+
          x24 = res1 - imul_b2(x4);
 
-         *(rowSrc) = x30 + x13 + x17;
-         *(rowSrc_1) = (res3 + x31) - x32;
-         *(rowSrc_2) = x24 + x30 + res3 - x13;
-         *(rowSrc_3) = x31 + x32 - res2;
+         *(rowSrc_2) = x30 + res3 + x24 - x13;
+         *(rowSrc_3) = x30 + x32 - res2;
 
       cont_idct_rows:
       rowSrc += 8;
@@ -291,6 +295,11 @@ void idctCols(uint8 mcuoffset)
 
    for (idctCC = 0; idctCC < 4; idctCC++)
    {
+
+      printf("%04X %04X %04X %04X %04X %04X %04X %04X\n",
+        *pSrc_0_8, *pSrc_1_8, *pSrc_2_8, *pSrc_3_8,
+        *pSrc_4_8, *pSrc_5_8, *pSrc_6_8, *pSrc_7_8);
+
       if (*pSrc_1_8 != 0)
         goto full_idct_cols;
       if (*pSrc_2_8 != 0)

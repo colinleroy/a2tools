@@ -22,7 +22,6 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "platform.h"
-#include "progress_bar.h"
 #include "qt-conv.h"
 #include "picojpeg.h"
 #include "extrazp.h"
@@ -137,10 +136,10 @@ uint8 ZAG_Coeff[] =
 
 int8 ZAG_Coeff_work[] =
 {
-   1,  1,  1,  1,  1,  1,  1,  1,
-   1,  1,  0,  1,  1,  1,  0,  0,
-   0,  1,  1,  0,  0,  0,  0,  0,
-   1,  0,  0,  0,  0,  0,  0,  0,
+   1,  1,  1,  1,  0,  0,  0,  0,
+   1,  1,  1,  0,  0,  0,  0,  0,
+   1,  1,  0,  0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,  0,  0,  0,
    0,  0,  0,  0,  0,  0,  0,  0,
    0,  0,  0,  0,  0,  0,  0,  0,
    0,  0,  0,  0,  0,  0,  0,  0,
@@ -245,7 +244,9 @@ uint8 gMCUOrg[6];
 void fillInBuf(void)
 {
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
+  cputsxy(0, 7, "Reading       ");
   read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
+  cputsxy(0, 7, "Decoding      ");
 }
 
 //------------------------------------------------------------------------------
@@ -990,7 +991,6 @@ void qt_load_raw(uint16 top)
       dst_y += m_MCUHeight;
       pDst_row += QT200_HEIGHT * 2;
 
-      progress_bar(-1, -1, 80*22, dst_y >> 1, height);
       if (dst_y % (BAND_HEIGHT*2) == 0) {
         break;
       }

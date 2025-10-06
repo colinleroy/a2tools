@@ -3,8 +3,8 @@
         .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
         .importzp        _zp2, _zp3, _zp4, _zp5, _zp6, _zp7, _zp12, _zp13
 
-        .import          _memcpy, _memset, _progress_bar
-				.import          pushax, decsp4, subysp
+        .import          _memcpy, _memset
+				.import          pushax, decsp4, subysp, _cputsxy
         .import          _height
         .import          _width
         .import          _read, _ifd, _cache_end
@@ -36,6 +36,9 @@ _model:
         .addr        model_str
 _cache_start:
         .addr        _cache
+
+_reading_str: .byte          "Reading     ", $0D, $0A, $00
+_decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
 .segment        "LC"
 .align 256
@@ -208,10 +211,6 @@ _raw_image:
 
 ; No need to align anymore
 
-; Status bar state, kept between bands
-pgbar_state:
-        .res        2
-
 ; Whether to keep floppy motor on (patched to softswitch in the code)
 motor_on:
         .res        2
@@ -265,6 +264,13 @@ set_cache_data:
 
 ; Cache filler
 fill_cache:
+        ldx     #0
+        lda     #7
+        jsr     pushax
+        lda     #<_reading_str
+        ldx     #>_reading_str
+        jsr     _cputsxy
+
         ; Push read fd
         jsr     decsp4
         ldy     #$03
@@ -293,7 +299,14 @@ fill_cache:
         bne     :+
         lda     last_read
         ldx     last_read+1
-:       jmp     _read
+:       jsr     _read
+
+        ldx     #0
+        lda     #7
+        jsr     pushax
+        lda     #<_decoding_str
+        ldx     #>_decoding_str
+        jmp     _cputsxy
 
 ; Main loop, decodes a band
 _qt_load_raw:
@@ -303,7 +316,6 @@ _qt_load_raw:
         bne     not_top
 
 top:
-        sta     pgbar_state             ; Zero progress bar (A=0 here)
         jsr     set_cache_data          ; Initialize cache things
 
         ; Compute how many full reads
@@ -596,54 +608,5 @@ next_row_handler:
         sta     inc_first_row_handler+2
 
         jmp     row_loop
-
-; ------
-; Update progress bar at end of band and return
 band_done:
-        lda     pgbar_state             ; Update progress bar
-        clc
-        adc     #BAND_HEIGHT
-        sta     pgbar_state
-        bcc     :+
-        inc     pgbar_state+1
-        clc
-
-:       ldy     #10
-        jsr     subysp
-        lda     #$FF
-
-        dey                              ; -1,
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-
-        dey                              ; -1,
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-
-        dey                              ; 80*22,
-        lda     #>(80*22)
-        sta     (c_sp),y
-        dey
-        lda     #<(80*22)
-        sta     (c_sp),y
-
-        dey                              ; pgbar_state (long)
-        lda     #0
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-        dey
-        lda     pgbar_state+1
-        sta     (c_sp),y
-        dey
-        lda     pgbar_state
-        sta     (c_sp),y
-
-        lda     #$00
-        sta     sreg+1                   ; height (long)
-        sta     sreg
-        lda     _height
-        ldx     _height+1
-        jmp     _progress_bar
+        rts
