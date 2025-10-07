@@ -97,7 +97,7 @@ void cputsxy(unsigned char x, unsigned char y, char *buf) {
     screensize(&scrw, &scrh);
   }
 
-  gotoxy(x, y);
+  // gotoxy(x, y);
   printf("%s", buf);
   fflush(stdout);
 }
