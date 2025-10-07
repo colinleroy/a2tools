@@ -1,5 +1,5 @@
 ; Too bad there's no #pragma align in cc65
-        .export _ZAG_Coeff, _ZAG_Coeff_work, _extendTests_l, _extendTests_h
+        .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
         .export _mul669_h, _mul669_m, _mul669_l
         .export _mul362_h, _mul362_m, _mul362_l
@@ -192,16 +192,17 @@ START_LAST_ARRAYS = *
   .byte  $7E
 .endproc
 ; Not the same order as the C implementation
-.proc _ZAG_Coeff_work
-  .byte $1, $1, $1, $1, $1, $1, $1, $1
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-  .byte $0, $0, $0, $0, $0, $0, $0, $0
-.endproc
+; It's simple here it's ordered. Only first 8
+; .proc _ZAG_Coeff_work
+;   .byte $1, $1, $1, $1, $1, $1, $1, $1
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+;   .byte $0, $0, $0, $0, $0, $0, $0, $0
+; .endproc
 .proc _extendTests_l
   .byte  <$0000
   .byte  <$0001

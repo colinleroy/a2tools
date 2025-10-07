@@ -31,10 +31,10 @@
         .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
         .import       _memset, _memcpy, aslax4
-.ifdef APPROX_DIVISION
-        .import       approx_div16x8_direct
+.ifdef DEBUG_HD
+        .import       tosdiva0          ; Force real div for sha1sum comparison
 .else
-        .import       tosdiva0
+        .import       approx_div16x8_direct
 .endif
 
         .importzp     _bitbuf, _vbits
@@ -309,13 +309,13 @@ huff_data_done:
 
 :       ldx     wordcnt
         lda     #$80
-.ifndef APPROX_DIVISION
+.ifndef DEBUG_HD
+fact:   ldy     #$FF
+        jsr     approx_div16x8_direct
+.else
         jsr     pushax
 fact:   lda     #$FF
         jsr     tosdiva0
-.else
-fact:   ldy     #$FF
-        jsr     approx_div16x8_direct
 .endif
         ldy     wordcnt
         bmi     overflows_neg     ; stop if signed < 0

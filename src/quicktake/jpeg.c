@@ -120,7 +120,7 @@ uint8 gLastDC_l[3];
 uint8 gLastDC_h[3];
 
 #ifndef __CC65__
-int16 gCoeffBuf[8*8];
+uint16 gCoeffBuf[8*8];
 
 uint8 ZAG_Coeff[] =
 {
@@ -201,7 +201,6 @@ extern HuffTable gHuffTab2;
 
 // 96 bytes
 extern HuffTable gHuffTab3;
-extern int16 gCoeffBuf[8*8];
 
 #endif
 

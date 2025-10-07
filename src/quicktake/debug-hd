@@ -39,20 +39,9 @@ if [ "$1" != "" ]; then
   java -jar ../../bin/ac.jar -g ../../disks/smart0.po GREY > GREY.A2
   echo Files sha1sum:
   expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
-  if [ "$2" = "" ]; then
-    if [ "$1" = "150" ]; then
-      # The approximated division changes the output file in an acceptable way
-      expected_sha1sum="321729809021bcc6fcf8bbdf0e529ce500e31354"
-    fi
-    if [ "$1" = "200" ]; then
-      # The approximated division changes the output file in an acceptable way
-      expected_sha1sum="ea80b6284ffaccfb5c86f0b263e0732160cedf95"
-    fi
-  fi
 
   final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)
-  echo "Ref:      $(sha1sum GREY|cut -d' ' -f1)"
-  echo "Expected: $expected_sha1sum"
+  echo "Ref:      $expected_sha1sum"
   echo "Got:      $final_sha1sum"
 
   if [ "$final_sha1sum" != "$expected_sha1sum" ]; then

@@ -12,7 +12,7 @@
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
         .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf
-        .import     _ZAG_Coeff, _ZAG_Coeff_work
+        .import     _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
@@ -62,19 +62,6 @@ CACHE_END = _cache + CACHE_SIZE + 4
 
 _cur_cache_ptr = _prev_ram_irq_vector
 
-; high in X low in A
-.macro INLINE_ASRAX7            ; X reg.   A reg.
-.scope                          ; HXXXXXXL hAAAAAAl
-        asl                     ;          AAAAAAA0, h->C
-        txa
-        rol                     ;          XXXXXXLh, H->C
-        ldx     #$00            ; 00000000 XXXXXXLh
-        bcc     @done
-        dex                     ; 11111111 XXXXXXLh if C
-@done:
-.endscope
-.endmacro
-
 ; high in A low in X
 .macro INLINE_ASRXA7            ; A reg    X reg
 .scope                          ; HXXXXXXL hAAAAAAl
@@ -105,8 +92,8 @@ _cur_cache_ptr = _prev_ram_irq_vector
 .macro ADD_128_AND_CLAMP
 .scope
         eor     #$80
-        bmi     :+
-        inx
+        bmi     :+              ; if A now $80-$FF X does not change
+        inx                     ; otherwise increment high byte
 :       cpx     #$00
         beq     clampDone
         txa                     ; Clamp:
@@ -839,16 +826,17 @@ nextCol:
         lda     _gCoeffBuf+1,y
         ldx     _gCoeffBuf,y
 
-        INLINE_ASRXA7
 
+        INLINE_ASRXA7
         ADD_128_AND_CLAMP
-        ldy     outputIdx
-        sta     _gMCUBufG,y
-        sta     _gMCUBufG+4,y
-        sta     _gMCUBufG+8,y
-        sta     _gMCUBufG+12,y
-        iny
-        sty     outputIdx
+
+        ldx     outputIdx         ; Keep Y inputIdx
+        sta     _gMCUBufG,x
+        sta     _gMCUBufG+4,x
+        sta     _gMCUBufG+8,x
+        sta     _gMCUBufG+12,x
+        inx
+        stx     outputIdx
 
         jmp     cont_idct_cols
 
@@ -1098,10 +1086,11 @@ val3 = *+1
         iny
         sty     outputIdx
 
+        ldy     inputIdx
+
 cont_idct_cols:
         dec     idctCC
         beq     idctColDone
-        ldy     inputIdx
         iny
         iny
         ; inc     outputIdx - already inc'd while loaded
@@ -1298,8 +1287,8 @@ sNotZero:
         tax
 
 storeGCoeff:
-        lda     _ZAG_Coeff_work,x
-        beq     end_of_coeff_cal
+        cpx     #9            ; We only do the first 8
+        bcs     end_of_coeff_cal
         ;ac = huffExtend(sDMCU)
         ; extendX already set
         tya                   ; Y still contains sDMCU
