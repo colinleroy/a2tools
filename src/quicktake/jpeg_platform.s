@@ -248,6 +248,34 @@ last_few:
         ldx     bbHigh
         rts
 
+skipBitsDirect:
+        tax
+        cpx     #9
+        bcs     skip_large_n
+skip_small_n:
+:       INLINE_GETBIT 1
+        dex
+        bne     :-
+        ; X is zero
+        rts
+
+skip_large_n:
+        ldy     n_min_eight,x ; How much more than 8?
+        sty     skip_last_few+1
+
+        ldx     #8            ; Get the first eight
+:       INLINE_GETBIT 1
+        dex
+        bne     :-
+
+skip_last_few:
+        ldx     #$FF          ; Get the last (n-8)
+:       INLINE_GETBIT 1
+        dex
+        bne     :-
+        rts
+
+
 AXBCK: .res 2
 inc_cache_high1:
         inc     _cur_cache_ptr+1
@@ -1362,7 +1390,7 @@ setUDec:
 doDecb:
         and     #$0F
         beq     :+
-        jsr     getBitsDirect
+        jsr     skipBitsDirect
 
 :       lda     #1
         sta     iDMCU
@@ -1375,7 +1403,7 @@ uselessDec:
         sta     sDMCU
         and     #$0F
         sta     tmp1
-        jsr     getBitsDirect
+        jsr     skipBitsDirect
         ldx     tmp1
         lda     right_shift_4,x
 

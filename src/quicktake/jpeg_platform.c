@@ -1,6 +1,8 @@
 #include "jpeg_platform.h"
 #include "qt-conv.h"
 
+static uint8 skipBits = 0;
+
 int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
   if (s < 16) {
@@ -87,7 +89,16 @@ uint16 __fastcall__ getBitsNoFF(uint8 numBits) {
 }
 uint16 __fastcall__ getBitsFF(uint8 numBits) {
   FFCheck = 1;
-  return getBits(numBits);
+  if (skipBits) {
+    printf("skip %d\n", numBits);
+    while (numBits--) {
+      getBit();
+    }
+    return 0;
+  } else {
+    printf("get %d\n", numBits);
+    return getBits(numBits);
+  }
 }
 
 extern uint8 *cur_cache_ptr;
@@ -407,6 +418,7 @@ uint8 decodeNextMCU(void)
       pQ_h = gQuant0_h;
     }
 
+
     compDCTab = gCompDCTab[componentID];
     if (compDCTab)
       s = huffDecode(&gHuffTab1, gHuffVal1);
@@ -444,12 +456,13 @@ uint8 decodeNextMCU(void)
       else
         s = huffDecode(&gHuffTab2, gHuffVal2);
 
-      extraBits = 0;
       r = s >> 4;
 
       numExtraBits = s & 0xF;
       if (numExtraBits)
         extraBits = getBitsFF(numExtraBits);
+      else
+        extraBits = 0;
 
       s = numExtraBits;
 
@@ -478,6 +491,7 @@ uint8 decodeNextMCU(void)
    /* Skip the other blocks, do the minimal work, only consuming
     * input bits
     */
+  skipBits = 1;
   for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];
 
@@ -508,6 +522,8 @@ uint8 decodeNextMCU(void)
       }
    }
   }
+  skipBits = 0;
+
   return 0;
 }
 
