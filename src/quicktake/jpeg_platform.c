@@ -386,9 +386,6 @@ uint8 decodeNextMCU(void)
   uint8 numExtraBits;
   uint16 dc;
   uint16 ac;
-  uint8 *cur_pQ_l, *cur_pQ_h;
-  uint8 *cur_ZAG_coeff;
-  uint8 *end_ZAG_coeff;
 
 
   if (gRestartInterval) {
@@ -439,14 +436,9 @@ uint8 decodeNextMCU(void)
       gCoeffBuf[i] = 0;
     }
 
-    cur_ZAG_coeff = ZAG_Coeff + 1;
-    end_ZAG_coeff = ZAG_Coeff + 64;
-
     compACTab = gCompACTab[componentID];
-    cur_pQ_l = pQ_l + 1;
-    cur_pQ_h = pQ_h + 1;
 
-    for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ_l++, cur_pQ_h++) {
+    for (i = 1; i != 64; i++) {
       if (compACTab)
         s = huffDecode(&gHuffTab3, gHuffVal3);
       else
@@ -463,29 +455,17 @@ uint8 decodeNextMCU(void)
 
       if (s) {
         if (r) {
-          cur_ZAG_coeff += r;
-          if (cur_ZAG_coeff-ZAG_Coeff < 9) {
-            cur_pQ_l += r;
-            cur_pQ_h += r;
-          }
+          i += r;
         }
 
         /* Compute only first eight */
-        if (cur_ZAG_coeff-ZAG_Coeff < 9) {
+        if (i < 9) {
           ac = huffExtend(extraBits, s);
-          gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
-          printf("gCoeffBuf+%d = %04X\n",
-                 *cur_ZAG_coeff,
-                 gCoeffBuf[*cur_ZAG_coeff]
-               );
+          gCoeffBuf[ZAG_Coeff[i]] = ac * (pQ_l[i]|(pQ_h[i] << 8));
         }
       } else {
         if (r == 15) {
-          cur_ZAG_coeff+=15;
-          if (cur_ZAG_coeff-ZAG_Coeff < 9) {
-            cur_pQ_l+=15;
-            cur_pQ_h+=15;
-          }
+          i+=15;
         } else {
           break;
         }
