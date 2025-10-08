@@ -66,11 +66,6 @@ typedef enum
 // Not thread safe.
 unsigned char pjpeg_decode_init(void);
 
-// Decompresses the file's next MCU. Returns 0 on success, PJPG_NO_MORE_BLOCKS if no more blocks are available, or an error code.
-// Must be called a total of m_MCUSPerRow*m_MCUSPerCol times to completely decompress the image.
-// Not thread safe.
-unsigned char pjpeg_decode_mcu(void);
-
 #ifdef __cplusplus
 }
 #endif

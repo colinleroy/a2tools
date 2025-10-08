@@ -23,7 +23,6 @@
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _getBitsNoFF, _getBitsFF
-        .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu
         .export     _copy_decoded_to
@@ -32,8 +31,7 @@
         .export     _getByteNoFF, _setFFCheck
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
-n              = _zp3       ; byte, used in getBits
-bbHigh         = _zp5       ; byte, used in huffDecode and getBits
+bbHigh         = _zp5       ; byte, used in huffDecode
 ; zp6-7 USED in qt-conv so only use it temporarily
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
 
@@ -44,8 +42,8 @@ sDMCU          = _zp12      ; byte, used in _decodeNextMCU
 iDMCU          = _zp13      ; byte, used in _decodeNextMCU
 inputIdx       = _zp11      ; byte, used in idctRows and idctCols
 outputIdx      = _zp12      ; byte, used in idctCols
-dw             = _zp9       ; byte, used in imul (IDCT)
-neg            = _zp10      ; byte, used in imul (IDCT)
+; dw             = _zp9       ; byte, used in imul (IDCT)
+; neg            = _zp10      ; byte, used in imul (IDCT)
 
 NO_FF_CHECK = $60
 FF_CHECK_ON = $EA
@@ -62,48 +60,37 @@ CACHE_END = _cache + CACHE_SIZE + 4
 
 _cur_cache_ptr = _prev_ram_irq_vector
 
-; high in A low in X
-.macro INLINE_ASRXA7            ; A reg    X reg
-.scope                          ; HXXXXXXL hAAAAAAl
-        cpx     #$80            ; HXXXXXXL hAAAAAAl,  h->C
-        rol                     ; XXXXXXLh no_care , H->C
-        ldx     #$00            ; XXXXXXLh 00000000
-        bcc     @done
-                                ; X reg    A reg
-        dex                     ; 11111111 XXXXXXLh if C
-@done:
-.endscope
-.endmacro
-
-; high in A low in Y
-.macro INLINE_ASRYA7            ; A reg    Y reg
-.scope                          ; HXXXXXXL hAAAAAAl
-        cpy     #$80            ; HXXXXXXL hAAAAAAl,  h->C
-        rol                     ; XXXXXXLh no_care , H->C
-        ldx     #$00            ; XXXXXXLh no_care
-        bcc     @done
-                                ; X reg    A reg
-        dex                     ; 11111111 XXXXXXLh if C
-@done:
-.endscope
-.endmacro
-
-; clamp uint16 in AX to uint8 in A
-.macro ADD_128_AND_CLAMP
+.macro SHIFT_7RIGHT_AND_CLAMP
 .scope
+        rol                     ; XXXXXXLh no_care , H->C
+        bcs     @neg
+@pos:
         eor     #$80
-        bmi     :+              ; if A now $80-$FF X does not change
-        inx                     ; otherwise increment high byte
-:       cpx     #$00
-        beq     clampDone
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone:
+        bmi     @done           ; if A now $80-$FF X does not change
+        lda     #$FF
+        jmp     @done
+@neg:
+        eor     #$80
+        bpl     @done
+@still_neg:
+        lda     #$00
+@done:
 .endscope
 .endmacro
 
+.macro SHIFT_XA_7RIGHT_AND_CLAMP
+.scope                          ; A        X
+        cpx     #$80            ; HXXXXXXL hAAAAAAl,  h->C
+        SHIFT_7RIGHT_AND_CLAMP
+.endscope
+.endmacro
+
+.macro SHIFT_YA_7RIGHT_AND_CLAMP
+.scope                          ; A        Y
+        cpy     #$80            ; HXXXXXXL hAAAAAAl,  h->C
+        SHIFT_7RIGHT_AND_CLAMP
+.endscope
+.endmacro
 ; Whether to start floppy motor early (patched to softswitch in the code)
 motor_on:
         .res        2,$00
@@ -143,38 +130,72 @@ done:
 .endscope
 .endmacro
 
-; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
+; uint8 getBit(void)
+; Returns with carry set if bit 1
+; Lets caller count _gBitsLeft in Y
+; Saves A if param given
+.macro INLINE_GETBIT_COUNT_Y SAVE_A
+.scope
+        dey
+        bpl     haveBit
+        .if .paramcount = 1
+        sta     reloadA+1
+        .endif
+        jsr     getOctet
+        sta     _gBitBuf
 
-.macro HUFFEXTEND
+        ldy     #7
+        .if .paramcount = 1
+reloadA:
+        lda     #$FF
+        .endif
+haveBit:
+        asl     _gBitBuf    ; Sets carry
+done:
+.endscope
+.endmacro
+
+; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
+; x = ptr2/+1, sDMCU = A
+; Returns in AX or updates ptr2/+1 according to parameter
+.macro HUFFEXTEND UPDATEPTR2
 .scope
         cmp     #16
         bcs     retNormal
 
         tax
-        ldy     _extendTests_h,x
+        lda     _extendTests_h,x
 
-        cpy     extendX+1
+        cmp     ptr2+1
         bcc     retNormal
         bne     retExtend
 
-        lda     extendX
+        lda     ptr2
         cmp     _extendTests_l,x
         bcs     retNormalX
         sec
 retExtend:
         lda     _extendOffsets_l,x    ; Carry set here
-        adc     extendX
+        adc     ptr2
+        .ifnblank UPDATEPTR2
+        sta     ptr2
+        .else
         tay
+        .endif
         lda     _extendOffsets_h,x
-        adc     extendX+1
+        adc     ptr2+1
+        .ifnblank UPDATEPTR2
+        sta     ptr2+1
+        .else
         tax
         tya
+        .endif
         jmp     done
 
 retNormal:
-        lda     extendX
+        lda     ptr2
 retNormalX:
-        ldx     extendX+1
+        ldx     ptr2+1
 done:
 .endscope
 .endmacro
@@ -213,66 +234,72 @@ getBits:
         stx     ffcheck
 getBitsDirect:
         tax
+        ldy     _gBitsLeft
         cpx     #9
         bcs     large_n
 small_n:
         lda     #0
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y 1
         rol     a
         dex
         bne     :-
+        sty     _gBitsLeft
         ; X is zero
         rts
 
 large_n:
-        ldy     n_min_eight,x ; How much more than 8?
-        sty     last_few+1
+        lda     n_min_eight,x ; How much more than 8?
+        sta     last_few+1
 
         lda     #0            ; Init result
         sta     bbHigh
 
         ldx     #8            ; Get the first eight
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y 1
         rol     a
         dex
         bne     :-
 
 last_few:
         ldx     #$FF          ; Get the last (n-8)
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y 1
         rol     a
         rol     bbHigh
         dex
         bne     :-
+        sty     _gBitsLeft
 
         ldx     bbHigh
         rts
 
 skipBitsDirect:
+        ldy     _gBitsLeft
         tax
         cpx     #9
         bcs     skip_large_n
 skip_small_n:
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y
         dex
         bne     :-
+        sty     _gBitsLeft
         ; X is zero
         rts
 
 skip_large_n:
-        ldy     n_min_eight,x ; How much more than 8?
-        sty     skip_last_few+1
+        lda     n_min_eight,x ; How much more than 8?
+        sta     skip_last_few+1
 
         ldx     #8            ; Get the first eight
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y
         dex
         bne     :-
 
 skip_last_few:
         ldx     #$FF          ; Get the last (n-8)
-:       INLINE_GETBIT 1
+:       INLINE_GETBIT_COUNT_Y
         dex
         bne     :-
+        sty     _gBitsLeft
         rts
 
 
@@ -412,12 +439,11 @@ getOctet_done:
         tax             ; remember for return or sign reversal
 
         ; Was val negative?
-        lda    neg
-        bmi    :+
-        lda    tmp1
-        rts
+neg = *+1
+        lda    #$FF
+        bpl    done
 
-:       ; dw ^= 0xffffff, dw++
+        ; dw ^= 0xffffff, dw++
         lda    #$FF
         eor    TABL,y
         adc    #1
@@ -425,35 +451,39 @@ getOctet_done:
         eor    tmp1
         adc    #0
 
-        tay
+        sta    tmp1
         txa
         eor    #$FF
         adc    #0
         tax
-        tya
-        rts
+done:
+        lda    tmp1
 .endscope
 .endmacro
 
 ; uint16 __fastcall__ imul_b1_b3(int16 w)
-_imul_b1_b3:
+.macro IMUL_B1_B3
         imul    _mul362_l, _mul362_m, _mul362_h
+.endmacro
 
 ; uint16 __fastcall__ imul_b2(int16 w)
 
-_imul_b2:
+.macro IMUL_B2
         imul    _mul669_l, _mul669_m, _mul669_h
+.endmacro
 
 ; uint16 __fastcall__ imul_b4(int16 w)
-_imul_b4:
+.macro IMUL_B4
         imul    _mul277_l, _mul277_m, _mul277_h
+.endmacro
 
 ; uint16 __fastcall__ imul_b5(int16 w)
-_imul_b5:
+.macro IMUL_B5
         imul    _mul196_l, _mul196_m
+.endmacro
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
-.macro huffDecode TABLE, VAL
+.macro huffDecode TABLE, VAL, RETURN
 .scope
         INLINE_GETBIT
         lda     #0
@@ -478,7 +508,7 @@ loopDoneS:
         tax                     ; Get index
 
         lda     VAL,x
-        rts
+        jmp     RETURN
 
 decodeLong:
         ldx     #7
@@ -504,14 +534,13 @@ incrementL:
         bpl     nextLoopL
 
         lda     #$00          ; if i == 16 return 0
-        tax
-        rts
+        jmp     RETURN
 loopDoneL:
         adc     TABLE+hufftable_t::mValPtr,x
         tax                     ; Get index
 
         lda     VAL,x
-        rts
+        jmp     RETURN
 .endscope
 .endmacro
 
@@ -551,21 +580,33 @@ _createWinogradQuant1:
         CREATE_WINO _gQuant1_l, _gQuant1_h
 
 _huffDecode0:
-        huffDecode _gHuffTab0, _gHuffVal0
+        huffDecode _gHuffTab0, _gHuffVal0, decodeDC
 
 _huffDecode1:
-        huffDecode _gHuffTab1, _gHuffVal1
+        huffDecode _gHuffTab1, _gHuffVal1, decodeDC
 
 _huffDecode2:
-        huffDecode _gHuffTab2, _gHuffVal2
+        huffDecode _gHuffTab2, _gHuffVal2, decodeAC
 
 _huffDecode3:
-        huffDecode _gHuffTab3, _gHuffVal3
+        huffDecode _gHuffTab3, _gHuffVal3, decodeAC
+
+_huffDecode0_skip:
+        huffDecode _gHuffTab0, _gHuffVal0, skipDC
+
+_huffDecode1_skip:
+        huffDecode _gHuffTab1, _gHuffVal1, skipDC
+
+_huffDecode2_skip:
+        huffDecode _gHuffTab2, _gHuffVal2, skipAC
+
+_huffDecode3_skip:
+        huffDecode _gHuffTab3, _gHuffVal3, skipAC
 
 ; void idctRows(void
 
 _idctRows:
-        lda    #4
+        lda    #3
         sta    idctRC
 
         ldy    #0
@@ -575,14 +616,10 @@ nextIdctRowsLoop:
         bne    full_idct_rows
         lda    _gCoeffBuf+4,y
         bne    full_idct_rows
-        lda    _gCoeffBuf+6,y
-        bne    full_idct_rows
 
         lda    _gCoeffBuf+3,y
         bne    full_idct_rows
         lda    _gCoeffBuf+5,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+7,y
         bne    full_idct_rows
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
@@ -603,25 +640,12 @@ full_idct_rows:
 
 rx5l  = ptr1
 rx5h  = ptr1+1
-rx7l = ptr2
-rx7h = ptr2+1
-rx4l = ptr3
-rx4h = ptr3+1
-rx13l = ptr4
-rx13h = ptr4+1
-
-        ; x7 and x4
-        clc
-        lda    _gCoeffBuf+6,y
-        sta    rx7l
-        eor    #$FF
-        adc    #1
-        sta    rx4l
-        lda    _gCoeffBuf+7,y
-        sta    rx7h
-        eor    #$FF
-        adc    #0
-        sta    rx4h
+rx13l = ptr2
+rx13h = ptr2+1
+rx30l = ptr3
+rx30h = ptr3+1
+rres1l= ptr4
+rres1h= ptr4+1
 
         ; x5
         lda    _gCoeffBuf+2,y
@@ -636,45 +660,33 @@ rx13h = ptr4+1
         sta    rx30h
 
         ; x13
+        clc
         lda    _gCoeffBuf+4,y
         sta    rx13l
+        adc    rx30l
+        tax
         lda    _gCoeffBuf+5,y
         sta    rx13h
-
-        ; x17 = x5+x7
-        clc
-        lda    rx5l
-        adc    rx7l
-        sta    rx17l
+        adc    rx30h
         tay
-        lda    rx5h
-        adc    rx7h
-        sta    rx17h
-        tax
 
-        ;*(rowSrc) = x30 + x13 + x17;
+        ;*(rowSrc) = x30 + x13 + x5;
         clc
-        tya
-        adc    rx13l
-        tay
         txa
-        adc    rx13h
+        adc    rx5l
         tax
         tya
-
-        clc
-        adc    rx30l
+        adc    rx5h
 
         ldy    inputIdx
-        sta    _gCoeffBuf,y
-        txa
-        adc    rx30h
         sta    _gCoeffBuf+1,y
+        txa
+        sta    _gCoeffBuf,y
 
         ; x32 = imul_b1_b3(x13) - x13;
         ldy    rx13l
         ldx    rx13h
-        jsr    _imul_b1_b3
+        IMUL_B1_B3
         sec
         sbc    rx13l
         sta    rx32l
@@ -682,22 +694,22 @@ rx13h = ptr4+1
         sbc    rx13h
         sta    rx32h
 
-        ; res1 = imul_b5(x4 - x5);
+        ; res1 = imul_b5(-x5);
         sec
-        lda    rx4l
+        lda    #$00
         sbc    rx5l
         tay
-        lda    rx4h
+        lda    #$00
         sbc    rx5h
         tax
-        jsr    _imul_b5
+        IMUL_B5
         sta    rres1l
         stx    rres1h
 
-        ; res2 = imul_b4(x5) - res1 - x17;
+        ; res2 = imul_b4(x5) - res1 - x5;
         ldy    rx5l
         ldx    rx5h
-        jsr    _imul_b4
+        IMUL_B4
         sec                     ; -res1
         sbc    rres1l
         tay
@@ -706,26 +718,17 @@ rx13h = ptr4+1
         tax
 
         tya
-        sec                     ; -x17
-rx17l = *+1
-        sbc    #$FF
+        sec                     ; -x5
+        sbc    rx5l
         sta    rres2l
         txa
-rx17h = *+1
-        sbc    #$FF
+        sbc    rx5h
         sta    rres2h
 
-        ; x15 = x5 - x7;
-        sec
-        lda    rx5l
-        sbc    rx7l
-        tay
-        lda    rx5h
-        sbc    rx7h
-
-        ; res3 = imul_b1_b3(x15) - res2;
-        tax
-        jsr    _imul_b1_b3
+        ; res3 = imul_b1_b3(x5) - res2;
+        ldy    rx5l
+        ldx    rx5h
+        IMUL_B1_B3
         sec
 rres2l = *+1
         sbc    #$FF
@@ -738,13 +741,11 @@ rres2h = *+1
         ; *(rowSrc_1) = res3 + x30 - x32;
         tya
         clc
-rx30l = *+1
-        adc    #$FF
+        adc    rx30l
         sta    res3x30l
         tay
         txa
-rx30h = *+1
-        adc    #$FF
+        adc    rx30h
         sta    res3x30h
         tax
 
@@ -760,36 +761,19 @@ rx32h = *+1
         sbc    #$FF
         sta    _gCoeffBuf+3,y
 
-        ; x24 = res1 - imul_b2(x4);
-        ldy    rx4l
-        ldx    rx4h
-        jsr    _imul_b2
-        sta    tmp1
-        stx    tmp2
+        ; *(rowSrc_2) = res3x30l + res1 - x13;
 
-        sec
-rres1l = *+1
-        lda    #$FF
-        sbc    tmp1
-        tay
-rres1h = *+1
-        lda    #$FF
-        sbc    tmp2
-        tax
-
-        ; *(rowSrc_2) = res3x30l + x24 - x13;
         clc
-        tya
 res3x30l = *+1
-        adc    #$FF
+        lda    #$FF
+        adc    rres1l
         tay
-        txa
 res3x30h = *+1
-        adc    #$FF
+        lda    #$FF
+        adc    rres1h
         tax
 
         tya
-
         sec
         sbc    rx13l
 
@@ -855,8 +839,7 @@ nextCol:
         ldx     _gCoeffBuf,y
 
 
-        INLINE_ASRXA7
-        ADD_128_AND_CLAMP
+        SHIFT_XA_7RIGHT_AND_CLAMP
 
         ldx     outputIdx         ; Keep Y inputIdx
         sta     _gMCUBufG,x
@@ -870,8 +853,6 @@ nextCol:
 
 full_idct_cols:
 
-cx4l  = ptr1
-cx4h  = ptr1+1
 cx30l = ptr2
 cx30h = ptr2+1
 cx5l  = ptr3
@@ -899,46 +880,22 @@ cx12h = ptr4+1
         lda     _gCoeffBuf+33,y
         sta     cx12h
 
-        ; cx4 and cx7
-        lda     _gCoeffBuf+48,y
-        sta     cx7l
-        clc
-        eor     #$FF
-        adc     #1
-        sta     cx4l
-        lda     _gCoeffBuf+49,y
-        sta     cx7h
-        eor     #$FF
-        adc     #0
-        sta     cx4h
-
-        ;x17 = x5 + x7;
-        clc
-        lda     cx5l
-cx7l = *+1
-        adc     #$FF
-        sta     cx17l
-        lda     cx5h
-cx7h = *+1
-        adc     #$FF
-        sta     cx17h
-
-        ;res1 = imul_b5(x4 - x5)
+        ;res1 = imul_b5(- x5)
         sec
-        lda     cx4l
+        lda     #$00
         sbc     cx5l
         tay
-        lda     cx4h
+        lda     #$00
         sbc     cx5h
         tax
-        jsr     _imul_b5
+        IMUL_B5
         sta     cres1l
         stx     cres1h
 
         ;res2 = imul_b4(x5) - res1 - x17;
         ldy     cx5l
         ldx     cx5h
-        jsr     _imul_b4
+        IMUL_B4
 
         sec
         sbc     cres1l
@@ -949,23 +906,16 @@ cx7h = *+1
 
         sec
         tya
-cx17l = *+1
-        sbc     #$FF
+        sbc     cx5l
         sta     cres2l
         txa
-cx17h = *+1
-        sbc     #$FF
+        sbc     cx5h
         sta     cres2h
 
-        ;res3 = imul_b1_b3(x5 - x7) - res2;
-        sec
-        lda     cx5l
-        sbc     cx7l
-        tay
-        lda     cx5h
-        sbc     cx7h
-        tax
-        jsr     _imul_b1_b3
+        ;res3 = imul_b1_b3(x5) - res2;
+        ldy     cx5l
+        ldx     cx5h
+        IMUL_B1_B3
         sec
 cres2l = *+1
         sbc     #$FF
@@ -986,19 +936,18 @@ cres2h = *+1
 
         clc
         tya
-        adc     cx17l
+        adc     cx5l
         tay
         txa
-        adc     cx17h
+        adc     cx5h
 
-        INLINE_ASRYA7
-        ADD_128_AND_CLAMP
+        SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val0
 
         ; cx32 = imul_b1_b3(cx12) - cx12;
         ldy     cx12l
         ldx     cx12h
-        jsr     _imul_b1_b3
+        IMUL_B1_B3
         sec
         sbc     cx12l
         sta     cx32l
@@ -1024,8 +973,7 @@ cres2h = *+1
         txa
         sbc     cres2h
 
-        INLINE_ASRYA7
-        ADD_128_AND_CLAMP
+        SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val3
 
         ;x42 = x30 - x32;
@@ -1049,33 +997,18 @@ cres3l = *+1
 cres3h = *+1
         adc     #$FF
 
-        INLINE_ASRYA7
-        ADD_128_AND_CLAMP
+        SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val1
 
-        ;x24 = res1 - imul_b2(x4)
-        ldy     cx4l
-        ldx     cx4h
-        jsr     _imul_b2
-        sta     tmp1
-        stx     tmp2
-
-        sec
+        ;res3 + res1
+        clc
+        tya
 cres1l = *+1
         lda     #$FF
-        sbc     tmp1
+        adc     cres3l
         tay
 cres1h = *+1
         lda     #$FF
-        sbc     tmp2
-        tax
-
-        ;+ res3
-        clc
-        tya
-        adc     cres3l
-        tay
-        txa
         adc     cres3h
         tax
 
@@ -1095,8 +1028,7 @@ cres1h = *+1
         txa
         sbc     cx12h
 
-        INLINE_ASRYA7
-        ADD_128_AND_CLAMP
+        SHIFT_YA_7RIGHT_AND_CLAMP
 
         ldy     outputIdx
 ; val2 which we just computed
@@ -1176,7 +1108,7 @@ nextMcuBlock:
         stx     load_pq0h+2
         stx     load_pq1h+2
 
-        jmp     loadDCTab
+        jmp     loadACTab
 
 :       ldx     #<_gQuant0_l
         stx     load_pq0l+1
@@ -1192,34 +1124,7 @@ nextMcuBlock:
         stx     load_pq0h+2
         stx     load_pq1h+2
 
-loadDCTab:
-        lda     _gCompDCTab,y
-        beq     :+
-
-        jsr     _huffDecode1
-        jmp     doDec
-
-:       jsr     _huffDecode0
-
-doDec:
-        sta     sDMCU
-
-        and     #$0F          ; numExtraBits
-        beq     :+
-        jsr     getBitsDirect ; r = getBitsFF(numExtraBits);
-        jmp     doExtend
-:       tax                   ; otherwise set r to uint16 0 (A is 0)
-
-doExtend:
-        sta     extendX       ; dc = huffExtend(r, s);
-        stx     extendX+1
-        lda     sDMCU
-        HUFFEXTEND
-        stx     tmp2          ; store dc in tmp1/2
-        sta     tmp1
-
-        ldy     componentID
-
+loadACTab:
         ; compACTab = gCompACTab[componentID];
         ; set pointers to huffDecode2/3 *before* cur_ZAG_coeff loop
         lda     _gCompACTab,y
@@ -1235,23 +1140,59 @@ setDec:
         sta     huffDec+1
         stx     huffDec+2
 
-        ; Zero the rest (not [0]!) of gCoeffBuf
-        ldx     #(62*2)
+zeroBuf:
+        ; Zero indices of gCoeffBuf that we'll use
+        ; in idctRows
         lda     #0
-:       sta     _gCoeffBuf+2,x
-        dex
-        bpl    :-
+        sta     _gCoeffBuf+2  ; 1
+        sta     _gCoeffBuf+3
+        sta     _gCoeffBuf+4  ; 2
+        sta     _gCoeffBuf+5
+        sta     _gCoeffBuf+2  ; 1
+        sta     _gCoeffBuf+3
+        sta     _gCoeffBuf+16 ; 8
+        sta     _gCoeffBuf+17
+        sta     _gCoeffBuf+18 ; 9
+        sta     _gCoeffBuf+19
+        sta     _gCoeffBuf+20 ; 10
+        sta     _gCoeffBuf+21
+        sta     _gCoeffBuf+32 ; 16
+        sta     _gCoeffBuf+33
+        sta     _gCoeffBuf+34 ; 17
+        sta     _gCoeffBuf+35
+        sta     _gCoeffBuf+36 ; 18
+        sta     _gCoeffBuf+37
 
+loadDCTab:
+        lda     _gCompDCTab,y
+        beq     :+
+        jmp     _huffDecode1
+:       jmp     _huffDecode0
+decodeDC:
+
+        sta     sDMCU
+        and     #$0F          ; numExtraBits
+        beq     :+
+        jsr     getBitsDirect ; r = getBitsFF(numExtraBits);
+        jmp     doExtend
+:       tax                   ; otherwise set r to uint16 0 (A is 0)
+
+doExtend:
+        sta     ptr2         ; dc = huffExtend(r, s);
+        stx     ptr2+1
+        lda     sDMCU
+        HUFFEXTEND            ; DC in AX now
+
+        ldy     componentID
         ; dc = dc + gLastDC[componentID];
         ; gLastDC[componentID] = dc;
         clc
-        lda     _gLastDC_l,y
-        adc     tmp1
+        adc     _gLastDC_l,y
         sta     _gLastDC_l,y
         sta     ptr2          ; Store dc to ptr2 as it's where mult expects it
 
-        lda     _gLastDC_h,y
-        adc     tmp2
+        txa
+        adc     _gLastDC_h,y
         sta     _gLastDC_h,y
         sta     ptr2+1
 
@@ -1264,89 +1205,67 @@ load_pq0l:
         sta     _gCoeffBuf    ; and store gCoeffBuf[0]
         stx     _gCoeffBuf+1
 
-        lda     #1            ; start the ZAG_coeff loop
-        sta     cur_ZAG_coeff
+        ldy     #1            ; start the ZAG_coeff loop
 
 doZAGLoop:
+        sty     cur_ZAG_coeff
 huffDec:
-        jsr     $FFFF           ; Patched with huffDecode2 or 3
-
-        tay                     ; r = s >> 4;
-        lda     right_shift_4,y
+        jmp     $FFFF           ; Patched with huffDecode2 or 3
+decodeAC:
+        tax                     ; r = s >> 4;
+        lda     right_shift_4,x
         sta     rDMCU
-
-        tya                     ; numExtraBits = s & 0xF
-        and     #$0F
-        sta     sDMCU
-
-        beq     :+              ; if numExtraBits (s & 0x0F)
-        jsr     getBitsDirect   ;   extraBits = getBitsFF(numExtraBits);
-        .byte   $A0             ; LDY imm opcode, skips tax, = jmp     storeExtraBits
-:       tax                     ; extraBits = 0
-
-storeExtraBits:
-        sta     extendX         ; Store for later huffExtending
-        stx     extendX+1
-
-        ldy     sDMCU           ; s = numExtraBits
-        bne     sNotZero
-sZero:
-        lda     rDMCU
-        cmp     #15
-        beq     :+
-        jmp     ZAG_finished
-
-:       ; Advance 15
-        lda     cur_ZAG_coeff
-        adc     #14           ; 15 with carry set by previous cmp
-        tax                   ; checkZAGLoop expects cur_ZAG_coeff in X
-                              ; and will save it.
-        jmp     checkZAGLoop
-
-sNotZero:
-        ldx     cur_ZAG_coeff
-        lda     rDMCU
-        beq     storeGCoeff
-
         ; cur_ZAG_coeff += r;
         clc
         adc     cur_ZAG_coeff
         sta     cur_ZAG_coeff
-        tax
+        tay                     ; to Y in case !s
 
-storeGCoeff:
-        cpx     #9            ; We only do the first 8
-        bcs     end_of_coeff_cal
+        txa                     ; numExtraBits = s & 0xF
+        and     #$0F
+
+        bne     getData   ; if (s)
+        lda     rDMCU
+        cmp     #15
+        beq     checkZAGLoop
+        jmp     ZAG_finished
+
+getData:
+        sta     dataS+1
+        jsr     getBitsDirect   ; extraBits = getBitsFF(numExtraBits);
+        stx     ptr2+1          ; Store for huffExtend
+
+        ldy     cur_ZAG_coeff   ; We only do a part of the matrix
+        ldx     _ZAG_Coeff,y
+        bmi     end_of_coeff_cal
+        stx     ZC              ; Remember Zag coeff
+        sta     ptr2            ; Finish storing for huffExtend
+
         ;ac = huffExtend(sDMCU)
-        ; extendX already set
-        tya                   ; Y still contains sDMCU
-        HUFFEXTEND
+dataS:
+        lda     #$FF
+        HUFFEXTEND 1
 
         ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
-        sta     ptr2
-        stx     ptr2+1
-        ldy     cur_ZAG_coeff
 load_pq1l:
-        lda     $FFFF,y
+        lda     $FFFF,y         ; Y still cur_ZAG_coeff
 load_pq1h:
         ldx     $FFFF,y
         jsr     mult16x16x16_direct
 
-        sta    tmp1
-
-        txa
-        ldx     cur_ZAG_coeff
-        ldy     _ZAG_Coeff,x
-        sta     _gCoeffBuf+1,y
-        lda    tmp1
+ZC = *+1
+        ldy     #$FF            ; ZAG_Coeff not cur_ZAG_coeff
         sta     _gCoeffBuf,y
+        txa
+        sta     _gCoeffBuf+1,y
+
+        ldy     cur_ZAG_coeff
+
 end_of_coeff_cal:
-        inx                     ; cur_ZAG_coeff
+        iny                     ; cur_ZAG_coeff
 checkZAGLoop:
-        cpx     #64             ; end_ZAG_coeff
-        beq     ZAG_finished
-        stx     cur_ZAG_coeff
-        jmp     doZAGLoop
+        cpy     #64             ; end_ZAG_coeff
+        bne     doZAGLoop
 
 ZAG_finished:
         jsr     _transformBlock
@@ -1354,27 +1273,23 @@ ZAG_finished:
         inc     mcuBlock
         ldx     mcuBlock
         cpx     #2
-        bcs     firstMCUBlocksDone
+        bcs     nextUselessBlock
         jmp     nextMcuBlock
 
-firstMCUBlocksDone:
-        ; Skip the other blocks, do the minimal work
-        cpx     _gMaxBlocksPerMCU
-        bcs     uselessBlocksDone
-
 nextUselessBlock:
+        ; Skip the other blocks, do the minimal work
+        stx     mcuBlock
         ldy     _gMCUOrg,x
-        sty     componentID
 
         lda     _gCompACTab,y
         beq     setUDec2
 setUDec3:
-        lda     #<_huffDecode3
-        ldx     #>_huffDecode3
+        lda     #<_huffDecode3_skip
+        ldx     #>_huffDecode3_skip
         jmp     setUDec
 setUDec2:
-        lda     #<_huffDecode2
-        ldx     #>_huffDecode2
+        lda     #<_huffDecode2_skip
+        ldx     #>_huffDecode2_skip
 setUDec:
         sta     uselessDec+1
         stx     uselessDec+2
@@ -1382,25 +1297,21 @@ setUDec:
         lda     _gCompDCTab,y
         beq     :+
 
-        jsr     _huffDecode1
-        jmp     doDecb
-
-:       jsr     _huffDecode0
-
-doDecb:
+        jmp     _huffDecode1_skip
+:       jmp     _huffDecode0_skip
+skipDC:
         and     #$0F
         beq     :+
         jsr     skipBitsDirect
 
 :       lda     #1
-        sta     iDMCU
 i64loop:
         ;for (iDMCU = 1; iDMCU != 64; iDMCU++) {
+        sta     iDMCU
 uselessDec:
-        jsr     $FFFF   ; Patched with huffDecode2/3
-
+        jmp     $FFFF   ; Patched with huffDecode2/3
+skipAC:
         beq     ZAG2_Done
-        sta     sDMCU
         and     #$0F
         sta     tmp1
         jsr     skipBitsDirect
@@ -1409,13 +1320,12 @@ uselessDec:
 
         sec             ; Set carry for for loop inc
         adc     iDMCU
-        sta     iDMCU
         cmp     #64
         bne     i64loop
 
 ZAG2_Done:
-        inc     mcuBlock
         ldx     mcuBlock
+        inx
         cpx     _gMaxBlocksPerMCU
         bcc     nextUselessBlock
 
@@ -1523,9 +1433,6 @@ copy_out:
         rts
 
         .bss
-
-;huffExtend
-extendX:.res 2
 
 ;idctRows
 idctRC: .res 1

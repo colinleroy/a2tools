@@ -29,7 +29,7 @@ extern uint16 gCoeffBuf[8*8];
 extern uint16 gRestartInterval;
 extern uint16 gRestartsLeft;
 extern uint8 ZAG_Coeff[];
-extern int8 ZAG_Coeff_work[];
+extern uint8 ZAG_Coeff_work[];
 extern uint8 gMaxBlocksPerMCU;
 extern uint8 gCompsInFrame;
 extern uint8 gCompIdent[3];
@@ -87,7 +87,6 @@ uint16 __fastcall__ imul_b4(int16 w);
 uint16 __fastcall__ imul_b5(int16 w);
 
 uint8 __fastcall__ huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal);
-uint8 decodeNextMCU(void);
 void transformBlock(uint8 mcuBlock);
 void idctRows(void);
 void idctCols(uint8 mcublock);
@@ -103,7 +102,7 @@ uint8 skipVariableMarker(void);
 #define DECODED_WIDTH (QT200_WIDTH>>1)
 #define DECODED_HEIGHT (QT200_HEIGHT>>1)
 
-unsigned char pjpeg_decode_mcu(void);
+unsigned char pjpeg_decode_mcu(uint8 *pDst_row);
 void copy_decoded_to(uint8 *pDst_row);
 
 void createWinogradQuant0(void);

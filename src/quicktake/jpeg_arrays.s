@@ -125,6 +125,7 @@ _cache:           .res CACHE_SIZE+4
 
 .assert <* = 0, error
 START_LAST_ARRAYS = *
+; Must be aligned to 0 (not only for page-crossing)
 .proc _ZAG_Coeff
   .byte  $00
   .byte  $02
@@ -132,77 +133,66 @@ START_LAST_ARRAYS = *
   .byte  $20
   .byte  $12
   .byte  $04
-  .byte  $06
+  .byte  $FF
   .byte  $14
   .byte  $22
-  .byte  $30
-  .byte  $40
-  .byte  $32
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
   .byte  $24
-  .byte  $16
-  .byte  $08
-  .byte  $0A
-  .byte  $18
-  .byte  $26
-  .byte  $34
-  .byte  $42
-  .byte  $50
-  .byte  $60
-  .byte  $52
-  .byte  $44
-  .byte  $36
-  .byte  $28
-  .byte  $1A
-  .byte  $0C
-  .byte  $0E
-  .byte  $1C
-  .byte  $2A
-  .byte  $38
-  .byte  $46
-  .byte  $54
-  .byte  $62
-  .byte  $70
-  .byte  $72
-  .byte  $64
-  .byte  $56
-  .byte  $48
-  .byte  $3A
-  .byte  $2C
-  .byte  $1E
-  .byte  $2E
-  .byte  $3C
-  .byte  $4A
-  .byte  $58
-  .byte  $66
-  .byte  $74
-  .byte  $76
-  .byte  $68
-  .byte  $5A
-  .byte  $4C
-  .byte  $3E
-  .byte  $4E
-  .byte  $5C
-  .byte  $6A
-  .byte  $78
-  .byte  $7A
-  .byte  $6C
-  .byte  $5E
-  .byte  $6E
-  .byte  $7C
-  .byte  $7E
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
+  .byte  $FF
 .endproc
-; Not the same order as the C implementation
-; It's simple here it's ordered. Only first 8
-; .proc _ZAG_Coeff_work
-;   .byte $1, $1, $1, $1, $1, $1, $1, $1
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-;   .byte $0, $0, $0, $0, $0, $0, $0, $0
-; .endproc
+
 .proc _extendTests_l
   .byte  <$0000
   .byte  <$0001

@@ -124,26 +124,14 @@ uint16 gCoeffBuf[8*8];
 
 uint8 ZAG_Coeff[] =
 {
-   0,  1,  8, 16,  9,  2,  3, 10,
-   17, 24, 32, 25, 18, 11,  4,  5,
-   12, 19, 26, 33, 40, 48, 41, 34,
-   27, 20, 13,  6,  7, 14, 21, 28,
-   35, 42, 49, 56, 57, 50, 43, 36,
-   29, 22, 15, 23, 30, 37, 44, 51,
-   58, 59, 52, 45, 38, 31, 39, 46,
-   53, 60, 61, 54, 47, 55, 62, 63,
-};
-
-int8 ZAG_Coeff_work[] =
-{
-   1,  1,  1,  1,  0,  0,  0,  0,
-   1,  1,  1,  0,  0,  0,  0,  0,
-   1,  1,  0,  0,  0,  0,  0,  0,
-   0,  0,  0,  0,  0,  0,  0,  0,
-   0,  0,  0,  0,  0,  0,  0,  0,
-   0,  0,  0,  0,  0,  0,  0,  0,
-   0,  0,  0,  0,  0,  0,  0,  0,
-   0,  0,  0,  0,  0,  0,  0,  0,
+   0,     1,   8,  16,    9,   2,0xFF,  10,
+   17, 0xFF,0xFF,0xFF,   18,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+   0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
 };
 
 uint8 gWinogradQuant[] =
@@ -157,12 +145,13 @@ uint8 gWinogradQuant[] =
    46,   42,   69,   79,   69,   42,   35,   54,
    54,   35,   28,   37,   28,   19,   19,   10,
 };
+
 uint8 gMCUBufG[128];
 // 256 bytes
-uint8 gQuant0_l[8*8];
-uint8 gQuant0_h[8*8];
-uint8 gQuant1_l[8*8];
-uint8 gQuant1_h[8*8];
+uint8 gQuant0_l[64];
+uint8 gQuant0_h[64];
+uint8 gQuant1_l[64];
+uint8 gQuant1_h[64];
 
 // DC - 192
 HuffTable gHuffTab0;
@@ -179,11 +168,6 @@ HuffTable gHuffTab3;
 uint8 gHuffVal3[256];
 
 #else
-// 256 bytes
-extern uint8 gQuant0_l[8*8];
-extern uint8 gQuant0_h[8*8];
-extern uint8 gQuant1_l[8*8];
-extern uint8 gQuant1_h[8*8];
 // 256 bytes
 extern uint8 gHuffVal2[256];
 // 256 bytes
@@ -203,8 +187,6 @@ extern HuffTable gHuffTab2;
 extern HuffTable gHuffTab3;
 
 #endif
-
-extern uint8 gWinogradQuant[64];
 
 static uint8 gValidQuantTables;
 
@@ -319,7 +301,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       l_pBits++;
    }
 }
-#pragma code-name(pop)
 
 //------------------------------------------------------------------------------
 static HuffTable* getHuffTable(uint8 index)
@@ -357,7 +338,6 @@ static uint16 getMaxHuffCodes(uint8 index)
    return (index < 2) ? 12 : 255;
 }
 
-#pragma code-name(push, "LC")
 
 #define getLong() (getByteNoFF()<<8|getByteNoFF())
 
@@ -969,7 +949,7 @@ void qt_load_raw(uint16 top)
   pDst_row = raw_image;
 
   for ( ; ; ) {
-    status = pjpeg_decode_mcu();
+    status = pjpeg_decode_mcu(pDst_row);
 
     if (status) {
        if (status != PJPG_NO_MORE_BLOCKS) {
@@ -978,8 +958,6 @@ void qt_load_raw(uint16 top)
        }
        break;
     }
-
-    //pDst_block = pDst_row;
 
     copy_decoded_to(pDst_row);
 
