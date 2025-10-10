@@ -285,7 +285,7 @@ void idctCols(void)
 
        // Short circuit the 1D IDCT if only the DC component is non-zero
        t = (*pSrc_0_8 >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0xF000)
+       if (t & 0x8000)
          c = 0; 
        else if (t & 0xFF00)
           c = 255;
@@ -311,7 +311,7 @@ void idctCols(void)
        /* same index as before */
        // descale, convert to unsigned and clamp to 8-bit
        t = ((int16)(cx30 + cx12 + cx5) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0xF000)
+       if (t & 0x8000)
          val0 = 0;
        else if (t & 0xFF00)
           val0 = 255;
@@ -320,7 +320,7 @@ void idctCols(void)
 
        cx32 = imul_b1_b3(cx12) - cx12;
        t = ((int16)(cx30 + cx32 + cres2) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0xF000)
+       if (t & 0x8000)
          val3 = 0;
        else if (t & 0xFF00)
           val3 = 255;
@@ -328,7 +328,7 @@ void idctCols(void)
          val3 = (uint8)t;
 
        t = ((int16)(cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0xF000)
+       if (t & 0x8000)
          val1 = 0;
        else if (t & 0xFF00)
           val1 = 255;
@@ -336,7 +336,7 @@ void idctCols(void)
          val1 = (uint8)t;
 
        t = ((int16)(cx30 + cres3 + cres1 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0xF000)
+       if (t & 0x8000)
          val2 = 0; 
        else if (t & 0xFF00)
           val2 = 255;

@@ -6,7 +6,7 @@
         .import     _fillInBuf, _cache
         .import     _mul362_l, _mul362_m, _mul362_h
         .import     _mul473_l, _mul473_m, _mul473_h
-        .import     _mul196_l, _mul196_m, _mul196_h
+        .import     _mul196_l, _mul196_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
@@ -603,9 +603,6 @@ _huffDecode3_skip:
 ; void idctRows(void
 
 _idctRows:
-        lda    #3
-        sta    idctRC
-
         ldy    #0
 nextIdctRowsLoop:
 
@@ -779,7 +776,7 @@ res3x30h = *+1
         sta    _gCoeffBuf+7,y
 
 cont_idct_rows:
-        dec    idctRC
+        cpy    #(16*2)        ; Loop 3 times
         beq    :+
         clc
         tya
@@ -792,9 +789,6 @@ cont_idct_rows:
 ; void idctCols(void
 
 _idctCols:
-        lda     #4
-        sta     idctCC
-
         ldy     #0
 nextCol:
         sty     inputIdx
@@ -1009,7 +1003,7 @@ _output3 = *+1
 
         ldy     inputIdx
 
-        dec     idctCC
+        cpy     #(3*2)
         beq     idctColDone
         iny
         iny
@@ -1345,10 +1339,3 @@ noMoreBlocks:
 retErr:
         ldx    #0
         rts
-
-        .bss
-
-;idctRows
-idctRC: .res 1
-;idctCols
-idctCC: .res 1
