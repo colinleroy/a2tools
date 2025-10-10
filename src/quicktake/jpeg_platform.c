@@ -363,20 +363,80 @@ void idctCols(void)
    }
 }
 
+uint8 *pQ_l, *pQ_h;
+
+void setQuant(uint8 quantId) {
+    if (quantId) {
+      pQ_l = gQuant1_l;
+      pQ_h = gQuant1_h;
+    } else {
+      pQ_l = gQuant0_l;
+      pQ_h = gQuant0_h;
+    }
+}
+
+uint8 compACTab;
+uint8 compDCTab;
+uint8 skipCompACTab;
+uint8 skipCompDCTab;
+
+HuffTable *DCHuff, *skipDCHuff;
+uint8 *DCHuffVal, *skipDCHuffVal;
+HuffTable *ACHuff, *skipACHuff;
+uint8 *ACHuffVal, *skipACHuffVal;
+
+void setACDCTabs(void) {
+  compACTab = gCompACTab[0];
+  if (compACTab) {
+    ACHuff = &gHuffTab3;
+    ACHuffVal = gHuffVal3;
+  } else {
+    ACHuff = &gHuffTab2;
+    ACHuffVal = gHuffVal2;
+  }
+
+  compDCTab = gCompDCTab[0];
+  if (compDCTab) {
+    DCHuff = &gHuffTab1;
+    DCHuffVal = gHuffVal1;
+  } else {
+    DCHuff = &gHuffTab0;
+    DCHuffVal = gHuffVal0;
+  }
+
+  if (gCompACTab[1] != gCompACTab[2]) {
+    printf("unsupported AC tabs\n");
+  }
+  if (gCompDCTab[1] != gCompDCTab[2]) {
+    printf("unsupported DC tabs\n");
+  }
+  skipCompACTab = gCompACTab[1];
+  if (skipCompACTab) {
+    skipACHuff = &gHuffTab3;
+    skipACHuffVal = gHuffVal3;
+  } else {
+    skipACHuff = &gHuffTab2;
+    skipACHuffVal = gHuffVal2;
+  }
+
+  skipCompDCTab = gCompDCTab[1];
+  if (skipCompDCTab) {
+    skipDCHuff = &gHuffTab1;
+    skipDCHuffVal = gHuffVal1;
+  } else {
+    skipDCHuff = &gHuffTab0;
+    skipDCHuffVal = gHuffVal0;
+  }
+}
+
 uint8 decodeNextMCU(void)
 {
   uint8 status;
   uint8 mcuBlock;
-  /* Do not use zp vars here, it'll be destroyed by transformBlock
-  * and idct*
-  */
   uint8 componentID;
-  uint8 *pQ_l, *pQ_h;
-  uint8 compACTab;
   uint16 r;
-  uint8 s, i;
+  uint8 s, cur_ZAG_coeff;
   uint16 extraBits;
-  uint8 compDCTab;
   uint8 numExtraBits;
   uint16 dc;
   uint16 ac;
@@ -391,18 +451,11 @@ uint8 decodeNextMCU(void)
   }
 
   for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-    componentID = gMCUOrg[mcuBlock];
-    if (gCompQuant[componentID]) {
-      pQ_l = gQuant1_l;
-      pQ_h = gQuant1_h;
-    } else {
-      pQ_l = gQuant0_l;
-      pQ_h = gQuant0_h;
+    if (gMCUOrg[mcuBlock] != 0) {
+      /* see initFrame, componentID = 0 for mcuBlocks 0/1 */
+      printf("Unexpected thingy.\n");
+      return -1;
     }
-
-
-    compACTab = gCompACTab[componentID];
-    compDCTab = gCompDCTab[componentID];
 
     /* Pre-zero coeffs we'll use in idctRows */
     gCoeffBuf[1] =
@@ -414,10 +467,7 @@ uint8 decodeNextMCU(void)
       gCoeffBuf[17] =
       gCoeffBuf[18] = 0;
 
-    if (compDCTab)
-      s = huffDecode(&gHuffTab1, gHuffVal1);
-    else
-      s = huffDecode(&gHuffTab0, gHuffVal0);
+    s = huffDecode(DCHuff, DCHuffVal);
 
     r = 0;
     numExtraBits = s & 0xF;
@@ -426,20 +476,17 @@ uint8 decodeNextMCU(void)
 
     dc = huffExtend(r, s);
 
-    dc = dc + gLastDC_l[componentID] + (gLastDC_h[componentID]<<8);
-    gLastDC_l[componentID] = dc & 0xFF;
-    gLastDC_h[componentID] = (dc & 0xFF00) >> 8;
+    dc = dc + gLastDC_l[0] + (gLastDC_h[0]<<8);
+    gLastDC_l[0] = dc & 0xFF;
+    gLastDC_h[0] = (dc & 0xFF00) >> 8;
 
     gCoeffBuf[0] = dc * (pQ_l[0]|(pQ_h[0]<<8));
 
-    for (i = 1; i != 64; i++) {
-      if (compACTab)
-        s = huffDecode(&gHuffTab3, gHuffVal3);
-      else
-        s = huffDecode(&gHuffTab2, gHuffVal2);
+    for (cur_ZAG_coeff = 1; cur_ZAG_coeff != 64; cur_ZAG_coeff++) {
+      s = huffDecode(ACHuff, ACHuffVal);
 
       r = s >> 4;
-      i += r;
+      cur_ZAG_coeff += r;
 
       s = s & 0xF;
       if (!s) {
@@ -449,10 +496,10 @@ uint8 decodeNextMCU(void)
       } else {
         extraBits = getBitsFF(s);
 
-        if (ZAG_Coeff[i] != 0xFF) {
+        if (ZAG_Coeff[cur_ZAG_coeff] != 0xFF) {
           ac = huffExtend(extraBits, s);
-          // printf("computing %d\n", ZAG_Coeff[i]);
-          gCoeffBuf[ZAG_Coeff[i]] = ac * (pQ_l[i]|(pQ_h[i] << 8));
+          // printf("computing %d\n", ZAG_Coeff[cur_ZAG_coeff]);
+          gCoeffBuf[ZAG_Coeff[cur_ZAG_coeff]] = ac * (pQ_l[cur_ZAG_coeff]|(pQ_h[cur_ZAG_coeff] << 8));
         }
       }
     }
@@ -467,21 +514,13 @@ uint8 decodeNextMCU(void)
   for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];
 
-    if (gCompDCTab[componentID])
-      s = huffDecode(&gHuffTab1, gHuffVal1);
-    else
-      s = huffDecode(&gHuffTab0, gHuffVal0);
-
-    compACTab = gCompACTab[componentID];
+    s = huffDecode(skipDCHuff, skipDCHuffVal);
 
     if (s & 0xF)
       getBitsFF(s & 0xF);
 
-    for (i = 1; i != 64;) {
-      if (compACTab)
-        s = huffDecode(&gHuffTab3, gHuffVal3);
-      else
-        s = huffDecode(&gHuffTab2, gHuffVal2);
+    for (cur_ZAG_coeff = 1; cur_ZAG_coeff != 64;) {
+      s = huffDecode(skipACHuff, skipACHuffVal);
 
       numExtraBits = s & 0xF;
       if (numExtraBits)
@@ -490,7 +529,7 @@ uint8 decodeNextMCU(void)
       if (!s) {
         break;
       } else {
-        i += (s >> 4) + 1;
+        cur_ZAG_coeff += (s >> 4) + 1;
       }
    }
   }

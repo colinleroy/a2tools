@@ -102,7 +102,8 @@ uint8 skipVariableMarker(void);
 #define DECODED_HEIGHT (QT200_HEIGHT>>1)
 
 unsigned char pjpeg_decode_mcu(void);
-void copy_decoded_to(uint8 *pDst_row);
+void setQuant(uint8 quantId);
+void setACDCTabs(void);
 
 void createWinogradQuant0(void);
 void createWinogradQuant1(void);

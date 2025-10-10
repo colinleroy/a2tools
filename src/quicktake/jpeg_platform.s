@@ -22,7 +22,7 @@
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _getBitsNoFF, _getBitsFF
         .export     _idctRows, _idctCols, _decodeNextMCU
-        .export     _pjpeg_decode_mcu
+        .export     _pjpeg_decode_mcu, _setQuant, _setACDCTabs
         .export     _createWinogradQuant0, _createWinogradQuant1
         .export     _initFloppyStarter
         .export     _getByteNoFF, _setFFCheck
@@ -1019,6 +1019,101 @@ _output3 = *+1
 idctColDone:
         rts
 
+; Patch quantization table in decodeNextMCU once
+_setQuant:
+        cmp     #0
+        beq     :+
+
+        ldx     #<_gQuant1_l
+        stx     load_pq0l+1
+        stx     load_pq1l+1
+        ldx     #>_gQuant1_l
+        stx     load_pq0l+2
+        stx     load_pq1l+2
+
+        ldx     #<_gQuant1_h
+        stx     load_pq0h+1
+        stx     load_pq1h+1
+        ldx     #>_gQuant1_h
+        stx     load_pq0h+2
+        stx     load_pq1h+2
+        rts
+
+:       ldx     #<_gQuant0_l
+        stx     load_pq0l+1
+        stx     load_pq1l+1
+        ldx     #>_gQuant0_l
+        stx     load_pq0l+2
+        stx     load_pq1l+2
+
+        ldx     #<_gQuant0_h
+        stx     load_pq0h+1
+        stx     load_pq1h+1
+        ldx     #>_gQuant0_h
+        stx     load_pq0h+2
+        stx     load_pq1h+2
+        rts
+
+; Patch huff decoders in decodeNextMCU once
+_setACDCTabs:
+        ; DC tab
+        lda     _gCompDCTab
+        beq     setDCDec2
+setDCDec3:
+        lda     #<_huffDecode1
+        ldx     #>_huffDecode1
+        jmp     setACDec
+setDCDec2:
+        lda     #<_huffDecode0
+        ldx     #>_huffDecode0
+setDCDec:
+        sta     huffDecDC+1
+        stx     huffDecDC+2
+
+        ; AC tab
+        lda     _gCompACTab
+        beq     setACDec2
+setACDec3:
+        lda     #<_huffDecode3
+        ldx     #>_huffDecode3
+        jmp     setACDec
+setACDec2:
+        lda     #<_huffDecode2
+        ldx     #>_huffDecode2
+setACDec:
+        sta     huffDecAC+1
+        stx     huffDecAC+2
+
+        ; Skipped DC tab
+        lda     _gCompDCTab+1
+        beq     setUDCDec2
+setUDCDec3:
+        lda     #<_huffDecode1_skip
+        ldx     #>_huffDecode1_skip
+        jmp     setUDCDec
+setUDCDec2:
+        lda     #<_huffDecode0_skip
+        ldx     #>_huffDecode0_skip
+setUDCDec:
+        sta     uselessDecDC+1
+        stx     uselessDecDC+2
+
+        ; Skipped AC tab
+        lda     _gCompACTab+1
+        beq     setUACDec2
+setUACDec3:
+        lda     #<_huffDecode3_skip
+        ldx     #>_huffDecode3_skip
+        jmp     setUACDec
+setUACDec2:
+        lda     #<_huffDecode2_skip
+        ldx     #>_huffDecode2_skip
+setUACDec:
+        sta     uselessDecAC+1
+        stx     uselessDecAC+2
+
+        rts
+
 _decodeNextMCU:
         GET_BITS_SET_FF_ON
 
@@ -1048,58 +1143,6 @@ noRestart:
 
 nextMcuBlock:
         ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-        ldy     _gMCUOrg,x
-        sty     componentID
-
-        lda     _gCompQuant,y
-        beq     :+
-
-        ldx     #<_gQuant1_l
-        stx     load_pq0l+1
-        stx     load_pq1l+1
-        ldx     #>_gQuant1_l
-        stx     load_pq0l+2
-        stx     load_pq1l+2
-
-        ldx     #<_gQuant1_h
-        stx     load_pq0h+1
-        stx     load_pq1h+1
-        ldx     #>_gQuant1_h
-        stx     load_pq0h+2
-        stx     load_pq1h+2
-
-        jmp     loadACTab
-
-:       ldx     #<_gQuant0_l
-        stx     load_pq0l+1
-        stx     load_pq1l+1
-        ldx     #>_gQuant0_l
-        stx     load_pq0l+2
-        stx     load_pq1l+2
-
-        ldx     #<_gQuant0_h
-        stx     load_pq0h+1
-        stx     load_pq1h+1
-        ldx     #>_gQuant0_h
-        stx     load_pq0h+2
-        stx     load_pq1h+2
-
-loadACTab:
-        ; compACTab = gCompACTab[componentID];
-        ; set pointers to huffDecode2/3 *before* cur_ZAG_coeff loop
-        lda     _gCompACTab,y
-        beq     setDec2
-setDec3:
-        lda     #<_huffDecode3
-        ldx     #>_huffDecode3
-        jmp     setDec
-setDec2:
-        lda     #<_huffDecode2
-        ldx     #>_huffDecode2
-setDec:
-        sta     huffDec+1
-        stx     huffDec+2
-
 zeroBuf:
         ; Zero indices of gCoeffBuf that we'll use
         ; in idctRows
@@ -1123,11 +1166,8 @@ zeroBuf:
         sta     _gCoeffBuf+36 ; 18
         sta     _gCoeffBuf+37
 
-loadDCTab:
-        lda     _gCompDCTab,y
-        beq     :+
-        jmp     _huffDecode1
-:       jmp     _huffDecode0
+huffDecDC:
+        jmp     $FFFF
 decodeDC:
 
         sta     sDMCU
@@ -1143,17 +1183,16 @@ doExtend:
         lda     sDMCU
         HUFFEXTEND            ; DC in AX now
 
-        ldy     componentID
-        ; dc = dc + gLastDC[componentID];
-        ; gLastDC[componentID] = dc;
+        ; dc = dc + gLastDC[componentID=0];
+        ; gLastDC[componentID=0] = dc;
         clc
-        adc     _gLastDC_l,y
-        sta     _gLastDC_l,y
+        adc     _gLastDC_l
+        sta     _gLastDC_l
         sta     ptr2          ; Store dc to ptr2 as it's where mult expects it
 
         txa
-        adc     _gLastDC_h,y
-        sta     _gLastDC_h,y
+        adc     _gLastDC_h
+        sta     _gLastDC_h
         sta     ptr2+1
 
         ;gCoeffBuf[0] = dc * pQ[0];
@@ -1169,7 +1208,7 @@ load_pq0l:
 
 doZAGLoop:
         sty     cur_ZAG_coeff
-huffDec:
+huffDecAC:
         jmp     $FFFF           ; Patched with huffDecode2 or 3
 decodeAC:
         tax                     ; r = s >> 4;
@@ -1240,26 +1279,9 @@ ZAG_finished:
 nextUselessBlock:
         ; Skip the other blocks, do the minimal work
         stx     mcuBlock
-        ldy     _gMCUOrg,x
 
-        lda     _gCompACTab,y
-        beq     setUDec2
-setUDec3:
-        lda     #<_huffDecode3_skip
-        ldx     #>_huffDecode3_skip
-        jmp     setUDec
-setUDec2:
-        lda     #<_huffDecode2_skip
-        ldx     #>_huffDecode2_skip
-setUDec:
-        sta     uselessDec+1
-        stx     uselessDec+2
-
-        lda     _gCompDCTab,y
-        beq     :+
-
-        jmp     _huffDecode1_skip
-:       jmp     _huffDecode0_skip
+uselessDecDC:
+        jmp     $FFFF
 skipDC:
         and     #$0F
         beq     :+
@@ -1269,7 +1291,7 @@ skipDC:
 i64loop:
         ;for (iDMCU = 1; iDMCU != 64; iDMCU++) {
         sta     iDMCU
-uselessDec:
+uselessDecAC:
         jmp     $FFFF   ; Patched with huffDecode2/3
 skipAC:
         beq     ZAG2_Done
@@ -1331,6 +1353,3 @@ retErr:
 idctRC: .res 1
 ;idctCols
 idctCC: .res 1
-
-;decodeNextMCU
-componentID:.res 1

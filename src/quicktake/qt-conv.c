@@ -134,7 +134,6 @@ static uint8 identify(const char *name)
 #ifdef JPEGCONV
   if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
-    cputs(" image ");
     cputs((char *)name);
     cputs("...\r\n");
     width = QT200_JPEG_WIDTH;

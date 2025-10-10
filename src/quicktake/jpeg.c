@@ -202,8 +202,6 @@ uint8 gBitsLeft;
 //------------------------------------------------------------------------------
 uint8 gCompsInFrame;
 uint8 gCompIdent[3];
-uint8 gCompHSamp[3];
-uint8 gCompVSamp[3];
 uint8 gCompQuant[3];
 
 uint16 gNextRestartNum;
@@ -471,7 +469,6 @@ static uint8 readSOFMarker(void)
   uint16 left = getLong();
   uint16 gImageXSize;
   uint16 gImageYSize;
-  register uint8 *ptr_ident, *ptr_quant, *ptr_hsamp;
 
    if (getByteNoFF() != 8)
       return PJPG_BAD_PRECISION;
@@ -494,22 +491,17 @@ static uint8 readSOFMarker(void)
    if (left != (gCompsInFrame + gCompsInFrame + gCompsInFrame + 8))
       return PJPG_BAD_SOF_LENGTH;
 
-   ptr_ident = gCompIdent;
-   ptr_quant = gCompQuant;
-   ptr_hsamp = gCompHSamp;
    for (i = 0; i < gCompsInFrame; i++)
    {
       uint8 tmp;
-      *(ptr_ident++) = (uint8)getByteNoFF();
-      tmp = getByteNoFF();
-      *(ptr_hsamp++) = tmp>>4;
-      gCompVSamp[i] = tmp&0x0F;
-      *(ptr_quant) = getByteNoFF();
-
-      if (*ptr_quant > 1)
+      gCompIdent[i] = (uint8)getByteNoFF();
+      getByteNoFF();
+      gCompQuant[i] = getByteNoFF();
+      if (gCompQuant[i] > 1)
          return PJPG_UNSUPPORTED_QUANT_TABLE;
-      ptr_quant++;
    }
+
+   setQuant(gCompQuant[0]);
 
    return 0;
 }
@@ -559,6 +551,8 @@ static uint8 readSOSMarker(void)
       gCompDCTab[ci] = (c >> 4) & 15;
       gCompACTab[ci] = (c & 15);
    }
+
+   setACDCTabs();
 
    spectral_start  = (uint8)getByteNoFF();
    spectral_end    = (uint8)getByteNoFF();
