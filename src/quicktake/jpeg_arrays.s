@@ -8,7 +8,8 @@
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
         .export _gHuffVal0, _gHuffVal1, _gHuffVal2, _gHuffVal3
         .export _gHuffTab0, _gHuffTab1, _gHuffTab2, _gHuffTab3
-        .export _gMCUBufG, _cache, _gCoeffBuf
+        .export _cache, _gCoeffBuf
+        .export _raw_image
         .export right_shift_4
 
 
@@ -19,40 +20,43 @@
    mGetMore   .res 16
 .endstruct
 
+BAND_HEIGHT = 20
         .segment "BSS"
 
+; raw_image has 512px wide lines to help with alignment
+; only the first 320 of each contain image data
+; We'll fill in the blanks with the rest of the BSS data
+; far enough that the scaler won't overwrite it (it will
+; overwrite 256*16 bytes)
 .align 256
-_gQuant0_l:       .res 64
-_gQuant0_h:       .res 64
-_gQuant1_l:       .res 64
-_gQuant1_h:       .res 64
+_raw_image:       .res (BAND_HEIGHT-1)*RAW_WIDTH+FINAL_WIDTH
+
+_gQuant0_l =      _raw_image+(8*512)+FINAL_WIDTH    ; 64 bytes
+_gQuant0_h =      _raw_image+(9*512)+FINAL_WIDTH    ; 64 bytes
+_gQuant1_l =      _raw_image+(10*512)+FINAL_WIDTH   ; 64 bytes
+_gQuant1_h =      _raw_image+(11*512)+FINAL_WIDTH   ; 64 bytes
+
+.assert .sizeof(hufftable_t) = 64, error
+_gHuffTab0 =      _raw_image+(12*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab1 =      _raw_image+(13*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab2 =      _raw_image+(14*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab3 =      _raw_image+(15*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffVal0 =      _raw_image+(16*512)+FINAL_WIDTH   ; 16 bytes
+_gHuffVal1 =      _raw_image+(17*512)+FINAL_WIDTH   ; 16 bytes
+
+; Fill the last bytes to align cache
+filler:           .res RAW_WIDTH-FINAL_WIDTH-4
+.assert <* = 256-4, error
+_cache:           .res CACHE_SIZE+4
 
 .assert <* = 0, error
 _gHuffVal2:       .res 256
 _gHuffVal3:       .res 256
-
 .assert <* = 0, error
-_gMCUBufG:        .res 128
 _gCoeffBuf:       .res 128
 
-.assert <* = 0, error
-_gHuffTab0:       .res .sizeof(hufftable_t)
-_gHuffTab1:       .res .sizeof(hufftable_t)
-_gHuffTab2:       .res .sizeof(hufftable_t)
-_gHuffTab3:       .res .sizeof(hufftable_t)
-
-.assert <* = 0, error
-_gHuffVal0:       .res 16
-_gHuffVal1:       .res 16
-
-filler:           .res 256-32-4
-.assert <* = 256-4, error
-_cache:           .res CACHE_SIZE+4
-
         .segment "DATA"
-; 512 + 128 + 16 + 8 + 4 + 1  - too much shifting
 .align 256
-; 256+64+32+8+2 - too much shifting
 .proc _mul362_l
   .repeat 256, I
     .byte (I*362) .BITAND $FF
@@ -68,8 +72,6 @@ _cache:           .res CACHE_SIZE+4
     .byte ((I*362) .SHR 16) .BITAND $FF
   .endrepeat
 .endproc
-
-;256+16+4+1 - too much shifting
 
 .proc _mul473_l
   .repeat 256, I
@@ -87,7 +89,6 @@ _cache:           .res CACHE_SIZE+4
   .endrepeat
 .endproc
 
-; 128 + 64 + 4 - shifting also longer than table lookup
 .proc _mul196_l
   .repeat 256, I
     .byte (I*196) .BITAND $FF

@@ -2,6 +2,7 @@
 #include "qt-conv.h"
 
 static uint8 skipBits = 0;
+uint8 raw_image[RAW_IMAGE_SIZE];
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
@@ -250,7 +251,9 @@ nextIdctRowsLoop:
 
 #define PJPG_DCT_SCALE_BITS 7
 
-void idctCols(uint8 mcuoffset)
+uint8 *output0, *output1, *output2, *output3;
+uint8 outputIdx;
+void idctCols(void)
 {
    uint8 idctCC;
 
@@ -260,7 +263,7 @@ void idctCols(uint8 mcuoffset)
    int16 stg26;
    uint8 c;
    uint16 t;
-   uint8 *output = (uint8*)gMCUBufG;
+   uint8 val0, val1, val2, val3;
 
    pSrc_0_8 = gCoeffBuf+0*8;
    pSrc_1_8 = gCoeffBuf+1*8;
@@ -289,10 +292,8 @@ void idctCols(uint8 mcuoffset)
        else 
          c = (uint8)t;
 
-       output[mcuoffset + 0*4] = 
-        output[mcuoffset + 1*4] = 
-        output[mcuoffset + 2*4] = 
-        output[mcuoffset + 3*4] = c;
+       val0 = val1 = val2 = val3 = c;
+        
       goto cont_idct_cols;
       full_idct_cols:
        int16 cx5, cx30, cx12;
@@ -311,47 +312,58 @@ void idctCols(uint8 mcuoffset)
        // descale, convert to unsigned and clamp to 8-bit
        t = ((int16)(cx30 + cx12 + cx5) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
-         output[mcuoffset + 0*4] = 0;
+         val0 = 0;
        else if (t & 0xFF00)
-          output[mcuoffset + 0*4] = 255;
+          val0 = 255;
        else
-         output[mcuoffset + 0*4] = (uint8)t;
+         val0 = (uint8)t;
 
        cx32 = imul_b1_b3(cx12) - cx12;
        t = ((int16)(cx30 + cx32 + cres2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
-         output[mcuoffset + 3*4] = 0;
+         val3 = 0;
        else if (t & 0xFF00)
-          output[mcuoffset + 3*4] = 255;
+          val3 = 255;
        else
-         output[mcuoffset + 3*4] = (uint8)t;
+         val3 = (uint8)t;
 
        t = ((int16)(cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
-         output[mcuoffset + 1*4] = 0;
+         val1 = 0;
        else if (t & 0xFF00)
-          output[mcuoffset + 1*4] = 255;
+          val1 = 255;
        else
-         output[mcuoffset + 1*4] = (uint8)t;
+         val1 = (uint8)t;
 
        t = ((int16)(cx30 + cres3 + cres1 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
-         output[mcuoffset + 2*4] = 0; 
+         val2 = 0; 
        else if (t & 0xFF00)
-          output[mcuoffset + 2*4] = 255;
+          val2 = 255;
        else 
-         output[mcuoffset + 2*4] = (uint8)t;
+         val2 = (uint8)t;
 
 
       cont_idct_cols:
+
+      output0[outputIdx] = val0;
+      output1[outputIdx] = val1;
+      output2[outputIdx] = val2;
+      output3[outputIdx] = val3;
       pSrc_0_8++;
       pSrc_1_8++;
       pSrc_2_8++;
-      mcuoffset++;
+      outputIdx++;
+      if (outputIdx == 0) {
+        output0 += 256;
+        output1 += 256;
+        output2 += 256;
+        output3 += 256;
+      }
    }
 }
 
-uint8 decodeNextMCU(uint8 *pDst_row)
+uint8 decodeNextMCU(void)
 {
   uint8 status;
   uint8 mcuBlock;
@@ -368,7 +380,6 @@ uint8 decodeNextMCU(uint8 *pDst_row)
   uint8 numExtraBits;
   uint16 dc;
   uint16 ac;
-
 
   if (gRestartInterval) {
     if (gRestartsLeft == 0) {
@@ -446,7 +457,7 @@ uint8 decodeNextMCU(uint8 *pDst_row)
       }
     }
     idctRows();
-    idctCols(mcuBlock == 0 ? 0 : 16);
+    idctCols();
   }
 
    /* Skip the other blocks, do the minimal work, only consuming
@@ -489,14 +500,14 @@ uint8 decodeNextMCU(uint8 *pDst_row)
 }
 
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_mcu(uint8 *pDst_row)
+unsigned char pjpeg_decode_mcu(void)
 {
    uint8 status;
 
    if ((!gNumMCUSRemainingX) && (!gNumMCUSRemainingY))
       return PJPG_NO_MORE_BLOCKS;
 
-   status = decodeNextMCU(pDst_row);
+   status = decodeNextMCU();
    if (status)
       return status;
 
@@ -509,37 +520,6 @@ unsigned char pjpeg_decode_mcu(uint8 *pDst_row)
    }
 
    return 0;
-}
-
-void copy_decoded_to(uint8 *pDst_row)
-{
-  uint8 by;
-  register uint8 *pDst1, *pDst2;
-  register uint8 s = 0;
-
-  pDst1 = pDst_row;
-  pDst2 = pDst1 + 4;
-
-  by = 4;
-  while (1) {
-    *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+16)[s];
-    s++;
-    *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+16)[s];
-    s++;
-    *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+16)[s];
-    s++;
-    *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+16)[s];
-    s++;
-
-    if (!--by)
-      break;
-    pDst1 += (DECODED_WIDTH-4);
-    pDst2 += (DECODED_WIDTH-4);
-  }
 }
 
 //----------------------------------------------------------------------------

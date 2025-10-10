@@ -89,7 +89,6 @@ uint16 __fastcall__ imul_b5(int16 w);
 uint8 __fastcall__ huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal);
 void transformBlock(uint8 mcuBlock);
 void idctRows(void);
-void idctCols(uint8 mcublock);
 uint8 processRestart(void);
 
 uint8 skipVariableMarker(void);
@@ -102,7 +101,7 @@ uint8 skipVariableMarker(void);
 #define DECODED_WIDTH (QT200_WIDTH>>1)
 #define DECODED_HEIGHT (QT200_HEIGHT>>1)
 
-unsigned char pjpeg_decode_mcu(uint8 *pDst_row);
+unsigned char pjpeg_decode_mcu(void);
 void copy_decoded_to(uint8 *pDst_row);
 
 void createWinogradQuant0(void);

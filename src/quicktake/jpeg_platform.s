@@ -13,7 +13,6 @@
         .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf
         .import     _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
-        .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     _gWinogradQuant
         .import     floppy_motor_on
@@ -24,12 +23,15 @@
         .export     _getBitsNoFF, _getBitsFF
         .export     _idctRows, _idctCols, _decodeNextMCU
         .export     _pjpeg_decode_mcu
-        .export     _copy_decoded_to
         .export     _createWinogradQuant0, _createWinogradQuant1
         .export     _initFloppyStarter
         .export     _getByteNoFF, _setFFCheck
+        .export     _output0, _output1, _output2, _output3
+        .export     _outputIdx
+
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
+_outputIdx     = _zp4       ; byte, used everywhere
 bbHigh         = _zp5       ; byte, used in huffDecode
 ; zp6-7 USED in qt-conv so only use it temporarily
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
@@ -40,7 +42,6 @@ rDMCU          = _zp11      ; byte, used in _decodeNextMCU
 sDMCU          = _zp12      ; byte, used in _decodeNextMCU
 iDMCU          = _zp13      ; byte, used in _decodeNextMCU
 inputIdx       = _zp11      ; byte, used in idctRows and idctCols
-outputIdx      = _zp12      ; byte, used in idctCols
 ; dw             = _zp9       ; byte, used in imul (IDCT)
 ; neg            = _zp10      ; byte, used in imul (IDCT)
 
@@ -791,13 +792,12 @@ cont_idct_rows:
 ; void idctCols(void
 
 _idctCols:
-        sta     outputIdx
         lda     #4
         sta     idctCC
 
         ldy     #0
-        sty     inputIdx
 nextCol:
+        sty     inputIdx
         lda     _gCoeffBuf+16,y
         bne     full_idct_cols
         lda     _gCoeffBuf+32,y
@@ -814,14 +814,10 @@ nextCol:
 
         SHIFT_XA_7RIGHT_AND_CLAMP
 
-        ldx     outputIdx         ; Keep Y inputIdx
-        sta     _gMCUBufG,x
-        sta     _gMCUBufG+4,x
-        sta     _gMCUBufG+8,x
-        sta     _gMCUBufG+12,x
-        inx
-        stx     outputIdx
-
+        sta     val0
+        sta     val1
+        ; Val2 is A in cont_idct_cols
+        sta     val3
         jmp     cont_idct_cols
 
 full_idct_cols:
@@ -985,26 +981,34 @@ cx30hcres3h = *+1
         sbc     cx12h
 
         SHIFT_YA_7RIGHT_AND_CLAMP
-
-        ldy     outputIdx
-; val2 which we just computed
-        sta     _gMCUBufG+8,y
+        ; val2 = A
+cont_idct_cols:
+        ldy     _outputIdx
+_output2 = *+1
+        sta     $FF00,y
 val0 = *+1
         lda     #$FF
-        sta     _gMCUBufG,y
+_output0 = *+1
+        sta     $FF00,y
 val1 = *+1
         lda     #$FF
-        sta     _gMCUBufG+4,y
+_output1 = *+1
+        sta     $FF00,y
 val3 = *+1
         lda     #$FF
-        sta     _gMCUBufG+12,y
+_output3 = *+1
+        sta     $FF00,y
 
         iny
-        sty     outputIdx
+        bne     :+
+        inc     _output0+1
+        inc     _output1+1
+        inc     _output2+1
+        inc     _output3+1
+:       sty     _outputIdx
 
         ldy     inputIdx
 
-cont_idct_cols:
         dec     idctCC
         beq     idctColDone
         iny
@@ -1225,12 +1229,7 @@ checkZAGLoop:
 
 ZAG_finished:
         jsr     _idctRows
-
-        lda     #0
-        ldy     mcuBlock
-        beq     :+
-        lda     #16
-:       jsr     _idctCols
+        jsr     _idctCols
 
         inc     mcuBlock
         ldx     mcuBlock
@@ -1324,63 +1323,6 @@ noMoreBlocks:
         lda    #1       ; PJPG_NO_MORE_BLOCKS
 retErr:
         ldx    #0
-        rts
-
-_copy_decoded_to:
-        sta    ptr1     ; pDst1 = pDst_row
-        stx    ptr1+1
-        stx    ptr2+1
-        clc
-        adc    #(8>>1)  ; pDst2 = pDst_row + 8>>1
-        sta    ptr2
-        bcc    :+
-        inc    ptr2+1
-        clc             ; Make sure to clear carry
-
-:       ldx    #4       ; by = 4
-        ldy    #0       ; s = 0
-
-copy_cont:
-        lda    _gMCUBufG,y
-        sta    (ptr1),y
-        lda    _gMCUBufG+16,y
-        sta    (ptr2),y
-        iny
-        lda    _gMCUBufG,y
-        sta    (ptr1),y
-        lda    _gMCUBufG+16,y
-        sta    (ptr2),y
-        iny
-        lda    _gMCUBufG,y
-        sta    (ptr1),y
-        lda    _gMCUBufG+16,y
-        sta    (ptr2),y
-        iny
-        lda    _gMCUBufG,y
-        sta    (ptr1),y
-        lda    _gMCUBufG+16,y
-        sta    (ptr2),y
-        iny
-
-        dex
-        beq    copy_out
-
-        lda    ptr1    ; pDst1 += (DECODED_WIDTH);
-        adc    #<(320-4) ; Carry sure to be clear
-        sta    ptr1
-        lda    ptr1+1
-        adc    #>(320-4)
-        sta    ptr1+1
-
-        lda    ptr2   ; pDst2 += (DECODED_WIDTH);
-        adc    #<(320-4)
-        sta    ptr2
-        lda    ptr2+1
-        adc    #>(320-4)
-        sta    ptr2+1
-
-        jmp    copy_cont
-copy_out:
         rts
 
         .bss

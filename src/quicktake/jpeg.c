@@ -39,7 +39,7 @@ uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
 extern uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
 #endif
 uint8 *cache_start = cache + N_STUFF_CHARS;
-uint8 raw_image[RAW_IMAGE_SIZE];
+extern uint8 raw_image[RAW_IMAGE_SIZE];
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -916,14 +916,16 @@ unsigned char pjpeg_decode_init(void)
    if (status)
       return status;
 
-   #define m_MCUWidth gMaxMCUXSize
-   #define m_MCUHeight gMaxMCUYSize
+   #define m_MCUHeight (gMaxMCUYSize/2)
    return 0;
 }
 
 static uint8 mcu_x = 0;
 static uint8 status;
 static uint16 dst_y;
+extern uint8 *output0, *output1, *output2, *output3;
+extern uint8 outputIdx;
+#pragma zpsym("outputIdx")
 
 void qt_load_raw(uint16 top)
 {
@@ -947,9 +949,13 @@ void qt_load_raw(uint16 top)
   }
 
   pDst_row = raw_image;
-
+  output0 = pDst_row;
+  output1 = output0+RAW_WIDTH;
+  output2 = output1+RAW_WIDTH;
+  output3 = output2+RAW_WIDTH;
+  outputIdx = 0;
   for ( ; ; ) {
-    status = pjpeg_decode_mcu(pDst_row);
+    status = pjpeg_decode_mcu();
 
     if (status) {
        if (status != PJPG_NO_MORE_BLOCKS) {
@@ -959,16 +965,20 @@ void qt_load_raw(uint16 top)
        break;
     }
 
-    copy_decoded_to(pDst_row);
+    // copy_decoded_to(pDst_row);
 
     mcu_x++;
-    pDst_row += 8;
     if (mcu_x == gMaxMCUSPerRow) {
       mcu_x = 0;
       dst_y += m_MCUHeight;
-      pDst_row += QT200_HEIGHT * 2;
+      pDst_row += m_MCUHeight*RAW_WIDTH;
+      output0 = pDst_row;
+      output1 = output0+RAW_WIDTH;
+      output2 = output1+RAW_WIDTH;
+      output3 = output2+RAW_WIDTH;
+      outputIdx = 0;
 
-      if (dst_y % (BAND_HEIGHT*2) == 0) {
+      if (dst_y % (BAND_HEIGHT) == 0) {
         break;
       }
     }
