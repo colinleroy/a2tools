@@ -25,7 +25,7 @@ extern uint8 mul669_l[256], mul669_m[256], mul669_h[256];
 extern uint8 mul362_l[256], mul362_m[256], mul362_h[256];
 extern uint8 mul277_l[256], mul277_m[256], mul277_h[256];
 extern uint8 mul196_l[256], mul196_m[256], mul196_h[256];
-extern uint16 gCoeffBuf[8*8];
+extern int16 gCoeffBuf[8*8];
 extern uint16 gRestartInterval;
 extern uint16 gRestartsLeft;
 extern uint8 ZAG_Coeff[];

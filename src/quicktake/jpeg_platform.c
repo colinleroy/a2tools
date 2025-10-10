@@ -194,80 +194,57 @@ incrementL:
 
 void idctRows(void)
 {
-   uint8 i;
-   register int16* rowSrc;
-   register int16* rowSrc_1;
-   register int16* rowSrc_2;
-   register int16* rowSrc_3;
+   uint8 idctRC;
 
+   for (idctRC = 0; idctRC < 3*8; idctRC += 8) {
 
-   rowSrc = gCoeffBuf;
-   i = 3;
-nextIdctRowsLoop:
-       rowSrc_1 = rowSrc + 1;
-       rowSrc_2 = rowSrc + 2;
-       rowSrc_3 = rowSrc + 3;
+     /* don't use rowSrc+3 (3,11,19) in input,
+      * but compute them for idctCols */
+    // printf("row using gCoeffBuf[%d,%d,%d]\n", 
+    //         rowSrc-(int16*)gCoeffBuf,
+    //         rowSrc_1-(int16*)gCoeffBuf,
+    //         rowSrc_2-(int16*)gCoeffBuf);
 
-       /* don't use rowSrc+3 (3,11,19) in input,
-        * but compute them for idctCols */
-      // printf("row using gCoeffBuf[%d,%d,%d]\n", 
-      //         rowSrc-(int16*)gCoeffBuf,
-      //         rowSrc_1-(int16*)gCoeffBuf,
-      //         rowSrc_2-(int16*)gCoeffBuf);
+    if (gCoeffBuf[(idctRC)+1] == 0 &&
+        gCoeffBuf[(idctRC)+2] == 0) {
+      // Short circuit the 1D IDCT if only the DC component is non-zero
+      gCoeffBuf[(idctRC)+1] =
+      gCoeffBuf[(idctRC)+2] =
+      gCoeffBuf[(idctRC)+3] = gCoeffBuf[(idctRC)+0];
+    } else {
+       int16 x24, res1, res2, res3;
+       int16 x30, x31, x13, x5;
+       int16 x32;
 
-      if (*rowSrc_1 != 0 || *rowSrc_2 != 0)
-        goto full_idct_rows;
-       // Short circuit the 1D IDCT if only the DC component is non-zero
-     *(rowSrc_1) = *(rowSrc_2) = *(rowSrc_3) = *rowSrc;
-      goto cont_idct_rows;
+       x30 = gCoeffBuf[(idctRC)+0];
+       x5  = gCoeffBuf[(idctRC)+1];
+       x13 = gCoeffBuf[(idctRC)+2];
 
-      full_idct_rows:
-         int16 x24, res1, res2, res3;
-         int16 x30, x31, x13, x5;
-         int16 x32;
+       gCoeffBuf[(idctRC)+0] = x30 + x13 + x5;
 
-         x5  = *(rowSrc_1);
-         x30 = *(rowSrc);
-         x13 = *(rowSrc_2);
+       x32 = imul_b1_b3(x13) - x13;
 
-         *(rowSrc) = x30 + x13 + x5;
+       res1 = imul_b5(x5);
+       res2 = imul_b4(x5) + x5;
+       res3 = imul_b1_b3(x5) + x30 + res2;
 
-         x32 = imul_b1_b3(x13) - x13;
-
-         res1 = imul_b5(x5);
-         res2 = imul_b4(x5) + x5;
-         res3 = imul_b1_b3(x5) + x30 + res2;
-
-         *(rowSrc_1) = res3 - x32;
-         *(rowSrc_2) = res3 + res1 - x13;
-         *(rowSrc_3) = x32 + x30 + res2;
-
-      cont_idct_rows:
-      rowSrc += 8;
-      i--;
-      if (i)
-        goto nextIdctRowsLoop;
+       gCoeffBuf[(idctRC)+1] = res3 - x32;
+       gCoeffBuf[(idctRC)+2] = res3 + res1 - x13;
+       gCoeffBuf[(idctRC)+3] = x32 + x30 + res2;
+     }
+  }
 }
 
 #define PJPG_DCT_SCALE_BITS 7
 
 uint8 *output0, *output1, *output2, *output3;
-uint8 outputIdx;
+uint16 outputIdx;
 void idctCols(void)
 {
    uint8 idctCC;
-
-   register int16* pSrc_0_8;
-   register int16* pSrc_2_8;
-   int16 *pSrc_1_8;
-   int16 stg26;
    uint8 c;
-   uint16 t;
+   int16 t;
    uint8 val0, val1, val2, val3;
-
-   pSrc_0_8 = gCoeffBuf+0*8;
-   pSrc_1_8 = gCoeffBuf+1*8;
-   pSrc_2_8 = gCoeffBuf+2*8;
 
    for (idctCC = 0; idctCC < 4; idctCC++)
    {
@@ -277,89 +254,48 @@ void idctCols(void)
       //         pSrc_1_8-(int16*)gCoeffBuf,
       //         pSrc_2_8-(int16*)gCoeffBuf);
 
+      #define DESCALE(v) (((v) >> PJPG_DCT_SCALE_BITS) + 128)
+      #define CLAMP(t) ((t) < 0 ? 0 : ((t) > 255 ? 255 : (t)))
+      if (gCoeffBuf[idctCC+1*8] == 0 &&
+          gCoeffBuf[idctCC+2*8] == 0) {
+        // Short circuit the 1D IDCT if only the DC component is non-zero
+        t = DESCALE(gCoeffBuf[idctCC+0*8]);
+        c = CLAMP(t);
 
-      if (*pSrc_1_8 != 0)
-        goto full_idct_cols;
-      if (*pSrc_2_8 != 0)
-        goto full_idct_cols;
+        val0 = val1 = val2 = val3 = c;
+      } else {
+        int16 cx5, cx30, cx12;
+        int16 cres1, cres2, cres3;
+        int16 cx32, cx42;
 
-       // Short circuit the 1D IDCT if only the DC component is non-zero
-       t = (*pSrc_0_8 >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0x8000)
-         c = 0; 
-       else if (t & 0xFF00)
-          c = 255;
-       else 
-         c = (uint8)t;
+        cx30 = gCoeffBuf[idctCC+0*8];
+        cx5  = gCoeffBuf[idctCC+1*8];
+        cx12 = gCoeffBuf[idctCC+2*8];
 
-       val0 = val1 = val2 = val3 = c;
-        
-      goto cont_idct_cols;
-      full_idct_cols:
-       int16 cx5, cx30, cx12;
-       int16 cres1, cres2, cres3;
-       int16 cx32, cx42;
+        cres1 = imul_b5(cx5);
+        cres2 = imul_b4(cx5) + cx5;
+        cres3 = imul_b1_b3(cx5) + cres2;
 
-       cx30 = *(pSrc_0_8);
-       cx5  = *(pSrc_1_8);
-       cx12 = *(pSrc_2_8);
+        /* same index as before */
+        // descale, convert to unsigned and clamp to 8-bit
+        t = DESCALE(cx30 + cx12 + cx5);
+        val0 = CLAMP(t);
 
-       cres1 = imul_b5(cx5);
-       cres2 = imul_b4(cx5) + cx5;
-       cres3 = imul_b1_b3(cx5) + cres2;
+        cx32 = imul_b1_b3(cx12) - cx12;
+        t = DESCALE(cx30 + cx32 + cres2);
+        val3 = CLAMP(t);
 
-       /* same index as before */
-       // descale, convert to unsigned and clamp to 8-bit
-       t = ((int16)(cx30 + cx12 + cx5) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0x8000)
-         val0 = 0;
-       else if (t & 0xFF00)
-          val0 = 255;
-       else
-         val0 = (uint8)t;
+        t = DESCALE(cx30 + cres3 - cx32);
+        val1 = CLAMP(t);
 
-       cx32 = imul_b1_b3(cx12) - cx12;
-       t = ((int16)(cx30 + cx32 + cres2) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0x8000)
-         val3 = 0;
-       else if (t & 0xFF00)
-          val3 = 255;
-       else
-         val3 = (uint8)t;
-
-       t = ((int16)(cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0x8000)
-         val1 = 0;
-       else if (t & 0xFF00)
-          val1 = 255;
-       else
-         val1 = (uint8)t;
-
-       t = ((int16)(cx30 + cres3 + cres1 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t & 0x8000)
-         val2 = 0; 
-       else if (t & 0xFF00)
-          val2 = 255;
-       else 
-         val2 = (uint8)t;
-
-
-      cont_idct_cols:
-
+        t = DESCALE(cx30 + cres3 + cres1 - cx12);
+        val2 = CLAMP(t);
+      }
       output0[outputIdx] = val0;
       output1[outputIdx] = val1;
       output2[outputIdx] = val2;
       output3[outputIdx] = val3;
-      pSrc_0_8++;
-      pSrc_1_8++;
-      pSrc_2_8++;
       outputIdx++;
-      if (outputIdx == 0) {
-        output0 += 256;
-        output1 += 256;
-        output2 += 256;
-        output3 += 256;
-      }
    }
 }
 

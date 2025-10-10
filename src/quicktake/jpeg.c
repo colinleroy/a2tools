@@ -120,7 +120,7 @@ uint8 gLastDC_l[3];
 uint8 gLastDC_h[3];
 
 #ifndef __CC65__
-uint16 gCoeffBuf[8*8];
+int16 gCoeffBuf[8*8];
 
 uint8 ZAG_Coeff[] =
 {
@@ -918,7 +918,7 @@ static uint8 mcu_x = 0;
 static uint8 status;
 static uint16 dst_y;
 extern uint8 *output0, *output1, *output2, *output3;
-extern uint8 outputIdx;
+extern uint16 outputIdx;
 #pragma zpsym("outputIdx")
 
 void qt_load_raw(uint16 top)
