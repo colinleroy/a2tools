@@ -98,6 +98,7 @@ display:
           off_t offset = y*w + x;
           int color = c2;
           int highlight = blink ? abs(c2-c) : 0;
+          printf("%d,%d: %d (%s) vs %d (%s)\n", x, y, c, argv[1], c2, argv[2]);
           sdl_set_pixel(screen, x*2, y*2, color, color/(1+highlight), color);
           sdl_set_pixel(screen, x*2+1, y*2, color, color/(1+highlight), color);
           sdl_set_pixel(screen, x*2, y*2+1, color, color/(1+highlight), color);

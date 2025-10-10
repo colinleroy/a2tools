@@ -4,9 +4,8 @@
         .import     popptr1
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
-        .import     _mul669_l, _mul669_m, _mul669_h
         .import     _mul362_l, _mul362_m, _mul362_h
-        .import     _mul277_l, _mul277_m, _mul277_h
+        .import     _mul473_l, _mul473_m, _mul473_h
         .import     _mul196_l, _mul196_m, _mul196_h
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
@@ -23,7 +22,7 @@
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _getBitsNoFF, _getBitsFF
-        .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
+        .export     _idctRows, _idctCols, _decodeNextMCU
         .export     _pjpeg_decode_mcu
         .export     _copy_decoded_to
         .export     _createWinogradQuant0, _createWinogradQuant1
@@ -397,7 +396,7 @@ getOctet_done:
         rts
 
 ; Low byte in Y, high in X, high loaded last !
-.macro imul TABL, TABM, TABH
+.macro imul TABL, TABM, TABH, REVERSESIGN
 .scope
         clc
 
@@ -430,7 +429,7 @@ getOctet_done:
         sta    tmp1
 
         ; dw += (mul362_m[h]) << 16;
-        .if .paramcount = 3
+        .ifnblank TABH
         lda    TABH,y
         .else
         lda    #$00
@@ -441,8 +440,11 @@ getOctet_done:
         ; Was val negative?
 neg = *+1
         lda    #$FF
+        .ifblank REVERSESIGN
         bpl    done
-
+        .else
+        bmi    done
+        .endif
         ; dw ^= 0xffffff, dw++
         lda    #$FF
         eor    TABL,y
@@ -466,20 +468,14 @@ done:
         imul    _mul362_l, _mul362_m, _mul362_h
 .endmacro
 
-; uint16 __fastcall__ imul_b2(int16 w)
-
-.macro IMUL_B2
-        imul    _mul669_l, _mul669_m, _mul669_h
-.endmacro
-
 ; uint16 __fastcall__ imul_b4(int16 w)
 .macro IMUL_B4
-        imul    _mul277_l, _mul277_m, _mul277_h
+        imul    _mul473_l, _mul473_m, _mul473_h, 1
 .endmacro
 
 ; uint16 __fastcall__ imul_b5(int16 w)
 .macro IMUL_B5
-        imul    _mul196_l, _mul196_m
+        imul    _mul196_l, _mul196_m, , 1
 .endmacro
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
@@ -661,27 +657,22 @@ rres1h= ptr4+1
 
         ; x13
         clc
+        ldx    #0
         lda    _gCoeffBuf+4,y
         sta    rx13l
         adc    rx30l
-        tax
+        bcc    :+
+        inx                   ; Remember first carry
+        clc
+:       adc    rx5l
+        sta    _gCoeffBuf,y
+
         lda    _gCoeffBuf+5,y
         sta    rx13h
         adc    rx30h
-        tay
-
-        ;*(rowSrc) = x30 + x13 + x5;
-        clc
-        txa
-        adc    rx5l
-        tax
-        tya
+        cpx    #1               ; Apply first carry
         adc    rx5h
-
-        ldy    inputIdx
         sta    _gCoeffBuf+1,y
-        txa
-        sta    _gCoeffBuf,y
 
         ; x32 = imul_b1_b3(x13) - x13;
         ldy    rx13l
@@ -694,48 +685,35 @@ rres1h= ptr4+1
         sbc    rx13h
         sta    rx32h
 
-        ; res1 = imul_b5(-x5);
-        sec
-        lda    #$00
-        sbc    rx5l
-        tay
-        lda    #$00
-        sbc    rx5h
-        tax
+        ; res1 = imul_b5(x5);
+        ldy    rx5l
+        ldx    rx5h
         IMUL_B5
         sta    rres1l
         stx    rres1h
 
-        ; res2 = imul_b4(x5) - res1 - x5;
+        ; res2 = imul_b4(x5) + x5;
         ldy    rx5l
         ldx    rx5h
         IMUL_B4
-        sec                     ; -res1
-        sbc    rres1l
-        tay
-        txa
-        sbc    rres1h
-        tax
-
-        tya
-        sec                     ; -x5
-        sbc    rx5l
+        clc                     ; +x5
+        adc    rx5l
         sta    rres2l
         txa
-        sbc    rx5h
+        adc    rx5h
         sta    rres2h
 
-        ; res3 = imul_b1_b3(x5) - res2;
+        ; res3 = imul_b1_b3(x5) + res2;
         ldy    rx5l
         ldx    rx5h
         IMUL_B1_B3
-        sec
+        clc
 rres2l = *+1
-        sbc    #$FF
+        adc    #$FF
         tay
         txa
 rres2h = *+1
-        sbc    #$FF
+        adc    #$FF
         tax
 
         ; *(rowSrc_1) = res3 + x30 - x32;
@@ -783,7 +761,7 @@ res3x30h = *+1
         sbc    rx13h
         sta    _gCoeffBuf+5,y
 
-        ; *(rowSrc_3) = x30 + x32 - res2;
+        ; *(rowSrc_3) = x30 + x32 + res2;
         clc
         lda    rx30l
         adc    rx32l
@@ -792,11 +770,11 @@ res3x30h = *+1
         adc    rx32h
         tax
         lda    tmp1
-        sec
-        sbc    rres2l
+        clc
+        adc    rres2l
         sta    _gCoeffBuf+6,y
         txa
-        sbc    rres2h
+        adc    rres2h
         sta    _gCoeffBuf+7,y
 
 cont_idct_rows:
@@ -824,20 +802,15 @@ nextCol:
         bne     full_idct_cols
         lda     _gCoeffBuf+32,y
         bne     full_idct_cols
-        lda     _gCoeffBuf+48,y
-        bne     full_idct_cols
 
         lda     _gCoeffBuf+17,y
         bne     full_idct_cols
         lda     _gCoeffBuf+33,y
         bne     full_idct_cols
-        lda     _gCoeffBuf+49,y
-        bne     full_idct_cols
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
         lda     _gCoeffBuf+1,y
         ldx     _gCoeffBuf,y
-
 
         SHIFT_XA_7RIGHT_AND_CLAMP
 
@@ -880,65 +853,52 @@ cx12h = ptr4+1
         lda     _gCoeffBuf+33,y
         sta     cx12h
 
-        ;res1 = imul_b5(- x5)
-        sec
-        lda     #$00
-        sbc     cx5l
-        tay
-        lda     #$00
-        sbc     cx5h
-        tax
+        ;res1 = imul_b5(x5)
+        ldy     cx5l
+        ldx     cx5h
         IMUL_B5
         sta     cres1l
         stx     cres1h
 
-        ;res2 = imul_b4(x5) - res1 - x17;
+        ;res2 = imul_b4(x5) + x5;
         ldy     cx5l
         ldx     cx5h
         IMUL_B4
 
-        sec
-        sbc     cres1l
-        tay
-        txa
-        sbc     cres1h
-        tax
-
-        sec
-        tya
-        sbc     cx5l
+        clc
+        adc     cx5l
         sta     cres2l
         txa
-        sbc     cx5h
+        adc     cx5h
         sta     cres2h
 
-        ;res3 = imul_b1_b3(x5) - res2;
+        ;res3 = imul_b1_b3(x5) + res2;
         ldy     cx5l
         ldx     cx5h
         IMUL_B1_B3
-        sec
+        clc
 cres2l = *+1
-        sbc     #$FF
+        adc     #$FF
         sta     cres3l
         txa
 cres2h = *+1
-        sbc     #$FF
+        adc     #$FF
         sta     cres3h
 
-        ; val0 = ((x30 + x12 + x17) >> PJPG_DCT_SCALE_BITS) +128;
+        ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
+        ldx     #0
         lda     cx30l
         adc     cx12l
+        bcc     :+
+        inx
+        clc
+:       adc     cx5l
         tay
+
         lda     cx30h
         adc     cx12h
-        tax
-
-        clc
-        tya
-        adc     cx5l
-        tay
-        txa
+        cpx     #1
         adc     cx5h
 
         SHIFT_YA_7RIGHT_AND_CLAMP
@@ -957,69 +917,65 @@ cres2h = *+1
         sta     cx32h
         tax
 
-        ; val3 = ((x30 + x32 - res2) >> PJPG_DCT_SCALE_BITS) +128;
+        ; val3 = ((x32 + x30 + res2) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         tya
+        ldy     #0
         adc     cx30l
-        tay
+        bcc     :+
+        iny
+        clc
+:       adc     cres2l
+        sta     tmp1
+
         txa
         adc     cx30h
-        tax
-
-        sec
-        tya
-        sbc     cres2l
-        tay
-        txa
-        sbc     cres2h
+        cpy     #1
+        adc     cres2h
+        ldy     tmp1
 
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val3
 
-        ;x42 = x30 - x32;
-        sec
+        ; val1 = ((cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) +128;
+        clc
         lda     cx30l
+cres3l = *+1
+        adc     #$FF
+        sta     cx30lcres3l
+        tay
+
+        lda     cx30h
+cres3h = *+1
+        adc     #$FF
+        sta     cx30hcres3h
+        tax
+
+        sec
+        tya
 cx32l = *+1
         sbc     #$FF
         tay
-        lda     cx30h
+        txa
 cx32h = *+1
         sbc     #$FF
-        tax
-
-        ; val1 = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
-        clc
-        tya
-cres3l = *+1
-        adc     #$FF
-        tay
-        txa
-cres3h = *+1
-        adc     #$FF
 
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val1
 
-        ;res3 + res1
+        ;cx30 + cres3 + cres1
         clc
-        tya
 cres1l = *+1
         lda     #$FF
-        adc     cres3l
+cx30lcres3l = *+1
+        adc     #$FF
         tay
 cres1h = *+1
         lda     #$FF
-        adc     cres3h
+cx30hcres3h = *+1
+        adc     #$FF
         tax
 
-        ; + x30
-        clc
-        tya
-        adc     cx30l
-        tay
-        txa
-        adc     cx30h
-        tax
         ; -x12
         sec
         tya
@@ -1268,7 +1224,13 @@ checkZAGLoop:
         bne     doZAGLoop
 
 ZAG_finished:
-        jsr     _transformBlock
+        jsr     _idctRows
+
+        lda     #0
+        ldy     mcuBlock
+        beq     :+
+        lda     #16
+:       jsr     _idctCols
 
         inc     mcuBlock
         ldx     mcuBlock
@@ -1333,17 +1295,6 @@ uselessBlocksDone:
         lda     #$00
         tax
         rts
-
-_transformBlock:
-        jsr     _idctRows
-
-        lda     #0
-        ldy     mcuBlock
-        beq     :+
-        lda     #16
-:
-        jsr     _idctCols     ; Keeping a jsr/rts here for profiling
-        rts                   ; Penalty is small, 4800*(12-3)
 
 _pjpeg_decode_mcu:
         lda    _gNumMCUSRemainingX

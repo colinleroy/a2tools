@@ -1,9 +1,8 @@
 ; Too bad there's no #pragma align in cc65
         .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
-        .export _mul669_h, _mul669_m, _mul669_l
         .export _mul362_h, _mul362_m, _mul362_l
-        .export _mul277_h, _mul277_m, _mul277_l
+        .export _mul473_h, _mul473_m, _mul473_l
         .export _mul196_m, _mul196_l
         .export _gWinogradQuant
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
@@ -53,22 +52,6 @@ _cache:           .res CACHE_SIZE+4
         .segment "DATA"
 ; 512 + 128 + 16 + 8 + 4 + 1  - too much shifting
 .align 256
-.proc _mul669_l
-  .repeat 256, I
-    .byte (I*669) .BITAND $FF
-  .endrepeat
-.endproc
-.proc _mul669_m
-  .repeat 256, I
-    .byte ((I*669) .SHR 8) .BITAND $FF
-  .endrepeat
-.endproc
-.proc _mul669_h
-  .repeat 256, I
-    .byte ((I*669) .SHR 16) .BITAND $FF
-  .endrepeat
-.endproc
-
 ; 256+64+32+8+2 - too much shifting
 .proc _mul362_l
   .repeat 256, I
@@ -88,19 +71,19 @@ _cache:           .res CACHE_SIZE+4
 
 ;256+16+4+1 - too much shifting
 
-.proc _mul277_l
+.proc _mul473_l
   .repeat 256, I
-    .byte (I*277) .BITAND $FF
+    .byte (I*473) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul277_m
+.proc _mul473_m
   .repeat 256, I
-    .byte ((I*277) .SHR 8) .BITAND $FF
+    .byte ((I*473) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul277_h
+.proc _mul473_h
   .repeat 256, I
-    .byte ((I*277) .SHR 16) .BITAND $FF
+    .byte ((I*473) .SHR 16) .BITAND $FF
   .endrepeat
 .endproc
 

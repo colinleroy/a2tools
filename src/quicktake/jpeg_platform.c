@@ -113,19 +113,10 @@ uint16 __fastcall__ imul_b1_b3(int16 w)
   return (uint16)x;
 }
 
-uint16 __fastcall__ imul_b2(int16 w)
-{
-  uint32 x;
-  x = (uint32)w * 669;
-  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
-
-  return (uint16)x;
-}
-
 uint16 __fastcall__ imul_b4(int16 w)
 {
   uint32 x;
-  x = (uint32)w * 277;
+  x = (uint32)(-w * 473);
   FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
 
   return (uint16)x;
@@ -134,11 +125,12 @@ uint16 __fastcall__ imul_b4(int16 w)
 uint16 __fastcall__ imul_b5(int16 w)
 {
   uint32 x;
-  x = (uint32)w * 196;
+  x = (uint32)(-w * 196);
   FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
 
   return (uint16)x;
 }
+
 
 uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
@@ -241,13 +233,13 @@ nextIdctRowsLoop:
 
          x32 = imul_b1_b3(x13) - x13;
 
-         res1 = imul_b5(-x5);
-         res2 = imul_b4(x5) - res1 - x5;
-         res3 = imul_b1_b3(x5) - res2;
+         res1 = imul_b5(x5);
+         res2 = imul_b4(x5) + x5;
+         res3 = imul_b1_b3(x5) + x30 + res2;
 
-         *(rowSrc_1) = (res3 + x30) - x32;
-         *(rowSrc_2) = x30 + res3 + res1 - x13;
-         *(rowSrc_3) = x30 + x32 - res2;
+         *(rowSrc_1) = res3 - x32;
+         *(rowSrc_2) = res3 + res1 - x13;
+         *(rowSrc_3) = x32 + x30 + res2;
 
       cont_idct_rows:
       rowSrc += 8;
@@ -311,9 +303,9 @@ void idctCols(uint8 mcuoffset)
        cx5  = *(pSrc_1_8);
        cx12 = *(pSrc_2_8);
 
-       cres1 = imul_b5(-cx5);
-       cres2 = imul_b4(cx5) - cres1 - cx5;
-       cres3 = imul_b1_b3(cx5) - cres2;
+       cres1 = imul_b5(cx5);
+       cres2 = imul_b4(cx5) + cx5;
+       cres3 = imul_b1_b3(cx5) + cres2;
 
        /* same index as before */
        // descale, convert to unsigned and clamp to 8-bit
@@ -326,7 +318,7 @@ void idctCols(uint8 mcuoffset)
          output[mcuoffset + 0*4] = (uint8)t;
 
        cx32 = imul_b1_b3(cx12) - cx12;
-       t = ((int16)(cx30 + cx32 - cres2) >> PJPG_DCT_SCALE_BITS) + 128;
+       t = ((int16)(cx30 + cx32 + cres2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
          output[mcuoffset + 3*4] = 0;
        else if (t & 0xFF00)
@@ -334,8 +326,7 @@ void idctCols(uint8 mcuoffset)
        else
          output[mcuoffset + 3*4] = (uint8)t;
 
-       cx42 = cx30 - cx32;
-       t = ((int16)(cx42 + cres3) >> PJPG_DCT_SCALE_BITS) + 128;
+       t = ((int16)(cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t & 0xF000)
          output[mcuoffset + 1*4] = 0;
        else if (t & 0xFF00)
@@ -454,7 +445,8 @@ uint8 decodeNextMCU(uint8 *pDst_row)
         }
       }
     }
-    transformBlock(mcuBlock);
+    idctRows();
+    idctCols(mcuBlock == 0 ? 0 : 16);
   }
 
    /* Skip the other blocks, do the minimal work, only consuming
@@ -494,16 +486,6 @@ uint8 decodeNextMCU(uint8 *pDst_row)
   skipBits = 0;
 
   return 0;
-}
-
-void transformBlock(uint8 mcuBlock)
-{
-  uint8* pGDst;
-  uint8* pSrc;
-  uint8 iTB;
-
-  idctRows();
-  idctCols(mcuBlock == 0 ? 0 : 16);
 }
 
 //------------------------------------------------------------------------------
