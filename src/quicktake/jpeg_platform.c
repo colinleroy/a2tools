@@ -521,16 +521,14 @@ uint8 decodeNextMCU(void)
 
     for (cur_ZAG_coeff = 1; cur_ZAG_coeff != 64;) {
       s = huffDecode(skipACHuff, skipACHuffVal);
-
+      if (!s) {
+        break;
+      }
       numExtraBits = s & 0xF;
       if (numExtraBits)
         getBitsFF(numExtraBits);
 
-      if (!s) {
-        break;
-      } else {
-        cur_ZAG_coeff += (s >> 4) + 1;
-      }
+      cur_ZAG_coeff += (s >> 4) + 1;
    }
   }
   skipBits = 0;

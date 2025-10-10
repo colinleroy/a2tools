@@ -1024,33 +1024,35 @@ _setQuant:
         cmp     #0
         beq     :+
 
-        ldx     #<_gQuant1_l
-        stx     load_pq0l+1
+        ldx     _gQuant1_l    ; Value for [0] won't change, set it directly
+        stx     pq0l+1
+        ldx     _gQuant1_h
+        stx     pq0h+1
+
+        ldx     #<_gQuant1_l  ; Set array address
         stx     load_pq1l+1
         ldx     #>_gQuant1_l
-        stx     load_pq0l+2
         stx     load_pq1l+2
 
         ldx     #<_gQuant1_h
-        stx     load_pq0h+1
         stx     load_pq1h+1
         ldx     #>_gQuant1_h
-        stx     load_pq0h+2
         stx     load_pq1h+2
         rts
 
-:       ldx     #<_gQuant0_l
-        stx     load_pq0l+1
+:       ldx     _gQuant0_l
+        stx     pq0l+1
+        ldx     _gQuant0_h
+        stx     pq0h+1
+
+        ldx     #<_gQuant0_l
         stx     load_pq1l+1
         ldx     #>_gQuant0_l
-        stx     load_pq0l+2
         stx     load_pq1l+2
 
         ldx     #<_gQuant0_h
-        stx     load_pq0h+1
         stx     load_pq1h+1
         ldx     #>_gQuant0_h
-        stx     load_pq0h+2
         stx     load_pq1h+2
         rts
 
@@ -1151,8 +1153,6 @@ zeroBuf:
         sta     _gCoeffBuf+3
         sta     _gCoeffBuf+4  ; 2
         sta     _gCoeffBuf+5
-        sta     _gCoeffBuf+2  ; 1
-        sta     _gCoeffBuf+3
         sta     _gCoeffBuf+16 ; 8
         sta     _gCoeffBuf+17
         sta     _gCoeffBuf+18 ; 9
@@ -1174,10 +1174,9 @@ decodeDC:
         and     #$0F          ; numExtraBits
         beq     :+
         jsr     getBitsDirect ; r = getBitsFF(numExtraBits);
-        jmp     doExtend
+        .byte   $A0           ; ldy IMM, eats tax, eq jmp doExtend
 :       tax                   ; otherwise set r to uint16 0 (A is 0)
 
-doExtend:
         sta     ptr2         ; dc = huffExtend(r, s);
         stx     ptr2+1
         lda     sDMCU
@@ -1196,22 +1195,22 @@ doExtend:
         sta     ptr2+1
 
         ;gCoeffBuf[0] = dc * pQ[0];
-load_pq0h:
-        ldx     $FFFF
-load_pq0l:
-        lda     $FFFF
+pq0h:
+        ldx     #$FF
+pq0l:
+        lda     #$FF
         jsr     mult16x16x16_direct
-        sta     _gCoeffBuf    ; and store gCoeffBuf[0]
+        sta     _gCoeffBuf      ; and store gCoeffBuf[0]
         stx     _gCoeffBuf+1
 
-        ldy     #1            ; start the ZAG_coeff loop
+        ldy     #1              ; start the ZAG_coeff loop
 
 doZAGLoop:
         sty     cur_ZAG_coeff
 huffDecAC:
         jmp     $FFFF           ; Patched with huffDecode2 or 3
 decodeAC:
-        tax                     ; r = s >> 4;
+        tax                     ; r = s >> 4, and backup value
         lda     right_shift_4,x
         sta     rDMCU
         ; cur_ZAG_coeff += r;
@@ -1220,10 +1219,10 @@ decodeAC:
         sta     cur_ZAG_coeff
         tay                     ; to Y in case !s
 
-        txa                     ; numExtraBits = s & 0xF
+        txa                     ; restore value, numExtraBits = s & 0xF
         and     #$0F
 
-        bne     getData   ; if (s)
+        bne     getData         ; if (s)
         lda     rDMCU
         cmp     #15
         beq     checkZAGLoop
@@ -1236,7 +1235,7 @@ getData:
 
         ldy     cur_ZAG_coeff   ; We only do a part of the matrix
         ldx     _ZAG_Coeff,y
-        bmi     end_of_coeff_cal
+        bmi     end_of_coeff_calc
         stx     ZC              ; Remember Zag coeff
         sta     ptr2            ; Finish storing for huffExtend
 
@@ -1245,7 +1244,7 @@ dataS:
         lda     #$FF
         HUFFEXTEND 1
 
-        ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
+        ;gCoeffBuf[cur_ZAG_coeff] = ac * pQ[cur_ZAG_coeff];
 load_pq1l:
         lda     $FFFF,y         ; Y still cur_ZAG_coeff
 load_pq1h:
@@ -1260,7 +1259,7 @@ ZC = *+1
 
         ldy     cur_ZAG_coeff
 
-end_of_coeff_cal:
+end_of_coeff_calc:
         iny                     ; cur_ZAG_coeff
 checkZAGLoop:
         cpy     #64             ; end_ZAG_coeff
@@ -1301,7 +1300,7 @@ skipAC:
         ldx     tmp1
         lda     right_shift_4,x
 
-        sec             ; Set carry for for loop inc
+        sec             ; Set carry for the loop's inc
         adc     iDMCU
         cmp     #64
         bne     i64loop
