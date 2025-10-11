@@ -3,7 +3,7 @@
         .export _extendOffsets_l, _extendOffsets_h
         .export _mul145_m, _mul145_l
         .export _mul217_m, _mul217_l
-        .export _mul196_m, _mul196_l
+        .export _mul51_m, _mul51_l
         .export _mul106_m, _mul106_l
         .export _gWinogradQuant
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
@@ -90,19 +90,19 @@ _gCoeffBuf:       .res 128
   .endrepeat
 ; .endproc
 
-.proc _mul196_l
+.proc _mul51_l
   .repeat 256, I
-    .byte (I*196) .BITAND $FF
+    .byte (I*51) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul196_m
+.proc _mul51_m
   .repeat 256, I
-    .byte ((I*196) .SHR 8) .BITAND $FF
+    .byte ((I*51) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-; .proc _mul196_h
+; .proc _mul51_h
   .repeat 256, I
-    .assert ((I*196) .SHR 16) .BITAND $FF = 0, error
+    .assert ((I*51) .SHR 16) .BITAND $FF = 0, error
   .endrepeat
 ; .endproc
 

@@ -6,7 +6,7 @@
         .import     _fillInBuf, _cache
         .import     _mul145_l, _mul145_m
         .import     _mul217_l, _mul217_m
-        .import     _mul196_l, _mul196_m
+        .import     _mul51_l, _mul51_m
         .import     _mul106_l, _mul106_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
@@ -467,7 +467,7 @@ done:
 
 ; uint16 __fastcall__ imul_b5(int16 w)
 .macro IMUL_B5
-        imul    _mul196_l, _mul196_m, , 1
+        imul    _mul51_l, _mul51_m, , 1
 .endmacro
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
@@ -670,12 +670,16 @@ rres1h= ptr4+1
         sta    rx32l
         stx    rx32h
 
-        ; res1 = imul_b5(x5);
+        ; res1 = imul_b5(x5) + x30;
         ldy    rx5l
         ldx    rx5h
         IMUL_B5
+        clc
+        adc    rx30l
         sta    rres1l
-        stx    rres1h
+        txa
+        adc    rx30h
+        sta    rres1h
 
         ; res2 = imul_b4(x5);
         ldy    rx5l
@@ -689,14 +693,12 @@ rres1h= ptr4+1
         ldx    rx5h
         IMUL_B1
 
-        ; *(rowSrc_1) = res3 + x30 - x32;
+        ; gCoeffBuf[(idctRC)+1] = res3 + x30 - x32;
         clc
         adc    rx30l
-        sta    res3x30l
         tay
         txa
         adc    rx30h
-        sta    res3x30h
         tax
 
         tya
@@ -711,25 +713,15 @@ rx32h = *+1
         sbc    #$FF
         sta    _gCoeffBuf+3,y
 
-        ; *(rowSrc_2) = res3x30l + res1 - x13;
-
+        ; gCoeffBuf[(idctRC)+2] = res1 - x13;
         clc
-res3x30l = *+1
-        lda    #$FF
-        adc    rres1l
-        tay
-res3x30h = *+1
-        lda    #$FF
-        adc    rres1h
-        tax
-
-        tya
+        lda    rres1l
         sec
         sbc    rx13l
 
         ldy    inputIdx
         sta    _gCoeffBuf+4,y
-        txa
+        lda    rres1h
         sbc    rx13h
         sta    _gCoeffBuf+5,y
 
@@ -894,13 +886,11 @@ cres2h = *+1
         lda     cx30l
 cres3l = *+1
         adc     #$FF
-        sta     cx30lcres3l
         tay
 
         lda     cx30h
 cres3h = *+1
         adc     #$FF
-        sta     cx30hcres3h
         tax
 
         sec
@@ -915,20 +905,17 @@ cx32h = *+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val1
 
-        ;cx30 + cres3 + cres1
+        ;cx30 + cres1 -cx12
         clc
 cres1l = *+1
         lda     #$FF
-cx30lcres3l = *+1
-        adc     #$FF
+        adc     cx30l
         tay
 cres1h = *+1
         lda     #$FF
-cx30hcres3h = *+1
-        adc     #$FF
+        adc     cx30h
         tax
 
-        ; -x12
         sec
         tya
         sbc     cx12l
