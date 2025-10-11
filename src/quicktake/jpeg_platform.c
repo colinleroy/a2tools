@@ -235,7 +235,7 @@ void idctRows(void)
 
        res1 = imul_b5(x5);
        res2 = imul_b4(x5);
-       res3 = imul_b1_b3(x5) + x30 + res2;
+       res3 = imul_b1_b3(x5) + imul_b4(x5) + x30;
 
        gCoeffBuf[(idctRC)+1] = res3 - x32;
        gCoeffBuf[(idctRC)+2] = res3 + res1 - x13;
@@ -283,7 +283,7 @@ void idctCols(void)
 
         cres1 = imul_b5(cx5);
         cres2 = imul_b4(cx5);
-        cres3 = imul_b1_b3(cx5) + cres2;
+        cres3 = imul_b1_b3(cx5) + imul_b4(cx5);
 
         /* same index as before */
         // descale, convert to unsigned and clamp to 8-bit
