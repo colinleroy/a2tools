@@ -274,19 +274,18 @@ void idctCols(void)
       } else {
         int16 cx5, cx30, cx12;
         int16 cres1, cres2, cres3;
-        int16 cx32, cx42;
+        int16 cx32;
 
         cx30 = gCoeffBuf[idctCC+0*8];
         cx5  = gCoeffBuf[idctCC+1*8];
         cx12 = gCoeffBuf[idctCC+2*8];
-
-        cres2 = imul_b4(cx5);
 
         /* same index as before */
         // descale, convert to unsigned and clamp to 8-bit
         t = DESCALE(cx30 + cx12 + cx5);
         val0 = CLAMP(t);
 
+        cres2 = imul_b4(cx5);
         cx32 = imul_b2(cx12);
         t = DESCALE(cx32 + cx30 + cres2);
         val3 = CLAMP(t);

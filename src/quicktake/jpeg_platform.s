@@ -803,16 +803,9 @@ cx12h = ptr4+1
 
         ; cx12
         lda     _gCoeffBuf+32,y
-        sta     cx12l             ; used 4 times
+        sta     cx12l
         lda     _gCoeffBuf+33,y
         sta     cx12h
-
-        ;res2 = imul_b4(x5);
-        ldy     cx5l
-        ldx     cx5h
-        IMUL_B4
-        sta     cres2l
-        stx     cres2h
 
         ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
@@ -832,6 +825,13 @@ cx12h = ptr4+1
 
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val0
+
+        ;res2 = imul_b4(x5);
+        ldy     cx5l
+        ldx     cx5h
+        IMUL_B4
+        sta     cres2l
+        stx     cres2h
 
         ; cx32 = imul_b1_b3(cx12);
         ldy     cx12l
