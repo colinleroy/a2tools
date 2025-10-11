@@ -423,7 +423,7 @@ getOctet_done:
         adc    TABM,x
         tax             ; remember for return or sign reversal
 
-        ; Was val negative?
+        ; Was val negative? (or should we reverse sign)
 neg = *+1
         lda    #$FF
         .ifblank REVERSESIGN
@@ -755,6 +755,8 @@ _idctCols:
         ldy     #0
 nextCol:
         sty     inputIdx
+        ldx     _gCoeffBuf,y
+
         lda     _gCoeffBuf+16,y
         bne     full_idct_cols
         lda     _gCoeffBuf+32,y
@@ -767,8 +769,6 @@ nextCol:
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
         lda     _gCoeffBuf+1,y
-        ldx     _gCoeffBuf,y
-
         SHIFT_XA_7RIGHT_AND_CLAMP
 
         sta     val0
@@ -786,11 +786,8 @@ cx5h  = ptr3+1
 cx12l = ptr4
 cx12h = ptr4+1
 
-        sty     inputIdx          ; Backup before b5/b2/b4/b1_b3 mults
-
         ; cx30
-        lda     _gCoeffBuf,y
-        sta     cx30l
+        stx     cx30l           ; X already _gCoeffBuf,y
         lda     _gCoeffBuf+1,y
         sta     cx30h
 
@@ -803,13 +800,13 @@ cx12h = ptr4+1
         ; cx12
         lda     _gCoeffBuf+32,y
         sta     cx12l
-        lda     _gCoeffBuf+33,y
+        lda    _gCoeffBuf+33,y
         sta     cx12h
 
         ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
+        txa                     ; Still cx30l
         ldx     #0
-        lda     cx30l
         adc     cx12l
         bcc     :+
         inx
@@ -851,7 +848,7 @@ cres2l = *+1
         adc     #$FF
         sta     tmp1
 
-        txa
+        txa                     ; Still cx32h
         adc     cx30h
         cpy     #1
 cres2h = *+1
@@ -926,12 +923,9 @@ _output3 = *+1
         sta     $FF00,y
 
         iny
-        bne     :+
-        inc     _output0+1
-        inc     _output1+1
-        inc     _output2+1
-        inc     _output3+1
-:       sty     _outputIdx
+        beq     shiftOutput
+storeOutputIdx:
+        sty     _outputIdx
 
         ldy     inputIdx
 
@@ -939,8 +933,14 @@ _output3 = *+1
         beq     idctColDone
         iny
         iny
-        ; inc     outputIdx - already inc'd while loaded
         jmp     nextCol
+
+shiftOutput:
+        inc     _output0+1
+        inc     _output1+1
+        inc     _output2+1
+        inc     _output3+1
+        jmp     storeOutputIdx
 
 idctColDone:
         rts
