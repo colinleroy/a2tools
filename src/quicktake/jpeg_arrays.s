@@ -2,7 +2,7 @@
         .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
         .export _mul362_h, _mul362_m, _mul362_l
-        .export _mul217_h, _mul217_m, _mul217_l
+        .export _mul217_m, _mul217_l
         .export _mul196_m, _mul196_l
         .export _gWinogradQuant
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
@@ -83,11 +83,11 @@ _gCoeffBuf:       .res 128
     .byte ((I*217) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul217_h
+; .proc _mul217_h
   .repeat 256, I
-    .byte ((I*217) .SHR 16) .BITAND $FF
+    .assert ((I*217) .SHR 16) .BITAND $FF = 0, error
   .endrepeat
-.endproc
+; .endproc
 
 .proc _mul196_l
   .repeat 256, I
@@ -99,6 +99,11 @@ _gCoeffBuf:       .res 128
     .byte ((I*196) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
+; .proc _mul196_h
+  .repeat 256, I
+    .assert ((I*196) .SHR 16) .BITAND $FF = 0, error
+  .endrepeat
+; .endproc
 
 .assert <* = 0, error
 .proc right_shift_4

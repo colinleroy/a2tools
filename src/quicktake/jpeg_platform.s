@@ -5,7 +5,7 @@
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
         .import     _mul362_l, _mul362_m, _mul362_h
-        .import     _mul217_l, _mul217_m, _mul217_h
+        .import     _mul217_l, _mul217_m
         .import     _mul196_l, _mul196_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
@@ -456,7 +456,7 @@ done:
 
 ; uint16 __fastcall__ imul_b4(int16 w)
 .macro IMUL_B4
-        imul    _mul217_l, _mul217_m, _mul217_h, 1
+        imul    _mul217_l, _mul217_m, , 1
 .endmacro
 
 ; uint16 __fastcall__ imul_b5(int16 w)
