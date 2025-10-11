@@ -7,6 +7,7 @@
         .import     _mul362_l, _mul362_m, _mul362_h
         .import     _mul217_l, _mul217_m
         .import     _mul196_l, _mul196_m
+        .import     _mul106_l, _mul106_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
@@ -454,6 +455,11 @@ done:
         imul    _mul362_l, _mul362_m, _mul362_h
 .endmacro
 
+; uint16 __fastcall__ imul_b2(int16 w)
+.macro IMUL_B2
+        imul    _mul106_l, _mul106_m, ,
+.endmacro
+
 ; uint16 __fastcall__ imul_b4(int16 w)
 .macro IMUL_B4
         imul    _mul217_l, _mul217_m, , 1
@@ -657,16 +663,12 @@ rres1h= ptr4+1
         adc    rx5h
         sta    _gCoeffBuf+1,y
 
-        ; x32 = imul_b1_b3(x13) - x13;
+        ; x32 = imul_b2(x13);
         ldy    rx13l
         ldx    rx13h
-        IMUL_B1_B3
-        sec
-        sbc    rx13l
+        IMUL_B2
         sta    rx32l
-        txa
-        sbc    rx13h
-        sta    rx32h
+        stx    rx32h
 
         ; res1 = imul_b5(x5);
         ldy    rx5l
@@ -870,22 +872,15 @@ cres2h = *+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val0
 
-        ; cx32 = imul_b1_b3(cx12) - cx12;
+        ; cx32 = imul_b1_b3(cx12);
         ldy     cx12l
         ldx     cx12h
-        IMUL_B1_B3
-        sec
-        sbc     cx12l
+        IMUL_B2
         sta     cx32l
-        tay
-        txa
-        sbc     cx12h
-        sta     cx32h
-        tax
+        stx     cx32h
 
         ; val3 = ((x32 + x30 + res2) >> PJPG_DCT_SCALE_BITS) +128;
         clc
-        tya
         ldy     #0
         adc     cx30l
         bcc     :+

@@ -4,6 +4,7 @@
         .export _mul362_h, _mul362_m, _mul362_l
         .export _mul217_m, _mul217_l
         .export _mul196_m, _mul196_l
+        .export _mul106_m, _mul106_l
         .export _gWinogradQuant
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
         .export _gHuffVal0, _gHuffVal1, _gHuffVal2, _gHuffVal3
@@ -102,6 +103,22 @@ _gCoeffBuf:       .res 128
 ; .proc _mul196_h
   .repeat 256, I
     .assert ((I*196) .SHR 16) .BITAND $FF = 0, error
+  .endrepeat
+; .endproc
+
+.proc _mul106_l
+  .repeat 256, I
+    .byte (I*106) .BITAND $FF
+  .endrepeat
+.endproc
+.proc _mul106_m
+  .repeat 256, I
+    .byte ((I*106) .SHR 8) .BITAND $FF
+  .endrepeat
+.endproc
+; .proc _mul106_h
+  .repeat 256, I
+    .assert ((I*106) .SHR 16) .BITAND $FF = 0, error
   .endrepeat
 ; .endproc
 
