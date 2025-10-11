@@ -2,7 +2,7 @@
         .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
         .export _mul362_h, _mul362_m, _mul362_l
-        .export _mul473_h, _mul473_m, _mul473_l
+        .export _mul217_h, _mul217_m, _mul217_l
         .export _mul196_m, _mul196_l
         .export _gWinogradQuant
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
@@ -73,19 +73,19 @@ _gCoeffBuf:       .res 128
   .endrepeat
 .endproc
 
-.proc _mul473_l
+.proc _mul217_l
   .repeat 256, I
-    .byte (I*473) .BITAND $FF
+    .byte (I*217) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul473_m
+.proc _mul217_m
   .repeat 256, I
-    .byte ((I*473) .SHR 8) .BITAND $FF
+    .byte ((I*217) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul473_h
+.proc _mul217_h
   .repeat 256, I
-    .byte ((I*473) .SHR 16) .BITAND $FF
+    .byte ((I*217) .SHR 16) .BITAND $FF
   .endrepeat
 .endproc
 

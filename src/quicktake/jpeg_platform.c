@@ -117,7 +117,7 @@ uint16 __fastcall__ imul_b1_b3(int16 w)
 uint16 __fastcall__ imul_b4(int16 w)
 {
   uint32 x;
-  x = (uint32)(-w * 473);
+  x = (uint32)(-w * 217);
   FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
 
   return (uint16)x;
@@ -225,7 +225,7 @@ void idctRows(void)
        x32 = imul_b1_b3(x13) - x13;
 
        res1 = imul_b5(x5);
-       res2 = imul_b4(x5) + x5;
+       res2 = imul_b4(x5);
        res3 = imul_b1_b3(x5) + x30 + res2;
 
        gCoeffBuf[(idctRC)+1] = res3 - x32;
@@ -261,8 +261,8 @@ void idctCols(void)
         // Short circuit the 1D IDCT if only the DC component is non-zero
         t = DESCALE(gCoeffBuf[idctCC+0*8]);
         c = CLAMP(t);
-
         val0 = val1 = val2 = val3 = c;
+
       } else {
         int16 cx5, cx30, cx12;
         int16 cres1, cres2, cres3;
@@ -273,7 +273,7 @@ void idctCols(void)
         cx12 = gCoeffBuf[idctCC+2*8];
 
         cres1 = imul_b5(cx5);
-        cres2 = imul_b4(cx5) + cx5;
+        cres2 = imul_b4(cx5);
         cres3 = imul_b1_b3(cx5) + cres2;
 
         /* same index as before */
