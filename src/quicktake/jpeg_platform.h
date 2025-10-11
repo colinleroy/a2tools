@@ -21,10 +21,6 @@ uint8 getByteNoFF(void);
 void setFFCheck(uint8 on);
 extern uint16 extendTests[];
 extern uint16 extendOffsets[];
-extern uint8 mul669_l[256], mul669_m[256], mul669_h[256];
-extern uint8 mul362_l[256], mul362_m[256], mul362_h[256];
-extern uint8 mul277_l[256], mul277_m[256], mul277_h[256];
-extern uint8 mul196_l[256], mul196_m[256], mul196_h[256];
 extern int16 gCoeffBuf[8*8];
 extern uint16 gRestartInterval;
 extern uint16 gRestartsLeft;
@@ -65,8 +61,7 @@ extern uint8 gQuant1_l[8*8];
 extern uint8 gQuant1_h[8*8];
 
 // 6 bytes
-extern uint8 gLastDC_l[3];
-extern uint8 gLastDC_h[3];
+extern uint16 gLastDC;
 
 extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];

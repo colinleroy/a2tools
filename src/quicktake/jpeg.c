@@ -115,9 +115,7 @@ typedef enum
 
 //------------------------------------------------------------------------------
 // 128 bytes
-// 6 bytes
-uint8 gLastDC_l[3];
-uint8 gLastDC_h[3];
+uint16 gLastDC;
 
 #ifndef __CC65__
 int16 gCoeffBuf[8*8];
@@ -254,10 +252,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
   uint8 j = 0;
   uint16 code = 0;
   uint8 *l_pBits = pBits;
-  register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
-  register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
-  register uint8 *curValPtr = pHuffTable->mValPtr;
-  register uint8 *curGetMore = pHuffTable->mGetMore;
 
    for ( ; ; )
    {
@@ -827,13 +821,8 @@ uint8 processRestart(void)
    if (c != (gNextRestartNum + M_RST0))
       return PJPG_BAD_RESTART_MARKER;
 
-   // Reset each component's DC prediction values.
-   gLastDC_l[0] = 
-     gLastDC_l[1] = 
-     gLastDC_l[2] = 
-     gLastDC_h[0] = 
-     gLastDC_h[1] = 
-     gLastDC_h[2] = 0;
+   // Reset DC prediction values.
+   gLastDC = 0;
 
    gRestartsLeft = gRestartInterval;
 
@@ -853,12 +842,7 @@ static uint8 initScan(void)
    if (foundEOI)
       return PJPG_UNEXPECTED_MARKER;
 
-   gLastDC_l[0] = 
-     gLastDC_l[1] = 
-     gLastDC_l[2] = 
-     gLastDC_h[0] = 
-     gLastDC_h[1] = 
-     gLastDC_h[2] = 0;
+   gLastDC = 0;
 
    if (gRestartInterval)
    {

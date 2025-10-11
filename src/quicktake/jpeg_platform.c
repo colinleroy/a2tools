@@ -429,9 +429,8 @@ uint8 decodeNextMCU(void)
 
     dc = huffExtend(r, s);
 
-    dc = dc + gLastDC_l[0] + (gLastDC_h[0]<<8);
-    gLastDC_l[0] = dc & 0xFF;
-    gLastDC_h[0] = (dc & 0xFF00) >> 8;
+    dc = dc + gLastDC;
+    gLastDC = dc;
 
     gCoeffBuf[0] = dc * (pQ_l[0]|(pQ_h[0]<<8));
 

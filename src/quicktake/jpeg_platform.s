@@ -11,7 +11,7 @@
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
-        .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf
+        .import     _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf
         .import     _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
@@ -1161,13 +1161,13 @@ decodeDC:
         ; dc = dc + gLastDC[componentID=0];
         ; gLastDC[componentID=0] = dc;
         clc
-        adc     _gLastDC_l
-        sta     _gLastDC_l
+        adc     _gLastDC
+        sta     _gLastDC
         sta     ptr2          ; Store dc to ptr2 as it's where mult expects it
 
         txa
-        adc     _gLastDC_h
-        sta     _gLastDC_h
+        adc     _gLastDC+1
+        sta     _gLastDC+1
         sta     ptr2+1
 
         ;gCoeffBuf[0] = dc * pQ[0];
