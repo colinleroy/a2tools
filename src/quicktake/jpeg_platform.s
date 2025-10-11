@@ -255,11 +255,11 @@ large_n:
         sta     last_few+1
 
         lda     #0            ; Init result
-        sta     bbHigh
+        sta     bbHigh        ; Incl. high byte
 
         ldx     #8            ; Get the first eight
 :       INLINE_GETBIT_COUNT_Y 1
-        rol     a
+        rol     a             ; Don't rol high byte so far
         dex
         bne     :-
 
@@ -267,7 +267,7 @@ last_few:
         ldx     #$FF          ; Get the last (n-8)
 :       INLINE_GETBIT_COUNT_Y 1
         rol     a
-        rol     bbHigh
+        rol     bbHigh        ; Do rolhigh byte now
         dex
         bne     :-
         sty     _gBitsLeft
@@ -275,36 +275,15 @@ last_few:
         ldx     bbHigh
         rts
 
-skipBitsDirect:
-        ldy     _gBitsLeft
+skipBitsDirect:                 ; No need to split short/large here
+        ldy     _gBitsLeft      ; As we don't care about the result
         tax
-        cpx     #9
-        bcs     skip_large_n
-skip_small_n:
 :       INLINE_GETBIT_COUNT_Y
         dex
         bne     :-
         sty     _gBitsLeft
         ; X is zero
         rts
-
-skip_large_n:
-        lda     n_min_eight,x ; How much more than 8?
-        sta     skip_last_few+1
-
-        ldx     #8            ; Get the first eight
-:       INLINE_GETBIT_COUNT_Y
-        dex
-        bne     :-
-
-skip_last_few:
-        ldx     #$FF          ; Get the last (n-8)
-:       INLINE_GETBIT_COUNT_Y
-        dex
-        bne     :-
-        sty     _gBitsLeft
-        rts
-
 
 inc_cache_high1:
         inc     _cur_cache_ptr+1
