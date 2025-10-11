@@ -1,7 +1,7 @@
 ; Too bad there's no #pragma align in cc65
         .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
-        .export _mul362_h, _mul362_m, _mul362_l
+        .export _mul145_m, _mul145_l
         .export _mul217_m, _mul217_l
         .export _mul196_m, _mul196_l
         .export _mul106_m, _mul106_l
@@ -58,21 +58,21 @@ _gCoeffBuf:       .res 128
 
         .segment "DATA"
 .align 256
-.proc _mul362_l
+.proc _mul145_l
   .repeat 256, I
-    .byte (I*362) .BITAND $FF
+    .byte (I*145) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul362_m
+.proc _mul145_m
   .repeat 256, I
-    .byte ((I*362) .SHR 8) .BITAND $FF
+    .byte ((I*145) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul362_h
+; .proc _mul145_h
   .repeat 256, I
-    .byte ((I*362) .SHR 16) .BITAND $FF
+    .assert ((I*145) .SHR 16) .BITAND $FF = 0, error
   .endrepeat
-.endproc
+; .endproc
 
 .proc _mul217_l
   .repeat 256, I

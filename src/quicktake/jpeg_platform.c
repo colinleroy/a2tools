@@ -103,12 +103,10 @@ uint16 __fastcall__ getBitsFF(uint8 numBits) {
 extern uint8 *cur_cache_ptr;
 extern uint8 *cache_end;
 
-// 1/cos(4*pi/16)
-// 362, 256+106
-uint16 __fastcall__ imul_b1_b3(int16 w)
+uint16 __fastcall__ imul_b1(int16 w)
 {
   uint32 x;
-  x = (uint32)w * 362;
+  x = (uint32)w * 145;
   FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
 
   return (uint16)x;
@@ -235,7 +233,7 @@ void idctRows(void)
 
        res1 = imul_b5(x5);
        res2 = imul_b4(x5);
-       res3 = imul_b1_b3(x5) + imul_b4(x5) + x30;
+       res3 = imul_b1(x5) + x30;
 
        gCoeffBuf[(idctRC)+1] = res3 - x32;
        gCoeffBuf[(idctRC)+2] = res3 + res1 - x13;
@@ -283,7 +281,7 @@ void idctCols(void)
 
         cres1 = imul_b5(cx5);
         cres2 = imul_b4(cx5);
-        cres3 = imul_b1_b3(cx5) + imul_b4(cx5);
+        cres3 = imul_b1(cx5);
 
         /* same index as before */
         // descale, convert to unsigned and clamp to 8-bit

@@ -4,7 +4,7 @@
         .import     popptr1
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
-        .import     _mul362_l, _mul362_m, _mul362_h
+        .import     _mul145_l, _mul145_m
         .import     _mul217_l, _mul217_m
         .import     _mul196_l, _mul196_m
         .import     _mul106_l, _mul106_m
@@ -450,9 +450,9 @@ done:
 .endscope
 .endmacro
 
-; uint16 __fastcall__ imul_b1_b3(int16 w)
-.macro IMUL_B1_B3
-        imul    _mul362_l, _mul362_m, _mul362_h
+; uint16 __fastcall__ imul_b1(int16 w)
+.macro IMUL_B1
+        imul    _mul145_l, _mul145_m, ,
 .endmacro
 
 ; uint16 __fastcall__ imul_b2(int16 w)
@@ -684,21 +684,12 @@ rres1h= ptr4+1
         sta    rres2l
         stx    rres2h
 
-        ; res3 = imul_b1_b3(x5) + res2;
+        ; res3 = imul_b1(x5);
         ldy    rx5l
         ldx    rx5h
-        IMUL_B1_B3
-        clc
-rres2l = *+1
-        adc    #$FF
-        tay
-        txa
-rres2h = *+1
-        adc    #$FF
-        tax
+        IMUL_B1
 
         ; *(rowSrc_1) = res3 + x30 - x32;
-        tya
         clc
         adc    rx30l
         sta    res3x30l
@@ -752,10 +743,12 @@ res3x30h = *+1
         tax
         lda    tmp1
         clc
-        adc    rres2l
+rres2l = *+1
+        adc    #$FF
         sta    _gCoeffBuf+6,y
         txa
-        adc    rres2h
+rres2h = *+1
+        adc    #$FF
         sta    _gCoeffBuf+7,y
 
 cont_idct_rows:
@@ -840,18 +833,13 @@ cx12h = ptr4+1
         sta     cres2l
         stx     cres2h
 
-        ;res3 = imul_b1_b3(x5) + res2;
+        ;res3 = imul_b1(x5);
         ldy     cx5l
         ldx     cx5h
-        IMUL_B1_B3
+        IMUL_B1
         clc
-cres2l = *+1
-        adc     #$FF
         sta     cres3l
-        txa
-cres2h = *+1
-        adc     #$FF
-        sta     cres3h
+        stx     cres3h
 
         ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
@@ -886,13 +874,16 @@ cres2h = *+1
         bcc     :+
         iny
         clc
-:       adc     cres2l
+:
+cres2l = *+1
+        adc     #$FF
         sta     tmp1
 
         txa
         adc     cx30h
         cpy     #1
-        adc     cres2h
+cres2h = *+1
+        adc     #$FF
         ldy     tmp1
 
         SHIFT_YA_7RIGHT_AND_CLAMP
