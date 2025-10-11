@@ -19,7 +19,7 @@
         .import     right_shift_4
 
         .import     asreax3, inceaxy, tosmul0ax, push0ax
-        .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
+        .import     shraxy, decsp4, popax, addysp
         .export     _getBitsNoFF, _getBitsFF
         .export     _idctRows, _idctCols, _decodeNextMCU
         .export     _pjpeg_decode_mcu, _setQuant, _setACDCTabs
@@ -28,6 +28,8 @@
         .export     _getByteNoFF, _setFFCheck
         .export     _output0, _output1, _output2, _output3
         .export     _outputIdx
+
+        .include    "../lib/mult16x16x16_macro.inc"
 
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
@@ -1110,6 +1112,18 @@ setUACDec:
 
         rts
 
+mult_zero_coeff_16:
+pq0h:
+        ldx     #$FF
+        MULT_16x16r16 zero_coeff_calc_done
+        jmp zero_coeff_calc_done
+
+mult_coeff_16:
+load_pq1h:
+        ldx     $FFFF,y
+        MULT_16x16r16 coeff_calc_done
+        jmp coeff_calc_done
+
 _decodeNextMCU:
         GET_BITS_SET_FF_ON
 
@@ -1189,11 +1203,11 @@ decodeDC:
         sta     ptr2+1
 
         ;gCoeffBuf[0] = dc * pQ[0];
-pq0h:
-        ldx     #$FF
 pq0l:
         lda     #$FF
-        jsr     mult16x16x16_direct
+        jmp     mult_zero_coeff_16
+zero_coeff_calc_done:
+
         sta     _gCoeffBuf      ; and store gCoeffBuf[0]
         stx     _gCoeffBuf+1
 
@@ -1241,9 +1255,8 @@ dataS:
         ;gCoeffBuf[cur_ZAG_coeff] = ac * pQ[cur_ZAG_coeff];
 load_pq1l:
         lda     $FFFF,y         ; Y still cur_ZAG_coeff
-load_pq1h:
-        ldx     $FFFF,y
-        jsr     mult16x16x16_direct
+        jmp     mult_coeff_16
+coeff_calc_done:
 
 ZC = *+1
         ldy     #$FF            ; ZAG_Coeff not cur_ZAG_coeff
