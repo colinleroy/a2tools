@@ -29,6 +29,9 @@
         .export     _output0, _output1, _output2, _output3
         .export     _outputIdx
 
+        .include    "../lib/mult8x8x16_macro.inc"
+        .include    "../lib/mult16xcommon.inc"
+        .include    "../lib/mult16x8x16_macro.inc"
         .include    "../lib/mult16x16x16_macro.inc"
 
 ; ZP vars. Mind that qt-conv uses some too
@@ -1017,6 +1020,9 @@ idctColDone:
 
 ; Patch quantization table in decodeNextMCU once
 _setQuant:
+        ldy     #0            ; 16-bits mults checker
+        sty     tmp1
+
         cmp     #0
         beq     :+
 
@@ -1032,9 +1038,11 @@ _setQuant:
 
         ldx     #<_gQuant1_h
         stx     load_pq1h+1
+        stx     checkQ+1
         ldx     #>_gQuant1_h
         stx     load_pq1h+2
-        rts
+        stx     checkQ+2
+        jmp     check_16bits_quants
 
 :       ldx     _gQuant0_l
         stx     pq0l+1
@@ -1048,9 +1056,34 @@ _setQuant:
 
         ldx     #<_gQuant0_h
         stx     load_pq1h+1
+        stx     checkQ+1
         ldx     #>_gQuant0_h
         stx     load_pq1h+2
-        rts
+        stx     checkQ+2
+
+check_16bits_quants:
+        ldx     _ZAG_Coeff,y  ; Is it a coeff we care about?
+        bmi     :+
+checkQ:
+        ldx     _gQuant1_h,y  ; Is quant factor 16bits?
+        beq     :+
+        inc     tmp1          ; Notice that
+:       iny
+        cpy     #64
+        bne     check_16bits_quants
+
+patch_16bits_quants:
+        ldx     tmp1          ; No 16bits quant factors in coeff we use
+        bne     :+            ; Patch mults for 16x8
+        ldx     #<mult_zero_coeff_8
+        stx     zero_coeff_calc+1
+        ldx     #>mult_zero_coeff_8
+        stx     zero_coeff_calc+2
+        ldx     #<mult_coeff_8
+        stx     coeff_calc+1
+        ldx     #>mult_coeff_8
+        stx     coeff_calc+2
+ :      rts
 
 ; Patch huff decoders in decodeNextMCU once
 _setACDCTabs:
@@ -1122,6 +1155,14 @@ mult_coeff_16:
 load_pq1h:
         ldx     $FFFF,y
         MULT_16x16r16 coeff_calc_done
+        jmp coeff_calc_done
+
+mult_zero_coeff_8:
+        MULT_16x8r16 zero_coeff_calc_done
+        jmp zero_coeff_calc_done
+
+mult_coeff_8:
+        MULT_16x8r16 coeff_calc_done
         jmp coeff_calc_done
 
 _decodeNextMCU:
@@ -1205,6 +1246,7 @@ decodeDC:
         ;gCoeffBuf[0] = dc * pQ[0];
 pq0l:
         lda     #$FF
+zero_coeff_calc:
         jmp     mult_zero_coeff_16
 zero_coeff_calc_done:
 
@@ -1255,6 +1297,7 @@ dataS:
         ;gCoeffBuf[cur_ZAG_coeff] = ac * pQ[cur_ZAG_coeff];
 load_pq1l:
         lda     $FFFF,y         ; Y still cur_ZAG_coeff
+coeff_calc:
         jmp     mult_coeff_16
 coeff_calc_done:
 

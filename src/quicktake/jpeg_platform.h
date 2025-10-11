@@ -72,6 +72,10 @@ extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];
 extern uint8 gWinogradQuant[];
 
+extern uint8 *output0, *output1, *output2, *output3;
+extern uint16 outputIdx;
+#pragma zpsym("outputIdx")
+
 #ifdef __CC65__
 void initFloppyStarter(void);
 #endif
@@ -82,13 +86,11 @@ uint16 __fastcall__ getBitsFF(uint8 numBits);
 void fillInBuf(void);
 
 uint16 __fastcall__ imul_b1_b3(int16 w);
-uint16 __fastcall__ imul_b2(int16 w);
 uint16 __fastcall__ imul_b4(int16 w);
 uint16 __fastcall__ imul_b5(int16 w);
 
 uint8 __fastcall__ huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal);
 void transformBlock(uint8 mcuBlock);
-void idctRows(void);
 uint8 processRestart(void);
 
 uint8 skipVariableMarker(void);

@@ -4,13 +4,12 @@
         .import         popax
 
 ;
-; 16 bit x 16 bit unsigned multiply, 16 bit result, no overflow indication
+; 16 bit x 8 bit unsigned multiply, 16 bit result, no overflow indication
 ; Average cycles: 114
 
-.macro MULT_16x16r16 OUTLABEL
+.macro MULT_16x8r16 OUTLABEL
 .scope
-         stx     AhBl+1
-         tay                  ; Get back at BhAl
+         tay                  ; Get inputA low byte back at BhAl
 
 AlBl:
          ldx     inputB
@@ -20,18 +19,8 @@ AlBl:
          MULT_AX_STORE_LOW resL
          sta     resH
 
-         ; X is still inputB
-AhBl:
-         lda     #$FF         ; Patched with A high byte
-         beq     BhAl         ; Skip if inputA high is 0
-         MULT_AX_NO_HIGH
-         clc
-         adc     resH
-         sta     resH
-
 BhAl:
          tya                  ; Get back inputA low byte
-         beq     skipLast
          ldx     inputB+1
          beq     skipLast
          MULT_AX_NO_HIGH

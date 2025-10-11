@@ -302,13 +302,23 @@ void idctCols(void)
 uint8 *pQ_l, *pQ_h;
 
 void setQuant(uint8 quantId) {
-    if (quantId) {
-      pQ_l = gQuant1_l;
-      pQ_h = gQuant1_h;
-    } else {
-      pQ_l = gQuant0_l;
-      pQ_h = gQuant0_h;
+  uint8 i;
+  uint8 large_mults = 0;
+
+  if (quantId) {
+    pQ_l = gQuant1_l;
+    pQ_h = gQuant1_h;
+  } else {
+    pQ_l = gQuant0_l;
+    pQ_h = gQuant0_h;
+  }
+  for (i = 1; i < 64; i++) {
+    if (ZAG_Coeff[i] != 0xFF && pQ_h[i]) {
+      large_mults = 1;
     }
+  }
+  printf("Quant table %d has%s 16-bits mults\n",
+         quantId, large_mults ? "":" no");
 }
 
 uint8 compACTab;

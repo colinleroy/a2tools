@@ -4,7 +4,8 @@
         .import         popax
         .export         _mult16x16x16, mult16x16x16_direct
 
-        .include        "mult16x16x16_macro.inc"
+        .include    "../lib/mult8x8x16_macro.inc"
+        .include    "../lib/mult16x16x16_macro.inc"
 ;
 ; 16 bit x 16 bit unsigned multiply, 16 bit result, no overflow indication
 ; Average cycles: 114

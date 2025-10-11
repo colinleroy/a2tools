@@ -493,7 +493,6 @@ static uint8 readSOFMarker(void)
 
    for (i = 0; i < gCompsInFrame; i++)
    {
-      uint8 tmp;
       gCompIdent[i] = (uint8)getByteNoFF();
       getByteNoFF();
       gCompQuant[i] = getByteNoFF();
@@ -917,9 +916,6 @@ unsigned char pjpeg_decode_init(void)
 static uint8 mcu_x = 0;
 static uint8 status;
 static uint16 dst_y;
-extern uint8 *output0, *output1, *output2, *output3;
-extern uint16 outputIdx;
-#pragma zpsym("outputIdx")
 
 void qt_load_raw(uint16 top)
 {

@@ -123,7 +123,6 @@ jpegconv_CC65SOURCES := \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
-	../lib/mult16x16x16.s \
 	../lib/square_table.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
@@ -235,12 +234,12 @@ loader.x86_64: loader.c
 clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po
 
-upload: all
+upload: clean all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/ && \
 	cp *.bin about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/ && \
 	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
 
-dist: quicktake.po
+dist: clean quicktake.po
 	mkdir -p ../../dist/
 	cp $< ../../dist/
