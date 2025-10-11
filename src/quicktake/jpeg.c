@@ -222,8 +222,8 @@ uint8 gMCUOrg[6];
 //------------------------------------------------------------------------------
 void fillInBuf(void)
 {
-   // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
   cputsxy(0, 7, "Reading       ");
+  // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
   read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
   cputsxy(0, 7, "Decoding      ");
 }

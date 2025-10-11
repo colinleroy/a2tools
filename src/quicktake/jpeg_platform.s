@@ -47,11 +47,9 @@ rDMCU          = _zp11      ; byte, used in _decodeNextMCU
 sDMCU          = _zp12      ; byte, used in _decodeNextMCU
 iDMCU          = _zp13      ; byte, used in _decodeNextMCU
 inputIdx       = _zp11      ; byte, used in idctRows and idctCols
-; dw             = _zp9       ; byte, used in imul (IDCT)
-; neg            = _zp10      ; byte, used in imul (IDCT)
 
-NO_FF_CHECK = $60
-FF_CHECK_ON = $EA
+NO_FF_CHECK = $60           ; RTS
+FF_CHECK_ON = $C9           ; CMP #$nn
 
 CACHE_END = _cache + CACHE_SIZE + 4
 .assert <CACHE_END = 0, error
@@ -308,21 +306,23 @@ skip_last_few:
         rts
 
 
-AXBCK: .res 2
 inc_cache_high1:
         inc     _cur_cache_ptr+1
         ldy     _cur_cache_ptr+1
         cpy     #(>CACHE_END)-1
         bne     :+
 start_floppy_motor_a:
-        sta     motor_on         ; Start drive motor in advance (patched if on floppy)
+        sta     motor_on        ; Start drive motor in advance (patched if on floppy)
 :       cpy     #>CACHE_END
-        bne     ffcheck
-        sta     AXBCK
-        stx     AXBCK+1          ; Backup X for caller
+        bne     noread
+        sta     abck1           ; Backup AX before reading
+        stx     xbck1
         jsr     _fillInBuf
-        ldx     AXBCK+1
-        lda     AXBCK
+xbck1 = *+1
+        ldx     #$FF            ; Restore AX
+abck1 = *+1
+        lda     #$FF
+noread: ldy     #$00            ; Restore Y after check
         jmp     ffcheck
 
 inc_cache_high2:
@@ -333,14 +333,17 @@ inc_cache_high2:
 start_floppy_motor_b:
         sta     motor_on         ; Start drive motor in advance
 :       cpy     #>CACHE_END
-        bne     getOctet_done
-        sta     AXBCK
-        stx     AXBCK+1          ; Backup Y for caller
+        beq     :+
+
+        lda     tmp1            ; No need to read, return
+        rts
+
+:       stx     xbck2           ; Backup X
         jsr     _fillInBuf
-        ldx     AXBCK+1
-        lda     AXBCK
-        ldy     #$00
-        jmp     getOctet_done
+xbck2 = *+1
+        ldx     #$FF            ; Restore X (no need for Y there)
+        lda     tmp1            ; Return value
+        rts
 
 dec_cache_high:
         dec     _cur_cache_ptr+1
@@ -369,14 +372,12 @@ getOctet:
         inc     _cur_cache_ptr
         beq     inc_cache_high1
 
-ffcheck:rts                   ; Should we check for $FF? patched.
-        cmp     #$FF          ; Is result FF?
+ffcheck:cmp     #$FF          ; Should we check for $FF? patched with RTS if not
         beq     :+
         rts
 :       sta     tmp1          ; Remember result
 
         ; Yes. Read again.
-        ldy     #$00
         lda     (_cur_cache_ptr),y
 
         cmp     #$00          ; is it 0 ?
