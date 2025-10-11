@@ -492,21 +492,13 @@ uint8 decodeNextMCU(void)
 //------------------------------------------------------------------------------
 unsigned char pjpeg_decode_mcu(void)
 {
-   uint8 status;
+   if (decodeNextMCU())
+      return -1;
 
-   if ((!gNumMCUSRemainingX) && (!gNumMCUSRemainingY))
-      return PJPG_NO_MORE_BLOCKS;
-
-   status = decodeNextMCU();
-   if (status)
-      return status;
-
-   gNumMCUSRemainingX--;
-   if (!gNumMCUSRemainingX)
+   if (!--gNumMCUSRemainingX)
    {
-      gNumMCUSRemainingY--;
-	  if (gNumMCUSRemainingY > 0)
-		  gNumMCUSRemainingX = gMaxMCUSPerRow;
+	  if (--gNumMCUSRemainingY > 0)
+		  gNumMCUSRemainingX = GMAXMCUSPERROW;
    }
 
    return 0;

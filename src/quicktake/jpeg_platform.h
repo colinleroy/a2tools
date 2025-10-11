@@ -95,11 +95,11 @@ uint8 processRestart(void);
 
 uint8 skipVariableMarker(void);
 
-#define gMaxMCUXSize 16
-#define gMaxMCUYSize 8
+#define GMAXMCUXSIZE 16
+#define GMAXMCUYSIZE 8
 
-#define gMaxMCUSPerRow ((QT200_WIDTH + (gMaxMCUXSize - 1)) >> 4)
-#define gMaxMCUSPerCol ((QT200_HEIGHT + (gMaxMCUYSize - 1)) >> 3)
+#define GMAXMCUSPERROW ((QT200_WIDTH + (GMAXMCUXSIZE - 1)) >> 4)
+#define GMAXMCUSPERCOL ((QT200_HEIGHT + (GMAXMCUYSIZE - 1)) >> 3)
 #define DECODED_WIDTH (QT200_WIDTH>>1)
 #define DECODED_HEIGHT (QT200_HEIGHT>>1)
 

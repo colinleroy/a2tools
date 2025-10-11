@@ -880,8 +880,8 @@ static uint8 initFrame(void)
    gMCUOrg[2] = 1;
    gMCUOrg[3] = 2;
 
-   gNumMCUSRemainingX = gMaxMCUSPerRow;
-   gNumMCUSRemainingY = gMaxMCUSPerCol;
+   gNumMCUSRemainingX = GMAXMCUSPERROW;
+   gNumMCUSRemainingY = GMAXMCUSPERCOL;
 
    return 0;
 }
@@ -909,13 +909,12 @@ unsigned char pjpeg_decode_init(void)
    if (status)
       return status;
 
-   #define m_MCUHeight (gMaxMCUYSize/2)
    return 0;
 }
 
 static uint8 mcu_x = 0;
 static uint8 status;
-static uint16 dst_y;
+static uint8 dst_y;
 
 void qt_load_raw(uint16 top)
 {
@@ -930,14 +929,11 @@ void qt_load_raw(uint16 top)
 
     if (status) {
       cputs("pjpeg_decode_init() failed\r\n");
-      if (status == PJPG_UNSUPPORTED_MODE) {
-        cputs("Progressive JPEG files are not supported.\r\n");
-      }
       return;
     }
-    dst_y = 0;
   }
 
+  dst_y = 0;
   pDst_row = raw_image;
   output0 = pDst_row;
   output1 = output0+RAW_WIDTH;
@@ -945,32 +941,24 @@ void qt_load_raw(uint16 top)
   output3 = output2+RAW_WIDTH;
   outputIdx = 0;
   for ( ; ; ) {
-    status = pjpeg_decode_mcu();
-
-    if (status) {
-       if (status != PJPG_NO_MORE_BLOCKS) {
-        cputs("pjpeg_decode_mcu() failed\r\n");
-        return;
-       }
-       break;
+    if (pjpeg_decode_mcu()) {
+      cputs("pjpeg_decode_mcu() failed\r\n");
+      return;
     }
 
-    // copy_decoded_to(pDst_row);
+    #define M_MCUHEIGHT (GMAXMCUYSIZE/2)
 
-    mcu_x++;
-    if (mcu_x == gMaxMCUSPerRow) {
+    if (++mcu_x == GMAXMCUSPERROW) {
       mcu_x = 0;
-      dst_y += m_MCUHeight;
-      pDst_row += m_MCUHeight*RAW_WIDTH;
+      if ((++dst_y == (BAND_HEIGHT/M_MCUHEIGHT))) {
+        break;
+      }
+      pDst_row += M_MCUHEIGHT*RAW_WIDTH;
       output0 = pDst_row;
       output1 = output0+RAW_WIDTH;
       output2 = output1+RAW_WIDTH;
       output3 = output2+RAW_WIDTH;
       outputIdx = 0;
-
-      if (dst_y % (BAND_HEIGHT) == 0) {
-        break;
-      }
     }
   }
 }

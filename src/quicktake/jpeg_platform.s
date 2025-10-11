@@ -76,7 +76,6 @@ _cur_cache_ptr = _prev_ram_irq_vector
 @neg:
         eor     #$80
         bpl     @done
-@still_neg:
         lda     #$00
 @done:
 .endscope
@@ -1295,10 +1294,6 @@ uselessBlocksDone:
         rts
 
 _pjpeg_decode_mcu:
-        lda    _gNumMCUSRemainingX
-        ora    _gNumMCUSRemainingY
-        beq    noMoreBlocks
-
         jsr    _decodeNextMCU
         bne    retErr
 
@@ -1306,7 +1301,7 @@ _pjpeg_decode_mcu:
         beq    noMoreX
 retOk:
         lda    #0
-        ldx    #0
+        tax
         rts
 
 noMoreX:
@@ -1315,11 +1310,6 @@ noMoreX:
         lda    #((640 + (16 - 1)) >> 4) ; gMaxMCUSPerRow
         sta    _gNumMCUSRemainingX
 :       lda    #0
-        ldx    #0
-        rts
-
-noMoreBlocks:
-        lda    #1       ; PJPG_NO_MORE_BLOCKS
 retErr:
         ldx    #0
         rts
