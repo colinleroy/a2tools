@@ -670,24 +670,6 @@ rres1h= ptr4+1
         sta    rx32l
         stx    rx32h
 
-        ; res1 = imul_b5(x5) + x30;
-        ldy    rx5l
-        ldx    rx5h
-        IMUL_B5
-        clc
-        adc    rx30l
-        sta    rres1l
-        txa
-        adc    rx30h
-        sta    rres1h
-
-        ; res2 = imul_b4(x5);
-        ldy    rx5l
-        ldx    rx5h
-        IMUL_B4
-        sta    rres2l
-        stx    rres2h
-
         ; res3 = imul_b1(x5);
         ldy    rx5l
         ldx    rx5h
@@ -713,34 +695,48 @@ rx32h = *+1
         sbc    #$FF
         sta    _gCoeffBuf+3,y
 
-        ; gCoeffBuf[(idctRC)+2] = res1 - x13;
-        clc
-        lda    rres1l
-        sec
-        sbc    rx13l
+        ; res1 = imul_b5(x5);
+        ldy    rx5l
+        ldx    rx5h
+        IMUL_B5
 
+        ; gCoeffBuf[(idctRC)+2] = res1 + x30 - x13;
+        clc
+        adc    rx30l
+        tay
+        txa
+        adc    rx30h
+        tax
+
+        sec
+        tya
+        sbc    rx13l
         ldy    inputIdx
         sta    _gCoeffBuf+4,y
-        lda    rres1h
+        txa
         sbc    rx13h
         sta    _gCoeffBuf+5,y
 
-        ; *(rowSrc_3) = x30 + x32 + res2;
+        ; res2 = imul_b4(x5);
+        ldy    rx5l
+        ldx    rx5h
+        IMUL_B4
+
+        ; gCoeffBuf[(idctRC)+3] = res2 + x30 + x32;
         clc
-        lda    rx30l
-        adc    rx32l
-        sta    tmp1
-        lda    rx30h
-        adc    rx32h
+        adc    rx30l
+        tay
+        txa
+        adc    rx30h
         tax
-        lda    tmp1
+
+        tya
         clc
-rres2l = *+1
-        adc    #$FF
+        adc    rx32l
+        ldy    inputIdx
         sta    _gCoeffBuf+6,y
         txa
-rres2h = *+1
-        adc    #$FF
+        adc    rx32h
         sta    _gCoeffBuf+7,y
 
 cont_idct_rows:
@@ -811,27 +807,12 @@ cx12h = ptr4+1
         lda     _gCoeffBuf+33,y
         sta     cx12h
 
-        ;res1 = imul_b5(x5)
-        ldy     cx5l
-        ldx     cx5h
-        IMUL_B5
-        sta     cres1l
-        stx     cres1h
-
         ;res2 = imul_b4(x5);
         ldy     cx5l
         ldx     cx5h
         IMUL_B4
         sta     cres2l
         stx     cres2h
-
-        ;res3 = imul_b1(x5);
-        ldy     cx5l
-        ldx     cx5h
-        IMUL_B1
-        clc
-        sta     cres3l
-        stx     cres3h
 
         ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
@@ -881,16 +862,17 @@ cres2h = *+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val3
 
-        ; val1 = ((cx30 + cres3 - cx32) >> PJPG_DCT_SCALE_BITS) +128;
-        clc
-        lda     cx30l
-cres3l = *+1
-        adc     #$FF
-        tay
+        ;res3 = imul_b1(x5);
+        ldy     cx5l
+        ldx     cx5h
+        IMUL_B1
 
-        lda     cx30h
-cres3h = *+1
-        adc     #$FF
+        ; val1 = ((cres3 + cx30 - cx32) >> PJPG_DCT_SCALE_BITS) +128;
+        clc
+        adc     cx30l
+        tay
+        txa
+        adc     cx30h
         tax
 
         sec
@@ -905,14 +887,16 @@ cx32h = *+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val1
 
-        ;cx30 + cres1 -cx12
+        ; res1 = imul_b5(x5)
+        ldy     cx5l
+        ldx     cx5h
+        IMUL_B5
+
+        ; cres1 + cx30 - cx12
         clc
-cres1l = *+1
-        lda     #$FF
         adc     cx30l
         tay
-cres1h = *+1
-        lda     #$FF
+        txa
         adc     cx30h
         tax
 

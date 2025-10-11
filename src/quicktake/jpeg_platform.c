@@ -231,13 +231,14 @@ void idctRows(void)
 
        x32 = imul_b2(x13);
 
-       res1 = imul_b5(x5) + x30;
-       res2 = imul_b4(x5);
        res3 = imul_b1(x5);
-
        gCoeffBuf[(idctRC)+1] = res3 + x30 - x32;
-       gCoeffBuf[(idctRC)+2] = res1 - x13;
-       gCoeffBuf[(idctRC)+3] = x30 + x32 + res2;
+
+       res1 = imul_b5(x5);
+       gCoeffBuf[(idctRC)+2] = res1 + x30 - x13;
+
+       res2 = imul_b4(x5);
+       gCoeffBuf[(idctRC)+3] = res2 + x30 + x32;
      }
   }
 }
@@ -279,9 +280,7 @@ void idctCols(void)
         cx5  = gCoeffBuf[idctCC+1*8];
         cx12 = gCoeffBuf[idctCC+2*8];
 
-        cres1 = imul_b5(cx5);
         cres2 = imul_b4(cx5);
-        cres3 = imul_b1(cx5);
 
         /* same index as before */
         // descale, convert to unsigned and clamp to 8-bit
@@ -292,10 +291,12 @@ void idctCols(void)
         t = DESCALE(cx32 + cx30 + cres2);
         val3 = CLAMP(t);
 
-        t = DESCALE(cx30 + cres3 - cx32);
+        cres3 = imul_b1(cx5);
+        t = DESCALE(cres3 + cx30 - cx32);
         val1 = CLAMP(t);
 
-        t = DESCALE(cx30 + cres1 - cx12);
+        cres1 = imul_b5(cx5);
+        t = DESCALE(cres1 + cx30 - cx12);
         val2 = CLAMP(t);
       }
       output0[outputIdx] = val0;
