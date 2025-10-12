@@ -285,9 +285,9 @@ void idctCols(void)
         t = DESCALE(cx30 + cx12 + cx5);
         val0 = CLAMP(t);
 
-        cres2 = imul_b4(cx5);
         cx32 = imul_b2(cx12);
-        t = DESCALE(cx32 + cx30 + cres2);
+        cres2 = imul_b4(cx5);
+        t = DESCALE(cres2 + cx30 + cx32);
         val3 = CLAMP(t);
 
         cres3 = imul_b1(cx5);

@@ -236,40 +236,40 @@ START_LAST_ARRAYS = *
   .byte  >$4000
 .endproc
 .proc _extendOffsets_l
-  .byte  <$FFFF
-  .byte  <$FFFE
-  .byte  <$FFFC
-  .byte  <$FFF8
-  .byte  <$FFF0
-  .byte  <$FFE0
-  .byte  <$FFC0
-  .byte  <$FF80
-  .byte  <$FF00
-  .byte  <$FE00
-  .byte  <$FC00
-  .byte  <$F800
-  .byte  <$F000
-  .byte  <$E000
-  .byte  <$C000
-  .byte  <$8000
+  .byte  <(((-1)<<0) + 1)
+  .byte  <(((-1)<<1) + 1)
+  .byte  <(((-1)<<2) + 1)
+  .byte  <(((-1)<<3) + 1)
+  .byte  <(((-1)<<4) + 1)
+  .byte  <(((-1)<<5) + 1)
+  .byte  <(((-1)<<6) + 1)
+  .byte  <(((-1)<<7) + 1)
+  .byte  <(((-1)<<8) + 1)
+  .byte  <(((-1)<<9) + 1)
+  .byte  <(((-1)<<10) + 1)
+  .byte  <(((-1)<<11) + 1)
+  .byte  <(((-1)<<12) + 1)
+  .byte  <(((-1)<<13) + 1)
+  .byte  <(((-1)<<14) + 1)
+  .byte  <(((-1)<<15) + 1)
 .endproc
 .proc _extendOffsets_h
-  .byte  >$FFFF
-  .byte  >$FFFE
-  .byte  >$FFFC
-  .byte  >$FFF8
-  .byte  >$FFF0
-  .byte  >$FFE0
-  .byte  >$FFC0
-  .byte  >$FF80
-  .byte  >$FF00
-  .byte  >$FE00
-  .byte  >$FC00
-  .byte  >$F800
-  .byte  >$F000
-  .byte  >$E000
-  .byte  >$C000
-  .byte  >$8000
+  .byte  >(((-1)<<0) + 1)
+  .byte  >(((-1)<<1) + 1)
+  .byte  >(((-1)<<2) + 1)
+  .byte  >(((-1)<<3) + 1)
+  .byte  >(((-1)<<4) + 1)
+  .byte  >(((-1)<<5) + 1)
+  .byte  >(((-1)<<6) + 1)
+  .byte  >(((-1)<<7) + 1)
+  .byte  >(((-1)<<8) + 1)
+  .byte  >(((-1)<<9) + 1)
+  .byte  >(((-1)<<10) + 1)
+  .byte  >(((-1)<<11) + 1)
+  .byte  >(((-1)<<12) + 1)
+  .byte  >(((-1)<<13) + 1)
+  .byte  >(((-1)<<14) + 1)
+  .byte  >(((-1)<<15) + 1)
 .endproc
 END_ARRAYS = *
 .assert >START_LAST_ARRAYS = >END_ARRAYS, error ; align that better!

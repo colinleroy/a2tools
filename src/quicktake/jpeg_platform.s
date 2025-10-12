@@ -129,7 +129,6 @@ reloadA:
         .endif
 haveBit:
         asl     _gBitBuf    ; Sets carry
-done:
 .endscope
 .endmacro
 
@@ -159,26 +158,30 @@ done:
 .endmacro
 
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
-; x = ptr2/+1, sDMCU = A
+; x = ptr2/+1, sDMCU = X
 ; Returns in AX or updates ptr2/+1 according to parameter
 .macro HUFFEXTEND UPDATEPTR2
 .scope
-        cmp     #16
+        cpx     #16
         bcs     retNormal
 
+        lda     ptr2+1
+        cmp     _extendTests_h,x
+
+        beq     checkLow
+        bcc     retExtend
+        .ifblank UPDATEPTR2
         tax
-        lda     _extendTests_h,x
+        lda     ptr2
+        .endif
+        jmp     done
 
-        cmp     ptr2+1
-        bcc     retNormal
-        bne     retExtend
-
+checkLow:
         lda     ptr2
         cmp     _extendTests_l,x
         bcs     retNormalX
-        sec
 retExtend:
-        lda     _extendOffsets_l,x    ; Carry set here
+        lda     _extendOffsets_l,x    ; Carry clear here
         adc     ptr2
         .ifnblank UPDATEPTR2
         sta     ptr2
@@ -196,9 +199,13 @@ retExtend:
         jmp     done
 
 retNormal:
+        .ifblank UPDATEPTR2
         lda     ptr2
+        .endif
 retNormalX:
+        .ifblank UPDATEPTR2
         ldx     ptr2+1
+        .endif
 done:
 .endscope
 .endmacro
@@ -401,20 +408,11 @@ getOctet_done:
         tax
 :
         ; We now have high byte in X, low in Y
-        ; dw = mul362_l[l] | mul362_m[l] <<8 | mul362_h[l] <<16;
-        ; lda    TABL,y
-        ; sta    dw
-        ; lda    _mul362_m,y - shortcut right below
-        ; sta    tmp1
-        ; lda    _mul362_h,y
-        ; sta    tmp2
 
-        ; dw += (mul362_l[h]) << 8;
         lda    TABM,y    ; tmp1
         adc    TABL,x
         sta    tmp1
 
-        ; dw += (mul362_m[h]) << 16;
         .ifnblank TABH
         lda    TABH,y
         .else
@@ -510,7 +508,6 @@ nextLoopL:
         beq     :+
         bcc     incrementL
 :
-
         cmp     TABLE+hufftable_t::mMaxCode_l,x
         bcc     loopDoneL
 incrementL:
@@ -773,7 +770,7 @@ nextCol:
 
         sta     val0
         sta     val1
-        ; Val2 is A in cont_idct_cols
+        ; val2 is A in cont_idct_cols
         sta     val3
         jmp     cont_idct_cols
 
@@ -822,13 +819,6 @@ cx12h = ptr4+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val0
 
-        ;res2 = imul_b4(x5);
-        ldy     cx5l
-        ldx     cx5h
-        IMUL_B4
-        sta     cres2l
-        stx     cres2h
-
         ; cx32 = imul_b1_b3(cx12);
         ldy     cx12l
         ldx     cx12h
@@ -836,7 +826,12 @@ cx12h = ptr4+1
         sta     cx32l
         stx     cx32h
 
-        ; val3 = ((x32 + x30 + res2) >> PJPG_DCT_SCALE_BITS) +128;
+        ;res2 = imul_b4(x5);
+        ldy     cx5l
+        ldx     cx5h
+        IMUL_B4
+
+        ; val3 = ((res2 + x30 + x32) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         ldy     #0
         adc     cx30l
@@ -844,15 +839,13 @@ cx12h = ptr4+1
         iny
         clc
 :
-cres2l = *+1
-        adc     #$FF
+        adc     cx32l
         sta     tmp1
 
-        txa                     ; Still cx32h
+        txa
         adc     cx30h
         cpy     #1
-cres2h = *+1
-        adc     #$FF
+        adc     cx32h
         ldy     tmp1
 
         SHIFT_YA_7RIGHT_AND_CLAMP
@@ -1155,7 +1148,7 @@ decodeDC:
 
         sta     ptr2         ; dc = huffExtend(r, s);
         stx     ptr2+1
-        lda     sDMCU
+        ldx     sDMCU
         HUFFEXTEND            ; DC in AX now
 
         ; dc = dc + gLastDC[componentID=0];
@@ -1218,7 +1211,7 @@ getData:
 
         ;ac = huffExtend(sDMCU)
 dataS:
-        lda     #$FF
+        ldx     #$FF
         HUFFEXTEND 1
 
         ;gCoeffBuf[cur_ZAG_coeff] = ac * pQ[cur_ZAG_coeff];
