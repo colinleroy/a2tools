@@ -446,12 +446,13 @@ uint8 decodeNextMCU(void)
           break;
         }
       } else {
-        extraBits = getBitsFF(s);
-
         if (ZAG_Coeff[cur_ZAG_coeff] != 0xFF) {
+          extraBits = getBitsFF(s);
           ac = huffExtend(extraBits, s);
           // printf("computing %d\n", ZAG_Coeff[cur_ZAG_coeff]);
           gCoeffBuf[ZAG_Coeff[cur_ZAG_coeff]] = ac * (pQ_l[cur_ZAG_coeff]|(pQ_h[cur_ZAG_coeff] << 8));
+        } else {
+          getBitsFF(s);
         }
       }
     }

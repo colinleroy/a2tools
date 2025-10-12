@@ -388,83 +388,143 @@ getOctet_done:
         lda     tmp1
         rts
 
-; Low byte in Y, high in X, high loaded last !
-.macro imul TABL, TABM, TABH, REVERSESIGN
+.macro imul TABL, TABM, lowRes, highRes
 .scope
         clc
 
         ; Check if positive
-        stx     neg
-        bpl     :+
+        bpl     pos
+        txa                   ; Negate number
+        ; val = -val;
+        eor     #$FF
+        adc     #1
+        sta     revl+1
+        tax                   ; Set our pos low byte
+        tya                   ; Get high byte
+        eor    #$FF
+        adc    #0
+        tay
+
+        lda    TABM,x
+        adc    TABL,y
+
+        ldx    TABM,y
+        bcc    :+
+        inx
+        clc
+
+:       tay     ; backup result low byte
+        ; dw ^= 0xffffff, dw++
+revl:   lda    TABL
+        eor    #$FF
+        adc    #1
         tya
+        eor    #$FF
+        adc    #0
+        .ifblank lowRes
+        tay
+        .else
+        sta    lowRes
+        .endif
+        txa
+        eor    #$FF
+        adc    #0
+        .ifblank highRes
+        tax
+        tya
+        .else
+        sta    highRes
+        .endif
+        jmp    done
+pos:
+        ; We now have high byte in Y, low in X
+        lda    TABM,x
+        adc    TABL,y
+        .ifnblank lowRes
+        sta    lowRes
+        .endif
+        ldx    TABM,y
+        bcc    :+
+        inx
+        clc
+:       .ifnblank highRes
+        stx    highRes
+        .endif
+done:
+.endscope
+.endmacro
+
+.macro imul_reverse TABL, TABM
+.scope
+        clc
+        ; Check if positive
+        bpl     pos
+        txa                   ; Negate number
         ; val = -val;
         eor     #$FF
         adc     #1
 
-        tay                   ; Set our pos low byte
-        txa                   ; Get high byte
+        tax                   ; Set our pos low byte
+        tya                   ; Get high byte
         eor    #$FF
         adc    #0
-        tax
-:
-        ; We now have high byte in X, low in Y
+        tay
 
-        lda    TABM,y    ; tmp1
-        adc    TABL,x
-        sta    tmp1
+        ; We now have high byte in Y, low in X
+        lda    TABM,x
+        adc    TABL,y
 
-        .ifnblank TABH
-        lda    TABH,y
-        .else
-        lda    #$00
-        .endif
-        adc    TABM,x
-        tax             ; remember for return or sign reversal
+        ldx    TABM,y
+        bcc    done
+        inx
+        clc
+        jmp    done
+pos:
+        ; We now have high byte in Y, low in X
+        stx    revl+1
+        lda    TABM,x
+        adc    TABL,y
 
-        ; Was val negative? (or should we reverse sign)
-neg = *+1
-        lda    #$FF
-        .ifblank REVERSESIGN
-        bpl    done
-        .else
-        bmi    done
-        .endif
+        ldx    TABM,y
+        bcc    :+
+        inx
+        clc
+:       tay     ; backup low byte
         ; dw ^= 0xffffff, dw++
-        lda    #$FF
-        eor    TABL,y
+revl:   lda    TABL
+        eor    #$FF
         adc    #1
-        lda    #$FF
-        eor    tmp1
+        tya
+        eor    #$FF
         adc    #0
-
-        sta    tmp1
+        tay
         txa
         eor    #$FF
         adc    #0
         tax
+        tya
 done:
-        lda    tmp1
 .endscope
 .endmacro
 
 ; uint16 __fastcall__ imul_b1(int16 w)
 .macro IMUL_B1
-        imul    _mul145_l, _mul145_m, ,
+        imul _mul145_l, _mul145_m, ,
 .endmacro
 
 ; uint16 __fastcall__ imul_b2(int16 w)
-.macro IMUL_B2
-        imul    _mul106_l, _mul106_m, ,
+.macro IMUL_B2 LB, HB
+        imul _mul106_l, _mul106_m, LB, HB
 .endmacro
 
 ; uint16 __fastcall__ imul_b4(int16 w)
 .macro IMUL_B4
-        imul    _mul217_l, _mul217_m, , 1
+        imul_reverse _mul217_l, _mul217_m
 .endmacro
 
 ; uint16 __fastcall__ imul_b5(int16 w)
 .macro IMUL_B5
-        imul    _mul51_l, _mul51_m, , 1
+        imul_reverse _mul51_l, _mul51_m
 .endmacro
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
@@ -660,15 +720,13 @@ rres1h= ptr4+1
         sta    _gCoeffBuf+1,y
 
         ; x32 = imul_b2(x13);
-        ldy    rx13l
-        ldx    rx13h
-        IMUL_B2
-        sta    rx32l
-        stx    rx32h
+        ldx    rx13l
+        ldy    rx13h
+        IMUL_B2 rx32l, rx32h
 
         ; res3 = imul_b1(x5);
-        ldy    rx5l
-        ldx    rx5h
+        ldx    rx5l
+        ldy    rx5h
         IMUL_B1
 
         ; gCoeffBuf[(idctRC)+1] = res3 + x30 - x32;
@@ -692,8 +750,8 @@ rx32h = *+1
         sta    _gCoeffBuf+3,y
 
         ; res1 = imul_b5(x5);
-        ldy    rx5l
-        ldx    rx5h
+        ldx    rx5l
+        ldy    rx5h
         IMUL_B5
 
         ; gCoeffBuf[(idctRC)+2] = res1 + x30 - x13;
@@ -714,8 +772,8 @@ rx32h = *+1
         sta    _gCoeffBuf+5,y
 
         ; res2 = imul_b4(x5);
-        ldy    rx5l
-        ldx    rx5h
+        ldx    rx5l
+        ldy    rx5h
         IMUL_B4
 
         ; gCoeffBuf[(idctRC)+3] = res2 + x30 + x32;
@@ -819,16 +877,14 @@ cx12h = ptr4+1
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val0
 
-        ; cx32 = imul_b1_b3(cx12);
-        ldy     cx12l
-        ldx     cx12h
-        IMUL_B2
-        sta     cx32l
-        stx     cx32h
+        ; cx32 = imul_b2(cx12);
+        ldx     cx12l
+        ldy     cx12h
+        IMUL_B2 cx32l, cx32h
 
         ;res2 = imul_b4(x5);
-        ldy     cx5l
-        ldx     cx5h
+        ldx     cx5l
+        ldy     cx5h
         IMUL_B4
 
         ; val3 = ((res2 + x30 + x32) >> PJPG_DCT_SCALE_BITS) +128;
@@ -852,8 +908,8 @@ cx12h = ptr4+1
         sta     val3
 
         ;res3 = imul_b1(x5);
-        ldy     cx5l
-        ldx     cx5h
+        ldx     cx5l
+        ldy     cx5h
         IMUL_B1
 
         ; val1 = ((cres3 + cx30 - cx32) >> PJPG_DCT_SCALE_BITS) +128;
@@ -877,8 +933,8 @@ cx32h = *+1
         sta     val1
 
         ; res1 = imul_b5(x5)
-        ldy     cx5l
-        ldx     cx5h
+        ldx     cx5l
+        ldy     cx5h
         IMUL_B5
 
         ; cres1 + cx30 - cx12
@@ -1187,26 +1243,20 @@ decodeAC:
         clc
         adc     cur_ZAG_coeff
         sta     cur_ZAG_coeff
-        tay                     ; to Y in case !s
+        tay                     ; to Y
 
         txa                     ; restore value, numExtraBits = s & 0xF
         and     #$0F
 
-        bne     getData         ; if (s)
-        lda     rDMCU
-        cmp     #15
-        beq     checkZAGLoop
-        jmp     ZAG_finished
+        beq     no_data         ; if (!s)
 
 getData:
+        ldx     _ZAG_Coeff,y    ; We only do a part of the matrix
+        bmi     skip_coeff
         sta     dataS+1
+        stx     ZC              ; Remember Zag coeff
         jsr     getBitsDirect   ; extraBits = getBitsFF(numExtraBits);
         stx     ptr2+1          ; Store for huffExtend
-
-        ldy     cur_ZAG_coeff   ; We only do a part of the matrix
-        ldx     _ZAG_Coeff,y
-        bmi     end_of_coeff_calc
-        stx     ZC              ; Remember Zag coeff
         sta     ptr2            ; Finish storing for huffExtend
 
         ;ac = huffExtend(sDMCU)
@@ -1215,8 +1265,9 @@ dataS:
         HUFFEXTEND 1
 
         ;gCoeffBuf[cur_ZAG_coeff] = ac * pQ[cur_ZAG_coeff];
+        ldy     cur_ZAG_coeff
 load_pq1l:
-        lda     $FFFF,y         ; Y still cur_ZAG_coeff
+        lda     $FFFF,y
 coeff_calc:
         jmp     mult_coeff_16
 coeff_calc_done:
@@ -1228,9 +1279,7 @@ ZC = *+1
         sta     _gCoeffBuf+1,y
 
         ldy     cur_ZAG_coeff
-
-end_of_coeff_calc:
-        iny                     ; cur_ZAG_coeff
+        iny
 checkZAGLoop:
         cpy     #64             ; end_ZAG_coeff
         bne     doZAGLoop
@@ -1244,6 +1293,22 @@ ZAG_finished:
         cpx     #2
         bcs     nextUselessBlock
         jmp     nextMcuBlock
+
+no_data:
+        lda     rDMCU
+        cmp     #15
+        bne     ZAG_finished
+        cpy     #64
+        beq     ZAG_finished
+        jmp     doZAGLoop
+
+skip_coeff:
+        jsr     skipBitsDirect
+        ldy     cur_ZAG_coeff
+        iny
+        cpy     #64
+        beq     ZAG_finished
+        jmp     doZAGLoop
 
 nextUselessBlock:
         ; Skip the other blocks, do the minimal work
