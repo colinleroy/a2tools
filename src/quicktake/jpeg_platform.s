@@ -235,14 +235,8 @@ n_min_eight:   .byte 0
         stx     ffcheck
 .endmacro
 
-_getBitsNoFF:
-        ldx     #NO_FF_CHECK
-        jmp     getBits
-_getBitsFF:
-        ldx     #FF_CHECK_ON
-getBits:
-        stx     ffcheck
-getBitsDirect:
+.macro GETBITSDIRECT RETURN_LABEL
+.scope
         tax
         ldy     _gBitsLeft
         cpx     #9
@@ -255,7 +249,11 @@ small_n:
         bne     :-
         sty     _gBitsLeft
         ; X is zero
+        .ifnblank RETURN_LABEL
+        jmp     RETURN_LABEL
+        .else
         rts
+        .endif
 
 large_n:
         lda     n_min_eight,x ; How much more than 8?
@@ -280,17 +278,34 @@ last_few:
         sty     _gBitsLeft
 
         ldx     bbHigh
+        .ifnblank RETURN_LABEL
+        jmp     RETURN_LABEL
+        .else
         rts
+        .endif
+.endscope
+.endmacro
 
-skipBitsDirect:                 ; No need to split short/large here
-        ldy     _gBitsLeft      ; As we don't care about the result
-        tax
+_getBitsNoFF:
+        ldx     #NO_FF_CHECK
+        jmp     getBits
+_getBitsFF:
+        ldx     #FF_CHECK_ON
+getBits:
+        stx     ffcheck
+        GETBITSDIRECT
+
+.macro SKIPBITSDIRECT
+.scope
+        ldy     _gBitsLeft      ; No need to split short/large here
+        tax                     ; As we don't care about the result
 :       INLINE_GETBIT_COUNT_Y
         dex
         bne     :-
         sty     _gBitsLeft
         ; X is zero
-        rts
+.endscope
+.endmacro
 
 inc_cache_high1:
         inc     _cur_cache_ptr+1
@@ -1193,15 +1208,15 @@ zeroBuf:
 
 huffDecDC:
         jmp     $FFFF
+
 decodeDC:
 
         sta     sDMCU
         and     #$0F          ; numExtraBits
-        beq     :+
-        jsr     getBitsDirect ; r = getBitsFF(numExtraBits);
-        .byte   $A0           ; ldy IMM, eats tax, eq jmp doExtend
-:       tax                   ; otherwise set r to uint16 0 (A is 0)
-
+        beq     noBits
+        GETBITSDIRECT DCBits  ; r = getBitsFF(numExtraBits);
+noBits: tax                   ; otherwise set r to uint16 0 (A is 0)
+DCBits:
         sta     ptr2         ; dc = huffExtend(r, s);
         stx     ptr2+1
         ldx     sDMCU
@@ -1255,7 +1270,8 @@ getData:
         bmi     skip_coeff
         sta     dataS+1
         stx     ZC              ; Remember Zag coeff
-        jsr     getBitsDirect   ; extraBits = getBitsFF(numExtraBits);
+        jmp     getACBits       ; extraBits = getBitsFF(numExtraBits);
+gotACBits:
         stx     ptr2+1          ; Store for huffExtend
         sta     ptr2            ; Finish storing for huffExtend
 
@@ -1291,8 +1307,9 @@ ZAG_finished:
         inc     mcuBlock
         ldx     mcuBlock
         cpx     #2
-        bcs     nextUselessBlock
-        jmp     nextMcuBlock
+        bcc     :+
+        jmp     nextUselessBlock
+:       jmp     nextMcuBlock
 
 no_data:
         lda     rDMCU
@@ -1303,12 +1320,15 @@ no_data:
         jmp     doZAGLoop
 
 skip_coeff:
-        jsr     skipBitsDirect
+        SKIPBITSDIRECT
         ldy     cur_ZAG_coeff
         iny
         cpy     #64
         beq     ZAG_finished
         jmp     doZAGLoop
+
+getACBits:
+        GETBITSDIRECT gotACBits
 
 nextUselessBlock:
         ; Skip the other blocks, do the minimal work
@@ -1318,10 +1338,10 @@ uselessDecDC:
         jmp     $FFFF
 skipDC:
         and     #$0F
-        beq     :+
-        jsr     skipBitsDirect
+        beq     noSBits
+        SKIPBITSDIRECT
 
-:       lda     #1
+noSBits:lda     #1
 i64loop:
         ;for (iDMCU = 1; iDMCU != 64; iDMCU++) {
         sta     iDMCU
@@ -1330,10 +1350,10 @@ uselessDecAC:
 skipAC:
         beq     ZAG2_Done
         and     #$0F
-        sta     tmp1
-        jsr     skipBitsDirect
-        ldx     tmp1
-        lda     right_shift_4,x
+        sta     rsx+1
+        SKIPBITSDIRECT
+        .assert <right_shift_4 = 0, error ; need alignment for patching trick
+rsx:    lda     right_shift_4
 
         sec             ; Set carry for the loop's inc
         adc     iDMCU
