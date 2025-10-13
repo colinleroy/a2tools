@@ -17,6 +17,7 @@
         .export         _getfactor
         .export         get_4datahuff_interpolate
         .import         got_4datahuff
+        .export         _histogram_low, _histogram_high
 
         .export         discard4datahuff_interpolate
         .import         discard_col_loop
@@ -73,6 +74,10 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 _cache:        .res        CACHE_SIZE,$00
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
+
+; Defined here to avoid holes due to alignment
+_histogram_low:         .res 256
+_histogram_high:        .res 256
 
 _next_line_l:  .res        322
 _ushiftl3p4:   .res        32

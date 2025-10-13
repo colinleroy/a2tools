@@ -8,7 +8,6 @@
         .export       _init_huff
         .export       tk1, tk2, tk3, tk4, got_4datahuff
         .export       discard_col_loop
-
         .import       _row_idx
 
         .import       get_4datahuff_interpolate, discard4datahuff_interpolate
@@ -1169,7 +1168,6 @@ got_4datahuff = _decode_row::got_4datahuff
 discard_col_loop = _consume_extra::discard_col_loop
 
 .segment "BSS"
-
 pass:           .res 1
 incr:           .res 1
 code:           .res 1

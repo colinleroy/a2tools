@@ -17,7 +17,7 @@
         .export          _qt_load_raw
         .export          _cache
         .export          _cache_start
-
+        .export          _histogram_low, _histogram_high
         .include         "fcntl.inc"
 
 ; Defines
@@ -208,6 +208,10 @@ _cache:
 ; Destination buffer for the band (8bpp grayscale)
 _raw_image:
         .res        RAW_IMAGE_SIZE
+
+; Defined here to avoid holes due to alignment
+_histogram_low:         .res 256
+_histogram_high:        .res 256
 
 ; No need to align anymore
 

@@ -12,7 +12,7 @@
         .export _cache, _gCoeffBuf
         .export _raw_image
         .export right_shift_4
-
+        .export _histogram_low, _histogram_high
 
 .struct hufftable_t
    mMaxCode_l .res 16
@@ -53,6 +53,11 @@ _cache:           .res CACHE_SIZE+4
 .assert <* = 0, error
 _gHuffVal2:       .res 256
 _gHuffVal3:       .res 256
+
+; Defined here to avoid holes due to alignment
+_histogram_low:         .res 256
+_histogram_high:        .res 256
+
 .assert <* = 0, error
 _gCoeffBuf:       .res 128
 

@@ -77,6 +77,7 @@ qtktconv_SOURCES := \
 
 qtktconv_CC65SOURCES := \
 	qtkt.s \
+	qt-conv.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -96,6 +97,7 @@ qtknconv_SOURCES := \
 qtknconv_CC65SOURCES := \
 	qtk_bithuff.s \
 	qtkn_platform.s \
+	qt-conv.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -120,6 +122,7 @@ jpegconv_SOURCES := \
 jpegconv_CC65SOURCES := \
 	jpeg_arrays.s \
 	jpeg_platform.s \
+	qt-conv.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \

@@ -147,25 +147,25 @@ static uint8 identify(const char *name)
 #ifndef __CC65__
 static uint16 histogram[256];
 #else
-static uint8 histogram_low[256];
-static uint8 histogram_high[256];
+extern uint8 histogram_low[256];
+extern uint8 histogram_high[256];
 #endif
 
 #ifndef __CC65__
 static uint8 *orig_y_table[BAND_HEIGHT];
 #else
-static uint8 orig_y_table_l[BAND_HEIGHT];
-static uint8 orig_y_table_h[BAND_HEIGHT];
+uint8 orig_y_table_l[BAND_HEIGHT];
+uint8 orig_y_table_h[BAND_HEIGHT];
 #endif
-static uint8 orig_x_offset[256];
-static uint8 special_x_orig_offset[256];
-static uint8 scaled_band_height;
-static uint16 output_write_len;
-static uint8 scaling_factor = 4;
-static uint16 crop_start_x, crop_start_y, crop_end_x, crop_end_y;
-static uint16 last_band = 0;
-static uint8 last_band_crop = 0;
-static uint16 effective_width;
+uint8 orig_x_offset[256];
+uint8 special_x_orig_offset[256];
+uint8 scaled_band_height;
+uint16 output_write_len;
+uint8 scaling_factor = 4;
+uint16 crop_start_x, crop_start_y, crop_end_x, crop_end_y;
+uint16 last_band = 0;
+uint8 last_band_crop = 0;
+uint16 effective_width;
 /* Scales:
  * 640x480 non-cropped        => 256x192, * 4  / 10, bands of 20 end up 8px
  * 640x480 cropped to 512x384 => 256x192, * 5  / 10, bands of 20 end up 10px, crop last band to 4px
@@ -267,9 +267,11 @@ reload:
 #pragma code-name (pop)
 /* Patched func */
 
-static void write_raw(uint16 h)
+#ifdef __CC65__
+void __fastcall__ write_raw(uint16 h);
+#else
+static void __fastcall__ write_raw(uint16 h)
 {
-#ifndef __CC65__
   uint8 *dst_ptr;
   uint8 *cur;
   uint8 *cur_orig_x;
@@ -289,14 +291,11 @@ static void write_raw(uint16 h)
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
 
-  #ifndef __CC65__
-    for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
-      write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), width);
-    }
+  for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
+    write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), width);
+  }
   y_len = 0;
   dst_ptr = raw_image;
-
-  #endif
 
   cur_orig_y = orig_y_table;
   do {
@@ -320,96 +319,9 @@ first_col:
     } while (--x_len);
     cur_orig_y++;
   } while (++y_len < y_end);
-
-#else
-  #define y_ptr      zp4
-
-  __asm__("lda %v", last_band_crop);
-  __asm__("beq %g", full_band);
-  __asm__("ldy %o", h);
-  __asm__("lda (c_sp),y");
-  __asm__("cmp %v", last_band);
-  __asm__("bne %g", full_band);
-  __asm__("iny");
-  __asm__("lda (c_sp),y");
-  __asm__("cmp %v+1", last_band);
-  __asm__("bne %g", full_band);
-
-  __asm__("lda %v", last_band_crop);
-  __asm__("sta %g+1", y_end);
-
-  /* output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH; */
-  /* FILE_WIDTH = 256 so shift 8 */
-  __asm__("lda %v", scaled_band_height);
-  __asm__("sec");
-  __asm__("sbc %v", last_band_crop);
-  __asm__("sta tmp1");
-  __asm__("sec");
-  __asm__("lda %v+1", output_write_len);
-  __asm__("sbc tmp1");
-  __asm__("sta %v+1", output_write_len);
-  __asm__("jmp %g", no_crop);
-
-full_band:
-  __asm__("lda %v", scaled_band_height);
-  __asm__("sta %g+1", y_end);
-
-no_crop:
-  __asm__("lda #>%v", raw_image);
-  __asm__("sta %g+2", dst_ptr);
-
-  __asm__("clc");
-
-  __asm__("ldy #0");
-  next_y:
-    __asm__("lda %v,y", orig_y_table_l);
-    __asm__("sta %g+1", cur_orig_y_addr);
-    __asm__("ldx %v,y", orig_y_table_h);
-    __asm__("stx %g+2", cur_orig_y_addr);
-
-    __asm__("iny");
-    __asm__("sty %v", y_ptr);
-
-    __asm__("ldy #0");
-    __asm__("ldx %v,y", orig_x_offset); /* Preload the first X offset */
-    __asm__("jmp %g", cur_orig_y_addr); /* Skip the first potential page increment */
-    next_x:
-    /* if (*cur_orig_x == 0) cur+=256 
-     * (otherwise load offset into X)*/
-    __asm__("ldx %v,y", orig_x_offset);
-    __asm__("bne %g", cur_orig_y_addr);
-    __asm__("ldx %v,y", special_x_orig_offset);
-    __asm__("inc %g+2", cur_orig_y_addr);
-
-    cur_orig_y_addr:
-    /* *dst_ptr = *(cur + *cur_orig_x); */
-    __asm__("lda $FFFF,x");   /* Patched */
-    dst_ptr:
-    __asm__("sta %v,y", raw_image);
-
-    /* histogram[*dst_ptr]++; */
-    __asm__("tax");
-
-    __asm__("inc %v,x", histogram_low);
-    __asm__("bne %g", noof7);
-    __asm__("inc %v,x", histogram_high);
-    noof7:
-    /* ++cur_orig_x */
-    __asm__("iny");
-    __asm__("bne %g", next_x);
-
-  /* Increment dst_ptr by FILE_WIDTH (256) */
-  __asm__("inc %g+2", dst_ptr);
-
-  /* y_len? */
-  __asm__("ldy %v", y_ptr);
-  y_end:
-  __asm__("cpy #$FF"); /* PATCHED */
-  __asm__("bcc %g", next_y);
-#endif
-
   write(ofd, raw_image, output_write_len);
 }
+#endif
 
 #pragma code-name (push, "LC")
 
