@@ -12,9 +12,12 @@ _"I should do it with the Apple //c!"_
 
 One thing led to another and there are now quite a few things
 here:
-- a full featured Mastodon client
-- a media player (mp3, video, webradios, ...)
-- a Peertube and Youtube client
+- a full featured Mastodon client ([homepage](https://www.colino.net/wordpress/en/mastodon-for-apple-ii/))
+- a media player (mp3, video, webradios, ...) ([homepage](https://www.colino.net/wordpress/en/wozamp-an-apple-ii-music-and-video-player/))
+- a Peertube and Youtube client ([homepage](https://www.colino.net/wordpress/en/woztubes-an-apple-ii-invidious-and-peertube-client/))
+- a Shufflepuck clone, with two-players mode ([homepage](https://www.colino.net/wordpress/en/shufflepuck-cafe-for-apple-ii/))
+- a Glider clone ([homepage](https://www.colino.net/wordpress/en/glider-for-apple-ii/))
+- a Quicktake program, to get and view pictures from Quicktake cameras ([homepage](https://www.colino.net/wordpress/en/quicktake-for-apple-ii/))
 - an FTP client
 - a Telnet client
 - an HomeAssistant frontend to control switches, heating, and view sensors' graphs.
