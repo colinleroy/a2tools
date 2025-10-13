@@ -311,10 +311,10 @@ inc_cache_high1:
         inc     _cur_cache_ptr+1
         ldy     _cur_cache_ptr+1
         cpy     #(>CACHE_END)-1
-        bne     :+
+        bcc     noread
 start_floppy_motor_a:
         sta     motor_on        ; Start drive motor in advance (patched if on floppy)
-:       cpy     #>CACHE_END
+        cpy     #>CACHE_END
         bne     noread
         sta     abck1           ; Backup AX before reading
         stx     xbck1
@@ -330,20 +330,20 @@ inc_cache_high2:
         inc     _cur_cache_ptr+1
         ldy     _cur_cache_ptr+1
         cpy     #(>CACHE_END)-1
-        bne     :+
+        bcc     noread2
 start_floppy_motor_b:
         sta     motor_on         ; Start drive motor in advance
-:       cpy     #>CACHE_END
+        cpy     #>CACHE_END
         beq     :+
-
-        lda     tmp1            ; No need to read, return
+noread2:
+        lda     #$FF            ; Return value (which was #$FF)
         rts
 
 :       stx     xbck2           ; Backup X
         jsr     _fillInBuf
 xbck2 = *+1
         ldx     #$FF            ; Restore X (no need for Y there)
-        lda     tmp1            ; Return value
+        lda     #$FF            ; Return value (which was #$FF)
         rts
 
 dec_cache_high:
@@ -376,13 +376,9 @@ getOctet:
 ffcheck:cmp     #$FF          ; Should we check for $FF? patched with RTS if not
         beq     :+
         rts
-:       sta     tmp1          ; Remember result
 
-        ; Yes. Read again.
-        lda     (_cur_cache_ptr),y
-
-        cmp     #$00          ; is it 0 ?
-        beq     out
+:       lda     (_cur_cache_ptr),y
+        beq     out           ; is it 0 ?
 
         ; No, stuff back char
         lda     _cur_cache_ptr
@@ -393,14 +389,12 @@ stuff_back:
         ldy     #$00
         lda     #$FF
         sta     (_cur_cache_ptr),y
-        lda     tmp1
         rts
-out:                          ; We read 0 so increment pointer
+out:                          ; We read 0 so increment pointer and return valid FF
         inc     _cur_cache_ptr
         beq     inc_cache_high2
-        ; Return result
-getOctet_done:
-        lda     tmp1
+
+        lda     #$FF          ; Return result
         rts
 
 .macro imul TABL, TABM, lowRes, highRes
