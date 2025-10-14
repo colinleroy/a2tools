@@ -301,4 +301,4 @@ upload: clean all
 
 dist: clean quicktake.po
 	mkdir -p ../../dist/
-	cp $< ../../dist/
+	cp quicktake.po ../../dist/
