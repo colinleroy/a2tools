@@ -48,7 +48,7 @@
   #pragma static-locals(push, on)
 #endif
 
-static void reload_menu(const char *filename);
+void reload_menu(const char *filename);
 
 /* Shared with decoders */
 uint16 height, width;
@@ -176,19 +176,21 @@ uint16 effective_width;
  * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  */
 
-static void build_scale_table(const char *ofname) {
+#ifdef __CC65__
+void __fastcall__ build_scale_table(const char *ofname);
+#else
+static void __fastcall__ build_scale_table(const char *ofname) {
   uint8 row, col;
   uint16 xoff, prev_xoff;
 
-  effective_width = crop_end_x - crop_start_x;
   if (width == 320) {
     /* Crop boundaries are 640x480 bound, divide them */
     crop_start_x /= 2;
     crop_end_x   /= 2;
     crop_start_y /= 2;
     crop_end_y   /= 2;
-    effective_width /= 2;
   }
+  effective_width = crop_end_x - crop_start_x;
 
   switch (effective_width) {
     case 640:
@@ -218,18 +220,11 @@ static void build_scale_table(const char *ofname) {
       last_band = crop_start_y + 180;
       last_band_crop = 12;
       break;
-    case 128:
-      cputs("Can not reframe 128x96 zone of 320x240 image.\r\n"
-             "Please try again with less zoom.\r\n");
-      /* Reset effective width to go back where we were */
-      effective_width = 320;
-reload:
+    default:
+      cputs("Unsupported width.\r\n");
       cgetc();
       reload_menu(ofname);
       break;
-    default:
-      cputs("Unsupported width.\r\n");
-      goto reload;
   }
 
   col = 0;
@@ -248,21 +243,12 @@ reload:
   } while (col); /* FILE_WIDTH == 256 */
 
   row = scaled_band_height;
-  do {
+  while (row--) {
     /* Y cropping is handled in main decode/save loop */
-    row--;
-    #ifdef __CC65__
-    __AX__ = (uint16)(raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH);
-    __asm__("ldy %v", row);
-    __asm__("sta %v,y", orig_y_table_l);
-    __asm__("txa");
-    __asm__("sta %v,y", orig_y_table_h);
-    #else
-    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
-    #endif
-  } while (row);
-
+    orig_y_table[row] = (row*10/scaling_factor)*RAW_WIDTH + raw_image + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
+  }
 }
+#endif
 
 #pragma code-name (pop)
 /* Patched func */
@@ -330,7 +316,7 @@ first_col:
 #pragma allow-eager-inline(pop)
 #pragma inline-stdfuncs(pop)
 
-static void reload_menu(const char *filename) {
+void reload_menu(const char *filename) {
   char buffer[128];
   reopen_start_device();
 

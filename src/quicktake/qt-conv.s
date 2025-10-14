@@ -1,14 +1,20 @@
-        .export         _write_raw
+        .export         _write_raw, _build_scale_table
         .import         _histogram_low, _histogram_high
 
-        .import         _write, _ofd
+        .import         _write, _ofd, _reload_menu
         .import         _special_x_orig_offset, _orig_x_offset
         .import         _orig_y_table_l, _orig_y_table_h
         .import         _output_write_len
         .import         _scaled_band_height, _last_band, _last_band_crop
+        .import         _scaling_factor
         .import         _raw_image
+        .import         _width, _effective_width
+        .import         _crop_start_x, _crop_end_x
+        .import         _crop_start_y, _crop_end_y
+        .import         _cputs, _cgetc, _reload_menu
+        .import         pusha0, pushax, popax, incsp2
+        .import         mulax10, tosudiva0, tosmulax
 
-        .import         pusha0, pushax
         .importzp       tmp1, _zp4
 y_ptr = _zp4
 
@@ -93,4 +99,198 @@ y_end:  cpy     #$FF              ; Patched
         jmp     _write
 .endproc
 
+.segment "LC"
+
+.proc _build_scale_table
+        jsr     pushax            ; Backup ofname
+
+        lda     _width            ; Divide crop boundaries if 320x240
+        cmp     #<320
+        bne     :+
+        lsr     _crop_start_x+1
+        ror     _crop_start_x
+        lsr     _crop_start_y+1
+        ror     _crop_start_y
+        lsr     _crop_end_x+1
+        ror     _crop_end_x
+        lsr     _crop_end_y+1
+        ror     _crop_end_y
+
+:       sec
+        lda     _crop_end_x       ; Compute effective_width
+        sbc     _crop_start_x
+        sta     _effective_width
+        tax                       ; Remember low byte
+        lda     _crop_end_x+1
+        sbc     _crop_start_x+1
+        sta     _effective_width+1
+
+        cpx     #<640             ; Compare low byte for 640/320
+        beq     scale_640
+        cpx     #<320
+        beq     scale_320
+        cpx     #$00              ; Now if low byte != 0 we're wrong
+        bne     default
+        cmp     #>512             ; And high byte for 512/256
+        beq     scale_512         ; As low == 0
+        cmp     #>256
+        beq     scale_256
+default:
+        lda     #<unsup_width_str
+        ldx     #>unsup_width_str
+        jsr     _cputs
+        jsr     _cgetc
+        jsr     popax
+        jsr     _reload_menu
+        brk
+scale_320:
+        lda     #8
+        sta     _scaling_factor
+        lda     #(BAND_HEIGHT*8/10)
+        sta     _scaled_band_height
+
+        lda     _width
+        cmp     #<640
+        bne     :+
+        inc     _effective_width
+
+:       lda     #<(FILE_WIDTH*BAND_HEIGHT*8/10)
+        ldx     #>(FILE_WIDTH*BAND_HEIGHT*8/10)
+        jmp     finish_scale
+scale_640:
+        lda     #4
+        sta     _scaling_factor
+        lda     #(BAND_HEIGHT*4/10)
+        sta     _scaled_band_height
+        lda     #<(FILE_WIDTH*BAND_HEIGHT*4/10)
+        ldx     #>(FILE_WIDTH*BAND_HEIGHT*4/10)
+        jmp     finish_scale
+scale_512:
+        lda     #5
+        sta     _scaling_factor
+        lda     #(BAND_HEIGHT*5/10)
+        sta     _scaled_band_height
+
+        lda     _crop_start_y
+        clc
+        adc     #<380
+        sta     _last_band
+        lda     _crop_start_y+1
+        adc     #>380
+        sta     _last_band+1
+        lda     #2
+        sta     _last_band_crop
+
+        lda     #<(FILE_WIDTH*BAND_HEIGHT*5/10)
+        ldx     #>(FILE_WIDTH*BAND_HEIGHT*5/10)
+        jmp     finish_scale
+scale_256:
+        lda     #10
+        sta     _scaling_factor
+        lda     #(BAND_HEIGHT*10/10)
+        sta     _scaled_band_height
+
+        lda     _crop_start_y
+        clc
+        adc     #<180
+        sta     _last_band
+        lda     _crop_start_y+1
+        adc     #>180
+        sta     _last_band+1
+        lda     #12
+        sta     _last_band_crop
+
+        lda     #<(FILE_WIDTH*BAND_HEIGHT*10/10)
+        ldx     #>(FILE_WIDTH*BAND_HEIGHT*10/10)
+
+finish_scale:
+        sta     _output_write_len
+        stx     _output_write_len+1
+
+        ; Compute column scaling table
+        ldy     #$00
+        sty     prev_xoff_h
+next_col:
+        sty     col
+        tya
+        ldx     #$00              ; col
+        jsr     mulax10           ; * 10
+        jsr     pushax
+        lda     _scaling_factor   ; / scaling_factor
+        jsr     tosudiva0
+        clc
+        adc     #RAW_X_OFFSET
+        bcc     :+
+        inx
+
+:       cpx     prev_xoff_h       ; Insert special offset for page change
+        beq     :+
+
+        stx     prev_xoff_h       ; update prev xoff high
+        tax                       ; Backup xoff low
+        ldy     col
+        lda     #$00
+        sta     _orig_x_offset,y
+        txa                       ; Get xoff low back
+        sta     _special_x_orig_offset,y
+        jmp     advance_col
+
+:       ldy     col
+        sta     _orig_x_offset,y
+
+advance_col:
+        iny                       ; col++
+        bne     next_col
+
+        ; Compute lines scaling pointers
+        ldy     _scaled_band_height
+        dey
+next_row:
+        sty     row
+
+        tya                       ; row
+        ldx     #$00
+        jsr     mulax10           ; * 10
+        jsr     pushax
+        lda     _scaling_factor   ; / scaling_factor
+        jsr     tosudiva0
+        jsr     pushax
+        lda     #<RAW_WIDTH       ; * RAW_WIDTH
+        ldx     #>RAW_WIDTH
+        jsr     tosmulax
+        clc
+        adc     #<_raw_image      ; + raw_image
+        tay
+        txa
+        adc     #>_raw_image
+        tax
+
+        tya                       ; + crop_start_x
+        clc
+        adc     _crop_start_x
+        tay
+        txa
+        adc     _crop_start_x+1
+        tax
+
+        tya                       ; + RAW_Y_OFFSET*RAW_WIDTH
+        clc
+        adc     #<(RAW_Y_OFFSET*RAW_WIDTH)
+        ldy     row
+        sta     _orig_y_table_l,y
+        txa
+        adc     #>(RAW_Y_OFFSET*RAW_WIDTH)
+        sta     _orig_y_table_h,y
+
+        dey
+        bpl     next_row
+        jmp     incsp2            ; Drop ofname and return
+.endproc
+
 .segment "BSS"
+col:                    .res 1
+row:                    .res 1
+prev_xoff_h:            .res 1
+
+.segment "DATA"
+unsup_width_str:        .byte "Unsupported width.",$0D,$0A,$00

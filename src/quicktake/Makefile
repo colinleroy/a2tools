@@ -146,26 +146,47 @@ CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
-slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TARGET)-iobuf-0800.o \
-	-DPROGRAM_NAME='"SLOWTAKE"' -DBUFFER_SIZE=2048 --asm-define BUFFER_SIZE=2048 \
-	--start-addr 0xC00 #One file buffer
+slowtake_CLCFLAGS = $(CLCFLAGS) \
+	-DPROGRAM_NAME='"SLOWTAKE"' \
+	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
+	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
+	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
+	-C ../../config/apple2enh-hgr-alignbss.cfg $(TARGET)-iobuf-0800.o \
+	--start-addr 0xC00  #One file buffer
 
 # 4 full tracks cache!
-qtktconv_CLCFLAGS = -D_CACHE_SIZE=20480 --asm-define CACHE_SIZE=20480 \
-	-DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 \
-	-DRAW_WIDTH=768 --asm-define RAW_WIDTH=768 \
+qtktconv_CLCFLAGS = \
+	-D_CACHE_SIZE=20480 --asm-define CACHE_SIZE=20480 \
+	-DRAW_X_OFFSET=1    --asm-define RAW_X_OFFSET=1 \
+	-DRAW_Y_OFFSET=1    --asm-define RAW_Y_OFFSET=1 \
+	-DRAW_WIDTH=768     --asm-define RAW_WIDTH=768 \
+	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
+	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQTKTCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o \
+	--start-addr 0x1000  #Two file buffers
 
 # 3.5 tracks cache
-qtknconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
-	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
+qtknconv_CLCFLAGS = \
+	-D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
+	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=320     --asm-define RAW_WIDTH=320 \
+	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
+	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQTKNCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000 \
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o \
+	--start-addr 0x1000  #Two file buffers
 
-jpegconv_CLCFLAGS = -D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
-	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=512 --asm-define RAW_WIDTH=512 \
-	-DJPEGCONV=1 -DFINAL_WIDTH=320 --asm-define FINAL_WIDTH=320 \
+jpegconv_CLCFLAGS = \
+	-D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
+	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
+	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
+	-DFINAL_WIDTH=320   --asm-define FINAL_WIDTH=320 \
+	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
+	-DJPEGCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \

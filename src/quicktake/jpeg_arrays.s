@@ -21,7 +21,6 @@
    mGetMore   .res 16
 .endstruct
 
-BAND_HEIGHT = 20
         .segment "BSS"
 
 ; raw_image has 512px wide lines to help with alignment

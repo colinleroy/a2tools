@@ -22,7 +22,6 @@
 
 ; Defines
 
-BAND_HEIGHT   = 20
 ; QTKT algorithm relies on two pixels "borders" around the
 ; image to simplify bound checking.
 SCRATCH_HEIGHT= (BAND_HEIGHT + 1)

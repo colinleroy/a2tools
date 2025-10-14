@@ -19,16 +19,16 @@ extern int ifd;
 #define cur_cache_ptr prev_ram_irq_vector
 #else
 extern uint8 *cur_cache_ptr;
+#define BAND_HEIGHT 20
+#define FILE_WIDTH 256
 #endif
 
-#define BAND_HEIGHT 20
 #define RAW_IMAGE_SIZE ((BAND_HEIGHT) * RAW_WIDTH)
 
 #define QTKT_MAGIC      "qktk"
 #define QTKN_MAGIC      "qktn"
 #define JPEG_EXIF_MAGIC "\377\330\377\341"
 
-#define FILE_WIDTH 256
 #define FILE_HEIGHT HGR_HEIGHT
 #define THUMB_WIDTH 80
 #define THUMB_HEIGHT 60
