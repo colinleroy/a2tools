@@ -409,17 +409,17 @@ try_again:
   progress_bar(0, 8, 80, 0, height);
 
   for (h = 0; h < crop_end_y; h += BAND_HEIGHT) {
-    cputsxy(0, 7, "Decoding    \r\n");
+    cputsxy(0, 7, "Decoding    ");
     progress_bar(0, 8, 80, h, crop_end_y);
 
     qt_load_raw(h);
     if (h >= crop_start_y) {
-      cputsxy(0, 7, "Scaling      \r\n");
+      cputsxy(0, 7, "Scaling      ");
       write_raw(h);
     }
   }
 
-  cputsxy(0, 7, "Finalizing      \r\n");
+  cputsxy(0, 7, "Finalizing      ");
   progress_bar(0, 8, 80, height, height);
 
   close(ifd);

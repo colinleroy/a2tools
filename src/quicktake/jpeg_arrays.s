@@ -31,18 +31,18 @@
 .align 256
 _raw_image:       .res (BAND_HEIGHT-1)*RAW_WIDTH+FINAL_WIDTH
 
-_gQuant0_l =      _raw_image+(8*512)+FINAL_WIDTH    ; 64 bytes
-_gQuant0_h =      _raw_image+(9*512)+FINAL_WIDTH    ; 64 bytes
-_gQuant1_l =      _raw_image+(10*512)+FINAL_WIDTH   ; 64 bytes
-_gQuant1_h =      _raw_image+(11*512)+FINAL_WIDTH   ; 64 bytes
+_gQuant0_l =      _raw_image+(10*512)+FINAL_WIDTH    ; 64 bytes
+_gQuant0_h =      _raw_image+(11*512)+FINAL_WIDTH    ; 64 bytes
+_gQuant1_l =      _raw_image+(12*512)+FINAL_WIDTH   ; 64 bytes
+_gQuant1_h =      _raw_image+(13*512)+FINAL_WIDTH   ; 64 bytes
 
 .assert .sizeof(hufftable_t) = 64, error
-_gHuffTab0 =      _raw_image+(12*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab1 =      _raw_image+(13*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab2 =      _raw_image+(14*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab3 =      _raw_image+(15*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffVal0 =      _raw_image+(16*512)+FINAL_WIDTH   ; 16 bytes
-_gHuffVal1 =      _raw_image+(17*512)+FINAL_WIDTH   ; 16 bytes
+_gHuffTab0 =      _raw_image+(14*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab1 =      _raw_image+(15*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab2 =      _raw_image+(16*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffTab3 =      _raw_image+(17*512)+FINAL_WIDTH   ; 64 bytes
+_gHuffVal0 =      _raw_image+(18*512)+FINAL_WIDTH   ; 16 bytes
+_gHuffVal1 =      _raw_image+(19*512)+FINAL_WIDTH   ; 16 bytes
 
 ; Fill the last bytes to align cache
 filler:           .res RAW_WIDTH-FINAL_WIDTH-4
