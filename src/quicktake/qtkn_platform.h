@@ -3,8 +3,6 @@
 
 #include "platform.h"
 
-#define WIDTH 320U
-#define HEIGHT 480U
 #define DATABUF_SIZE 322
 
 extern uint8 val_hi_from_last[17];

@@ -41,8 +41,7 @@
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11
 
         .include      "qtkn_huffgetters.inc"
-WIDTH               = 320
-USEFUL_DATABUF_SIZE = 321
+USEFUL_DATABUF_SIZE = DECODE_WIDTH+1
 DATA_INIT           = 8
 
 ; ZP vars share locations when they can - they're usually limited to one function
@@ -368,7 +367,7 @@ REFILLER ctrl_discard_fill, ctrl_discard_rts, #7
 repeat_loop:
         lda     #1
         sta     tree
-        lda     #<(WIDTH/2)
+        lda     #<(DECODE_WIDTH/2)
         sta     col
 
 discard_col_loop:
@@ -610,11 +609,11 @@ next_pass:
 
 :       clc                   ; Advance row in output buffer
         lda     _row_idx
-        adc     #<(WIDTH)
+        adc     #<DECODE_WIDTH
         sta     _row_idx
         tay                   ; For init_pass
         lda     _row_idx+1
-        adc     #>(WIDTH)
+        adc     #>DECODE_WIDTH
         sta     _row_idx+1
         tax
         jsr     init_pass
@@ -1019,19 +1018,19 @@ init_done:
         ror     a                   ; put initial low bit back to high bit of low byte
 
         ; val0 = next_line[WIDTH+1] = factor<<7
-        stx     _next_line_h+(WIDTH+1)
+        stx     _next_line_h+DECODE_WIDTH+1
         stx     val0+1
-        sta     _next_line_l+(WIDTH+1)
+        sta     _next_line_l+DECODE_WIDTH+1
         sta     val0
 
         ; tree = 1,
         lda     #1
         sta     tree
 
-        ; col = WIDTH
-        lda     #<(WIDTH)
+        ; col = DECODE_WIDTH
+        lda     #<DECODE_WIDTH
         sta     col
-        ldx     #>(WIDTH)
+        ldx     #>DECODE_WIDTH
         stx     colh
 
         ; Init the numerous patched locations

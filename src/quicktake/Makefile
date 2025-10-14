@@ -156,7 +156,7 @@ slowtake_CLCFLAGS = $(CLCFLAGS) \
 
 # 4 full tracks cache!
 qtktconv_CLCFLAGS = \
-	-D_CACHE_SIZE=20480 --asm-define CACHE_SIZE=20480 \
+	-DCACHE_SIZE=20480  --asm-define CACHE_SIZE=20480 \
 	-DRAW_X_OFFSET=1    --asm-define RAW_X_OFFSET=1 \
 	-DRAW_Y_OFFSET=1    --asm-define RAW_Y_OFFSET=1 \
 	-DRAW_WIDTH=768     --asm-define RAW_WIDTH=768 \
@@ -168,39 +168,71 @@ qtktconv_CLCFLAGS = \
 
 # 3.5 tracks cache
 qtknconv_CLCFLAGS = \
-	-D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
+	-DCACHE_SIZE=16384  --asm-define CACHE_SIZE=16384 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=320     --asm-define RAW_WIDTH=320 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
+	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQTKNCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_CLCFLAGS = \
-	-D_CACHE_SIZE=14336 --asm-define CACHE_SIZE=14336 \
+	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
-	-DFINAL_WIDTH=320   --asm-define FINAL_WIDTH=320 \
+	-DINPUT_WIDTH=640   --asm-define INPUT_WIDTH=640 \
+	-DINPUT_HEIGHT=480  --asm-define INPUT_HEIGHT=480 \
+	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DJPEGCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o \
+	--start-addr 0x1000  #Two file buffers
 
 GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
 	-fno-omit-frame-pointer \
 	$(shell sdl-config --cflags)
-qtktconv_GCCCFLAGS = -D_CACHE_SIZE=20480 -DRAW_X_OFFSET=1 -DRAW_Y_OFFSET=1 -DRAW_WIDTH=768 \
-	-DFINAL_WIDTH=640 -DQTKTCONV=1
+qtktconv_GCCCFLAGS = \
+	-DCACHE_SIZE=20480 \
+	-DRAW_X_OFFSET=1 \
+	-DRAW_Y_OFFSET=1 \
+	-DRAW_WIDTH=768 \
+	-DBAND_HEIGHT=20 \
+	-DFILE_WIDTH=256 \
+	-DQTKTCONV=1 \
 
-qtknconv_GCCCFLAGS = -D_CACHE_SIZE=14336 -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=320 \
-	-DFINAL_WIDTH=320 -DQTKNCONV=1 \
+qtknconv_GCCCFLAGS = \
+	-DCACHE_SIZE=16384 \
+	-DRAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=320 \
+	-DBAND_HEIGHT=20 \
+	-DINPUT_WIDTH=640 \
+	-DINPUT_HEIGHT=480 \
+	-DDECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 \
+	-DFILE_WIDTH=256 \
+	-DQTKNCONV=1 \
 
-jpegconv_GCCCFLAGS = -D_CACHE_SIZE=14336 -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=512 \
-	-DFINAL_WIDTH=320 -DJPEGCONV=1
+jpegconv_GCCCFLAGS = \
+	-DCACHE_SIZE=14336 \
+	-DRAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=512 \
+	-DBAND_HEIGHT=20 \
+	-DINPUT_WIDTH=640 \
+	-DINPUT_HEIGHT=480 \
+	-DDECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 \
+	-DFILE_WIDTH=256 \
+	-DJPEGCONV=1 \
 
 GCCLDFLAGS = $(shell sdl-config --libs)
 

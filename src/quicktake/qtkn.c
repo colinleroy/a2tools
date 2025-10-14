@@ -107,7 +107,7 @@ void qt_load_raw(uint16 top)
     }
   }
 
-  row_idx = raw_image - WIDTH;
+  row_idx = raw_image - DECODE_WIDTH;
 
   for (row=0; row != BAND_HEIGHT; row+=2) {
     factor = getfactor();

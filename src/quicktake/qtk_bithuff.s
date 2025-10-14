@@ -94,7 +94,7 @@ _huff_data:   .res        (4*256)
 _div48:       .res        256
 _dyndiv:      .res        256
 .assert <* = 0, error
-_raw_image:   .res        (20*320)  ; Cool, this is aligned!
+_raw_image:   .res        (BAND_HEIGHT*RAW_WIDTH)  ; Cool, this is aligned!
 .assert <* = 0, error
 _next_line_h:  .res        322
 

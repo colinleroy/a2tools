@@ -125,10 +125,12 @@ static uint8 identify(const char *name)
     else
       cur_cache_ptr = cache_start + (736);
 
+#ifdef QTKNCONV
     if (!memcmp(cache_start, QTKN_MAGIC, 4)) {
-      width = 320;
-      height = 240;
+      width = DECODE_WIDTH;
+      height = DECODE_HEIGHT;
     }
+#endif
   }
 #endif
 #ifdef JPEGCONV
@@ -136,8 +138,8 @@ static uint8 identify(const char *name)
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     cputs((char *)name);
     cputs("...\r\n");
-    width = QT200_JPEG_WIDTH;
-    height = QT200_JPEG_HEIGHT;
+    width = DECODE_WIDTH;
+    height = DECODE_HEIGHT;
     cur_cache_ptr = cache_start;
   }
 #endif

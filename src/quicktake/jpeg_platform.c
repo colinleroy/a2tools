@@ -103,6 +103,8 @@ uint16 __fastcall__ getBitsFF(uint8 numBits) {
 extern uint8 *cur_cache_ptr;
 extern uint8 *cache_end;
 
+#define FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(value) (value >>=8)
+
 uint16 __fastcall__ imul_b1(int16 w)
 {
   uint32 x;

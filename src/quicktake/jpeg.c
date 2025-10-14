@@ -469,12 +469,12 @@ static uint8 readSOFMarker(void)
 
    gImageYSize = getLong();
 
-   if (gImageYSize != QT200_HEIGHT)
+   if (gImageYSize != INPUT_HEIGHT)
       return PJPG_BAD_HEIGHT;
 
    gImageXSize = getLong();
 
-   if (gImageXSize  != QT200_WIDTH)
+   if (gImageXSize  != INPUT_WIDTH)
       return PJPG_BAD_WIDTH;
 
    gCompsInFrame = (uint8)getByteNoFF();

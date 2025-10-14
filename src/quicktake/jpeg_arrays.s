@@ -29,23 +29,23 @@
 ; far enough that the scaler won't overwrite it (it will
 ; overwrite 256*16 bytes)
 .align 256
-_raw_image:       .res (BAND_HEIGHT-1)*RAW_WIDTH+FINAL_WIDTH
+_raw_image:       .res (BAND_HEIGHT-1)*RAW_WIDTH+DECODE_WIDTH
 
-_gQuant0_l =      _raw_image+(10*512)+FINAL_WIDTH    ; 64 bytes
-_gQuant0_h =      _raw_image+(11*512)+FINAL_WIDTH    ; 64 bytes
-_gQuant1_l =      _raw_image+(12*512)+FINAL_WIDTH   ; 64 bytes
-_gQuant1_h =      _raw_image+(13*512)+FINAL_WIDTH   ; 64 bytes
+_gQuant0_l =      _raw_image+(10*512)+DECODE_WIDTH   ; 64 bytes
+_gQuant0_h =      _raw_image+(11*512)+DECODE_WIDTH   ; 64 bytes
+_gQuant1_l =      _raw_image+(12*512)+DECODE_WIDTH   ; 64 bytes
+_gQuant1_h =      _raw_image+(13*512)+DECODE_WIDTH   ; 64 bytes
 
 .assert .sizeof(hufftable_t) = 64, error
-_gHuffTab0 =      _raw_image+(14*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab1 =      _raw_image+(15*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab2 =      _raw_image+(16*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffTab3 =      _raw_image+(17*512)+FINAL_WIDTH   ; 64 bytes
-_gHuffVal0 =      _raw_image+(18*512)+FINAL_WIDTH   ; 16 bytes
-_gHuffVal1 =      _raw_image+(19*512)+FINAL_WIDTH   ; 16 bytes
+_gHuffTab0 =      _raw_image+(14*512)+DECODE_WIDTH   ; 64 bytes
+_gHuffTab1 =      _raw_image+(15*512)+DECODE_WIDTH   ; 64 bytes
+_gHuffTab2 =      _raw_image+(16*512)+DECODE_WIDTH   ; 64 bytes
+_gHuffTab3 =      _raw_image+(17*512)+DECODE_WIDTH   ; 64 bytes
+_gHuffVal0 =      _raw_image+(18*512)+DECODE_WIDTH   ; 16 bytes
+_gHuffVal1 =      _raw_image+(19*512)+DECODE_WIDTH   ; 16 bytes
 
 ; Fill the last bytes to align cache
-filler:           .res RAW_WIDTH-FINAL_WIDTH-4
+filler:           .res RAW_WIDTH-DECODE_WIDTH-4
 .assert <* = 256-4, error
 _cache:           .res CACHE_SIZE+4
 

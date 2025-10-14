@@ -4,9 +4,6 @@
 #include "platform.h"
 #include "picojpeg.h"
 
-#define QT200_WIDTH 640
-#define QT200_HEIGHT 480
-
 typedef struct HuffTableT
 {
    uint8 mMaxCode_l[16];
@@ -93,10 +90,8 @@ uint8 skipVariableMarker(void);
 #define GMAXMCUXSIZE 16
 #define GMAXMCUYSIZE 8
 
-#define GMAXMCUSPERROW ((QT200_WIDTH + (GMAXMCUXSIZE - 1)) >> 4)
-#define GMAXMCUSPERCOL ((QT200_HEIGHT + (GMAXMCUYSIZE - 1)) >> 3)
-#define DECODED_WIDTH (QT200_WIDTH>>1)
-#define DECODED_HEIGHT (QT200_HEIGHT>>1)
+#define GMAXMCUSPERROW ((INPUT_WIDTH + (GMAXMCUXSIZE - 1)) >> 4)
+#define GMAXMCUSPERCOL ((INPUT_HEIGHT + (GMAXMCUYSIZE - 1)) >> 3)
 
 unsigned char pjpeg_decode_mcu(void);
 void setQuant(uint8 quantId);

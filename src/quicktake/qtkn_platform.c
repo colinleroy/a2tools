@@ -122,7 +122,7 @@ void consume_extra(void) {
   uint8 rep, rep_loop, nreps;
   /* Consume RADC tokens but don't care about them. */
   for (c=1; c != 3; c++) {
-    for (tree = 1, col = WIDTH/2; col; ) {
+    for (tree = 1, col = DECODE_WIDTH/2; col; ) {
       tree = getctrlhuff(tree*2);
       if (tree) {
         col--;
@@ -209,12 +209,12 @@ void decode_row(void) {
 
   for (r=0; r != 2; r++) {
     val0 = ((int16)factor)<<7;
-    next_line[WIDTH+1] = factor << 7;
+    next_line[DECODE_WIDTH+1] = factor << 7;
 
-    row_idx += WIDTH;
+    row_idx += DECODE_WIDTH;
     dest = row_idx;
 
-    col = WIDTH;
+    col = DECODE_WIDTH;
     tree = 1;
 
     while(col) {
