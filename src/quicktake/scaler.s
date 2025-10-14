@@ -1,21 +1,25 @@
         .export         _write_raw, _build_scale_table
+        .export         _output_write_len
+        .export         _scaled_band_height, _last_band, _last_band_crop
+        .export         _scaling_factor
+        .export         _effective_width
+        .export         _crop_start_x, _crop_end_x
+        .export         _crop_start_y, _crop_end_y
+
         .import         _histogram_low, _histogram_high
 
         .import         _write, _ofd, _reload_menu
         .import         _special_x_orig_offset, _orig_x_offset
         .import         _orig_y_table_l, _orig_y_table_h
-        .import         _output_write_len
-        .import         _scaled_band_height, _last_band, _last_band_crop
-        .import         _scaling_factor
         .import         _raw_image
-        .import         _width, _effective_width
-        .import         _crop_start_x, _crop_end_x
-        .import         _crop_start_y, _crop_end_y
+        .import         _width
+
         .import         _cputs, _cgetc, _reload_menu
         .import         pusha0, pushax, popax, incsp2
         .import         mulax10, tosudiva0, tosmulax
 
         .importzp       tmp1, _zp4
+
 y_ptr = _zp4
 
 .proc _write_raw
@@ -291,6 +295,16 @@ next_row:
 col:                    .res 1
 row:                    .res 1
 prev_xoff_h:            .res 1
+_scaled_band_height:    .res 1
+_last_band:             .res 2
+_last_band_crop:        .res 1
+_scaling_factor:        .res 1
+_effective_width:       .res 2
+_crop_start_x:          .res 2
+_crop_end_x:            .res 2
+_crop_start_y:          .res 2
+_crop_end_y:            .res 2
+_output_write_len:      .res 2
 
 .segment "DATA"
 unsup_width_str:        .byte "Unsupported width.",$0D,$0A,$00

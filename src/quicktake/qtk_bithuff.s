@@ -17,7 +17,6 @@
         .export         _getfactor
         .export         get_4datahuff_interpolate
         .import         got_4datahuff
-        .export         _histogram_low, _histogram_high
 
         .export         discard4datahuff_interpolate
         .import         discard_col_loop
@@ -37,6 +36,10 @@
         .export         huff_small_3
         .export         huff_small_4
         .export         huff_small_5
+
+        .export         _histogram_low, _histogram_high
+        .export         _orig_y_table_l, _orig_y_table_h
+        .export         _orig_x_offset, _special_x_orig_offset
 
         .importzp       _zp6, _zp11, _zp12, _zp13
 
@@ -78,6 +81,8 @@ CACHE_END = _cache + CACHE_SIZE
 ; Defined here to avoid holes due to alignment
 _histogram_low:         .res 256
 _histogram_high:        .res 256
+_orig_x_offset:         .res 256
+_special_x_orig_offset: .res 256
 
 _next_line_l:  .res        322
 _ushiftl3p4:   .res        32
@@ -97,6 +102,10 @@ _dyndiv:      .res        256
 _raw_image:   .res        (BAND_HEIGHT*RAW_WIDTH)  ; Cool, this is aligned!
 .assert <* = 0, error
 _next_line_h:  .res        322
+
+; No need to align anymore
+_orig_y_table_l:        .res BAND_HEIGHT
+_orig_y_table_h:        .res BAND_HEIGHT
 
 col         = _zp6   ; byte - _decode_row, _consume_extra
 num_discard = _zp11

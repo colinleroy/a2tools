@@ -77,7 +77,7 @@ qtktconv_SOURCES := \
 
 qtktconv_CC65SOURCES := \
 	qtkt.s \
-	qt-conv.s \
+	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -87,7 +87,8 @@ qtktconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 qtktconv_GCCSOURCES := \
-	qtkt.c
+	qtkt.c \
+	scaler.c
 
 qtknconv_SOURCES := \
 	qt-conv.c \
@@ -97,7 +98,7 @@ qtknconv_SOURCES := \
 qtknconv_CC65SOURCES := \
 	qtk_bithuff.s \
 	qtkn_platform.s \
-	qt-conv.s \
+	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -112,7 +113,8 @@ qtknconv_CC65SOURCES := \
 	
 qtknconv_GCCSOURCES := \
 	qtk_bithuff.c \
-	qtkn_platform.c
+	qtkn_platform.c \
+	scaler.c
 
 jpegconv_SOURCES := \
 	qt-conv.c \
@@ -122,7 +124,7 @@ jpegconv_SOURCES := \
 jpegconv_CC65SOURCES := \
 	jpeg_arrays.s \
 	jpeg_platform.s \
-	qt-conv.s \
+	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -133,7 +135,8 @@ jpegconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 jpegconv_GCCSOURCES := \
-	jpeg_platform.c
+	jpeg_platform.c \
+	scaler.c
 
 GCCSOURCES := \
 	../lib/extended_conio.c \

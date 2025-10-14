@@ -18,6 +18,9 @@
         .export          _cache
         .export          _cache_start
         .export          _histogram_low, _histogram_high
+        .export          _orig_y_table_l, _orig_y_table_h
+        .export          _orig_x_offset, _special_x_orig_offset
+
         .include         "fcntl.inc"
 
 ; Defines
@@ -211,8 +214,12 @@ _raw_image:
 ; Defined here to avoid holes due to alignment
 _histogram_low:         .res 256
 _histogram_high:        .res 256
+_orig_x_offset:         .res 256
+_special_x_orig_offset: .res 256
 
 ; No need to align anymore
+_orig_y_table_l:        .res BAND_HEIGHT
+_orig_y_table_h:        .res BAND_HEIGHT
 
 ; Whether to keep floppy motor on (patched to softswitch in the code)
 motor_on:

@@ -13,6 +13,8 @@
         .export _raw_image
         .export right_shift_4
         .export _histogram_low, _histogram_high
+        .export _orig_y_table_l, _orig_y_table_h
+        .export _orig_x_offset, _special_x_orig_offset
 
 .struct hufftable_t
    mMaxCode_l .res 16
@@ -45,20 +47,25 @@ _gHuffVal0 =      _raw_image+(18*512)+DECODE_WIDTH   ; 16 bytes
 _gHuffVal1 =      _raw_image+(19*512)+DECODE_WIDTH   ; 16 bytes
 
 ; Fill the last bytes to align cache
-filler:           .res RAW_WIDTH-DECODE_WIDTH-4
+filler:                 .res RAW_WIDTH-DECODE_WIDTH-4
 .assert <* = 256-4, error
-_cache:           .res CACHE_SIZE+4
+_cache:                 .res CACHE_SIZE+4
 
 .assert <* = 0, error
-_gHuffVal2:       .res 256
-_gHuffVal3:       .res 256
+_gHuffVal2:             .res 256
+_gHuffVal3:             .res 256
 
 ; Defined here to avoid holes due to alignment
 _histogram_low:         .res 256
 _histogram_high:        .res 256
+_orig_x_offset:         .res 256
+_special_x_orig_offset: .res 256
 
 .assert <* = 0, error
-_gCoeffBuf:       .res 128
+_gCoeffBuf:             .res 128
+
+_orig_y_table_l:        .res BAND_HEIGHT
+_orig_y_table_h:        .res BAND_HEIGHT
 
         .segment "DATA"
 .align 256
