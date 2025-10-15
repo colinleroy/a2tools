@@ -20,17 +20,16 @@
         cmp     #'w'
         beq     set_write
 set_read:
-        lda     #<(O_RDONLY)
-        sta     io_mode+1
+        ldy     #<(O_RDONLY)
         lda     #<_read
         ldx     #>_read
         bne     patch_io
 set_write:
-        lda     #<(O_WRONLY|O_CREAT)
-        sta     io_mode+1
+        ldy     #<(O_WRONLY|O_CREAT)
         lda     #<_write
         ldx     #>_write
 patch_io:
+        sty     io_mode+1
         sta     io_func+1
         stx     io_func+2
 
@@ -64,6 +63,7 @@ io_func:
         jmp     _close
 
 close_error:
+        jsr     popax
         jsr     _close
 error:
         lda     #$FF
