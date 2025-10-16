@@ -36,18 +36,17 @@
         .include    "../lib/mult16x16x16_macro.inc"
 
 ; ZP vars. Mind that qt-conv uses some too
-_gBitBuf       = _zp2       ; byte, used everywhere
-_outputIdx     = _zp4       ; byte, used everywhere
-bbHigh         = _zp5       ; byte, used in huffDecode
-; zp6-7 USED in qt-conv so only use it temporarily
-mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
-
-_gBitsLeft     = _zp8       ; byte, used everywhere
-cur_ZAG_coeff  = _zp10      ; byte, used in _decodeNextMCU
-rDMCU          = _zp11      ; byte, used in _decodeNextMCU
-sDMCU          = _zp12      ; byte, used in _decodeNextMCU
-iDMCU          = _zp13      ; byte, used in _decodeNextMCU
-inputIdx       = _zp11      ; byte, used in idctRows and idctCols
+bbHigh         = _zp4       ; byte, used in huffDecode
+mcuBlock       = _zp5       ; byte, used in _decodeNextMCU
+cur_ZAG_coeff  = _zp6       ; byte, used in _decodeNextMCU
+rDMCU          = _zp7       ; byte, used in _decodeNextMCU
+inputIdx       = _zp7       ; byte, used in idctRows and idctCols
+sDMCU          = _zp8       ; byte, used in _decodeNextMCU
+iDMCU          = _zp9       ; byte, used in _decodeNextMCU
+winoIdx        = _zp9       ; byte, used in createWinogradQuant
+_gBitBuf       = _zp10      ; byte, used everywhere, across bands
+_outputIdx     = _zp11      ; word, used everywhere, across bands
+_gBitsLeft     = _zp13      ; byte, used everywhere, across bands
 
 NO_FF_CHECK = $60           ; RTS
 FF_CHECK_ON = $C9           ; CMP #$nn
@@ -601,12 +600,12 @@ loopDoneL:
 .scope
         ldy     #63
 nextQ:
-        sty     _zp13
+        sty     winoIdx
         ; x *= gWinogradQuant[i];
         lda     _gWinogradQuant,y
         ldx     #$00
         jsr     push0ax
-        ldy     _zp13
+        ldy     winoIdx
         lda     TABL,y
         ldx     TABH,y
         jsr     tosmul0ax
@@ -616,7 +615,7 @@ nextQ:
         jsr     inceaxy
         jsr     asreax3
 
-        ldy     _zp13
+        ldy     winoIdx
         sta     TABL,y
         txa
         sta     TABH,y

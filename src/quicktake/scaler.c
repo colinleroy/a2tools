@@ -1,32 +1,16 @@
 /*
-  QTKT/QTKN decoding wrapper
-  Copyright 2023, Colin Leroy-Mira <colin@colino.net>
-
-  Based on dcraw.c -- Dave Coffin's raw photo decoder
-  Copyright 1997-2018 by Dave Coffin, dcoffin a cybercom o net
-
-  Main decoding program, link with either qtkt.c or qtkn.c to
-  build the decoder.
-
-  Decoding implementations are expected to provide global variables:
-  char magic[5];
-  char *model;
-  uint16 raw_image_size;
-  uint8 raw_image[<of raw_image_size>];
-
-  and the decoding function:
-  void qt_load_raw(uint16 top)
-
-  This file provides the actual uint16 height and width to the decoder.
-  uint16 raw_image_size;
-  uint8 raw_image[<of raw_image_size>];
- */
-
-/* Handle pic by horizontal bands for memory constraints reasons.
- * Bands need to be a multiple of 4px high for compression reasons
- * on QT 150/200 pictures,
- * and a multiple of 5px for nearest-neighbor scaling reasons.
+ * Quicktake for Apple II - scaler
+ * Copyright 2023, Colin Leroy-Mira <colin@colino.net>
+ *
+ * Scaler code - builds scales tables both column and rows at start,
+ * picks pixels from 8bpp buffer according to scaling, and writes
+ * them out to output file.
+ * Handles picture by horizontal bands for memory constraints reasons.
+ * Bands need to be a multiple of 4px high for file format reasons
+ * on QT 150 and 200 pictures.
+ * Bands also needs to a multiple of 5px for scaling reasons.
  * (480 => 192 = *0.4, 240 => 192 = *0.8)
+ * 
  */
 #include <stdio.h>
 #include <stdlib.h>

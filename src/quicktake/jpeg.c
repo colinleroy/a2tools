@@ -194,8 +194,8 @@ static uint8 gTemFlag;
 uint8 gBitBuf;
 uint8 gBitsLeft;
 #else
-#define gBitBuf zp2i
-#define gBitsLeft zp8
+#define gBitBuf zp10
+#define gBitsLeft zp13
 #endif
 //------------------------------------------------------------------------------
 uint8 gCompsInFrame;

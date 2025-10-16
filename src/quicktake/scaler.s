@@ -18,9 +18,9 @@
         .import         pusha0, pushax, popax, incsp2
         .import         mulax10, tosudiva0, tosmulax
 
-        .importzp       tmp1, _zp4
+        .importzp       tmp1, _zp2
 
-y_ptr = _zp4
+y_ptr = _zp2
 
 .proc _write_raw
         ldy     _last_band_crop   ; Is there cropping?

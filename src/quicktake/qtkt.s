@@ -1,7 +1,7 @@
         .importzp        c_sp, sreg
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
         .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
-        .importzp        _zp2, _zp3, _zp4, _zp5, _zp6, _zp7, _zp12, _zp13
+        .importzp        _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
 
         .import          _memcpy, _memset
 				.import          pushax, decsp4, subysp, _cputsxy
@@ -22,6 +22,16 @@
         .export          _orig_x_offset, _special_x_orig_offset
 
         .include         "fcntl.inc"
+
+; Zero page pointers and variables
+
+cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
+row               = _zp8                 ; Current row, 1 byte
+loop              = _zp9
+loops             = _zp10                ; Used across bands
+row_page_inc      = _zp11                ; Used across bands
+ln_val            = _zp12                ; Used across bands
+hn_val            = _zp13                ; Used across bands
 
 ; Defines
 
@@ -230,19 +240,6 @@ full_reads:
         .res        1
 last_read:
         .res        2
-
-; Zero page pointers and variables
-
-cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
-
-row               = _zp2                 ; Current row, 1 byte
-
-loop              = _zp4
-loops             = _zp5
-row_page_inc      = _zp6
-
-ln_val            = _zp12                 ; Last low nibble computed value
-hn_val            = _zp13                 ; Last high nibble computed value
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = _raw_image + ((BAND_HEIGHT-1) * RAW_WIDTH)

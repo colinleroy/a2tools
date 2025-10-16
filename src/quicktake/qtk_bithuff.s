@@ -107,10 +107,10 @@ _next_line_h:  .res        322
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
 
-col         = _zp6   ; byte - _decode_row, _consume_extra
-num_discard = _zp11
-_bitbuf     = _zp12
-_vbits      = _zp13
+col              = _zp6   ; byte - _decode_row, _consume_extra
+num_discard      = _zp11  ; byte - used everywhere, accross bands
+_bitbuf          = _zp12  ; byte - used everywhere, accross bands
+_vbits           = _zp13  ; byte - used everywhere, accross bands
 motor_on:    .res 1
 
 ; ---------------------------------------------------------------

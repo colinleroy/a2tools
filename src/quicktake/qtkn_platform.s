@@ -36,9 +36,8 @@
         .import       approx_div16x8_direct
 .endif
 
-        .importzp     _bitbuf, _vbits
         .importzp     tmp1, ptr2, tmp2, tmp3
-        .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11
+        .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
 
         .include      "qtkn_huffgetters.inc"
 USEFUL_DATABUF_SIZE = DECODE_WIDTH+1
@@ -56,10 +55,11 @@ hval             = _zp6   ; word - _init_huff
 col              = _zp6   ; byte - _decode_row, _consume_extra
 
 rept             = _zp8   ; byte - _decode_row
-tree             = _zp9  ; byte - _decode_row, _consume_extra
+tree             = _zp9   ; byte - _decode_row, _consume_extra
 colh             = _zp10  ; byte - _decode_row, _consume_extra
-
-                          ; _zp11-13 used by bitbuffer
+num_discard      = _zp11  ; byte - used everywhere, across bands
+_bitbuf          = _zp12  ; byte - used everywhere, across bands
+_vbits           = _zp13  ; byte - used everywhere, across bands
 
 .segment "LC"
 
