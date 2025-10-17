@@ -54,7 +54,7 @@ assets_files = $(assets:%=%_img)
 opponents_code    = $(opponents:%=opponents/opponent%.s)
 opponents_files   = $(opponents:%=opponent_%)
 
-lzsa_files = \
+zx02_files = \
 	$(assets_files) \
 	$(opponents_files) \
 	low_code \
@@ -63,8 +63,8 @@ lzsa_files = \
 	bar_code \
 
 assets_backgrounds = $(assets:=.bg.gen.s)
-assets_bin         = $(lzsa_files:=.bin)
-assets_lzsa         = $(lzsa_files:=.lzsa)
+assets_bin         = $(zx02_files:=.bin)
+assets_zx02         = $(zx02_files:=.zx02)
 
 
 sprites_pixel_perfect = \
@@ -280,8 +280,8 @@ lz4_compressor: ../lz4_compressor/lz4_compressor.c
 
 $(assets_bin): $(BINARY_NAME)
 
-%.lzsa: %.bin
-	lzsa -f 1 -r -m 3 $< $@
+%.zx02: %.bin
+	zx02 -f $< $@
 
 $(assets_backgrounds): %.bg.gen.s: %.hgr
 
@@ -293,7 +293,7 @@ $(assets_backgrounds): %.bg.gen.s: %.hgr
 
 %.hgr: assets/%.xcf ../surl-server/hgr-convert
 	convert -flatten $< $<.png
-	#Use -short to have 8 less bytes at the end so lzsa can uncompress
+	#Use -short to have 8 less bytes at the end so zx02 can uncompress
 	#in-place
 	../surl-server/hgr-convert -short $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
@@ -389,7 +389,7 @@ clean:
 	table.hgr \
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
-	*.dbg *.lbl *.map *.lz4 *.lzsa \
+	*.dbg *.lbl *.map *.lz4 *.zx02 \
 	shflpuck.ld.cfg
 
 check_imports.sh: $(shflpuck_SOURCES) check_imports.sh
@@ -403,20 +403,20 @@ $(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
-shufflepuck.po: $(BINARY_NAME) $(assets_lzsa)
+shufflepuck.po: $(BINARY_NAME) $(assets_zx02)
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ SHUFFLEPUCK
 	java -jar ../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -as $@ SHFLPUCK < $<; \
-	for r in $(assets_lzsa); do \
-		java -jar ../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lzsa$///") BIN < $$r; \
+	for r in $(assets_zx02); do \
+		java -jar ../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
 	done; \
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ && \
-	cp *.bin *.lzsa /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
+	cp *.bin *.zx02 /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ && \
 	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/

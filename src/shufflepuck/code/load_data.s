@@ -35,7 +35,7 @@
         .import   __SPLC_START__, __SPLC_SIZE__
         .import   __HGR_START__, __HGR_SIZE__
         .import   __OPPONENT_START__, __OPPONENT_SIZE__
-        .import   _decompress_lzsa1
+        .import   _decompress_zx02
 
         .importzp tmp1, ptr1
 
@@ -269,7 +269,7 @@ finish_decompress:
         bit       $C083           ; Enable writing to LC
         bit       $C083           ; In case we're writing to it
 
-        jsr     _decompress_lzsa1
+        jsr     _decompress_zx02
 
         bit     $C080
 
