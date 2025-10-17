@@ -55,7 +55,7 @@ pos2_lo         := $04F8
 pos2_hi         := $05F8
 status          := $0778
 
-        .rodata
+        .segment "RODATA"
 
 offsets:.byte   $05             ; Pascal 1.0 ID byte
         .byte   $07             ; Pascal 1.0 ID byte

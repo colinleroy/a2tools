@@ -180,14 +180,10 @@ done:
         rts
 .endproc
 
-.segment "n"
-.include "../lib/serial/asm/driver.s"
-
-.segment "RODATA"
-
 slot_str:         .asciiz "SERIAL SLOT: "
 open_error_str:   .asciiz "SERIAL OPEN ERROR"
 modem_str:        .asciiz "MODEM  "
 printer_str:      .asciiz "PRINTER"
-
 tmp_param:        .byte   0
+
+.include "../lib/serial/asm/driver.s"

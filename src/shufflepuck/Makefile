@@ -209,6 +209,7 @@ shflpuck_SOURCES := \
 	$(win_sounds) \
 	$(lose_sounds) \
 	$(sprites) \
+	$(sounds) \
 	code/init.s \
 	code/main.s \
 	code/hz.s \
@@ -233,7 +234,6 @@ shflpuck_SOURCES := \
 	../lib/extrazp.s \
 	../lib/cntoabuf.s \
 	../lib/platform_sleep.s \
-	$(sounds) \
 	transform.s \
 	$(assets_backgrounds) \
 	$(levels_code) \

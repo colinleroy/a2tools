@@ -541,16 +541,21 @@ lowcode_ok:           .res 0
 
 _init_text_before_decompress: .byte 0
 _cache_working:      .byte 1
+
+table_backup_name:   .asciiz "/RAM/TABLE.IMG"
+table_name = table_backup_name + 5
+
+bar_backup_name:     .asciiz "/RAM/BAR.IMG"
+bar_name = bar_backup_name + 5
+
+bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
+bar_code_name = bar_code_backup_name + 5
+
+barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
+barsnd_name = barsnd_backup_name + 5
+
 lowcode_name:        .asciiz "LOW.CODE"
 lc_name:             .asciiz "LC.CODE"
-table_name:          .asciiz "TABLE.IMG"
-bar_name:            .asciiz "BAR.IMG"
-bar_code_name:       .asciiz "BAR.CODE"
-barsnd_name:         .asciiz "BAR.SND"
-table_backup_name:   .asciiz "/RAM/TABLE.IMG"
-bar_backup_name:     .asciiz "/RAM/BAR.IMG"
-bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
-barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
 load_err_str:        .asciiz "COULD NOT LOAD "
 
