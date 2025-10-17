@@ -88,6 +88,8 @@
         jmp     _real_main
 .endproc
 
+.segment "LOWCODE"
+
 .proc _draw_opponent_parts
         ldx     #(7/7)
         ldy     #39
@@ -109,7 +111,6 @@
         rts
 .endproc
 
-
 .proc _check_keyboard
         lda     KBD
         bpl     no_kbd
@@ -130,8 +131,6 @@ no_kbd:
         sty     _abs_max_dy
         rts
 .endproc
-
-.segment "LOWCODE"
 
 .proc _real_main
         lda     _cache_working

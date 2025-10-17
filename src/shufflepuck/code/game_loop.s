@@ -839,23 +839,51 @@ check_my_late_catch:
         beq     they_win
 
 we_win:
-        ; Put up their "lose" sprite
-        jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
-
         ; Make sure puck_y didn't underflow
         ldx     puck_x
         ldy     #PUCK_MIN_Y
         jsr     _set_puck_position
+        ; Increment our score
+        inc     my_score
 
-        ; Their side's sprites will be redrawn by update_screen_for_crash
-        ; so don't bother with it here
+        ; Set parameters
+        .assert >(__OPPONENT_START__+OPPONENT::LOSE_POINT) = >(__OPPONENT_START__+OPPONENT::WIN_POINT), error
+        .assert >(__OPPONENT_START__+OPPONENT::LOSE_POINT_SND) = >(__OPPONENT_START__+OPPONENT::WIN_POINT_SND), error
+
+        lda     #<__OPPONENT_START__+OPPONENT::LOSE_POINT
+        ldx     #<__OPPONENT_START__+OPPONENT::LOSE_POINT_SND
+        ldy     #2
+        clc
+        jmp     point_update
+
+they_win:
+        inc     their_score
+
+        lda     #<__OPPONENT_START__+OPPONENT::WIN_POINT
+        ldx     #<__OPPONENT_START__+OPPONENT::WIN_POINT_SND
+        ldy     #0
+        sec
+
+point_update:
+        ; Set parameters
+        sta     sprite_update+1
+        stx     sound_update+1
+        sty     crash_sound_speed+1
+
+        ; Backup carry
+        php
+sprite_update:
+        ; Put up their lose/win sprite
+        jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
 
         ; Set crash lines parameters
-        clc                       ; Little crash
+        plp                   ; Get carry back
+        php                   ; And save it again
         jsr     update_screen_for_crash
 
         ; Play crash sound, a bit slowed
-        ldy     #2
+crash_sound_speed:
+        ldy     #$FF
         jsr     _play_crash
 
         ; Wait 200ms
@@ -867,43 +895,11 @@ we_win:
         jsr     _rand
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
+sound_update:
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
 
-:       ; Increment our score,
-        inc     my_score
-
-        ; And call the hand drawing with carry clear so it updates our line
-        clc
-        jsr     _draw_score_update
-
-        ; Return with carry set to inform main that the round is over
-        sec
-        rts
-
-they_win:
-        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
-
-        ; Set crash lines parameters
-        sec                       ; Large crash, on our side
-        jsr     update_screen_for_crash
-
-        ; Play crash sound, a bit slowed
-        ldy     #0
-        jsr     _play_crash
-
-        lda     #200
-        ldx     #0
-        jsr     _platform_msleep
-
-        ; Play their win sound (and/or animation)
-        jsr     _rand
-        cmp     #<(255*2/3)       ; 2/3 chances to play the sound
-        bcs     :+
-        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
-:       inc     their_score
-
-        ; And call the hand drawing with carry set so it updates their line
-        sec
+:       ; And call the hand drawing with carry clear so it updates our line
+        plp
         jsr     _draw_score_update
 
         ; Return with carry set to inform main that the round is over
@@ -923,7 +919,6 @@ they_win:
 ; A: standard 8-bit X
 .proc _init_precise_x
         ldx     #0
-        clc
         asl
         sta     puck_precise_x
         bcc     :+
@@ -935,7 +930,6 @@ they_win:
 ; A: standard 8-bit Y
 .proc _init_precise_y
         ldx     #0
-        clc
         asl
         sta     puck_precise_y
         bcc     :+

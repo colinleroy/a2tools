@@ -18,6 +18,7 @@ endif
 # G: Bejin
 # H: Biff
 # I: DC3
+# N: network (serial)
 
 opponents = \
 	a \

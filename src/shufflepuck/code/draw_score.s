@@ -40,7 +40,7 @@ _score_x_start:
         .byte 68, 70, 72, 74, 67
         .byte 80, 82, 84, 86, 79
 
-.segment "CODE"
+.segment "LOWCODE"
 
 THEIR_SCORE_Y_OFFSET = 14
 HAND_TOP = 8
@@ -105,8 +105,6 @@ y_offset:
 
 out:    rts
 .endproc
-
-.segment "LOWCODE"
 
 .proc _draw_scores
         ldx     #0

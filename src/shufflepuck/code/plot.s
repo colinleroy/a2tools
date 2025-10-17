@@ -42,89 +42,6 @@ _plot_line = _plot_line_bresenham
         rts
 .endproc
 
-; Slow but small recursive line drawing
-; by plotting a dot in the middle
-; .proc _plot_line_recursive
-;         lda     ox            ; Compute middle of line
-;         clc
-;         adc     dx
-;         ror
-;         sta     mid_x
-;         tax
-;         lda     oy
-;         clc
-;         adc     dy
-;         ror
-;         sta     mid_y
-;         tay
-;         jsr     _plot_dot     ; Plot at middle
-; 
-;         lda     mid_y         ; mid_y != dy?
-;         cmp     dy
-;         beq     :+
-; plot_line_start_to_middle:
-;         ; Backup coords before overwriting them
-;         lda     dx
-;         pha
-;         lda     dy
-;         pha
-;         ; and set end to middle
-;         lda     mid_x
-;         sta     dx
-;         lda     mid_y
-;         sta     dy
-; 
-;         ; plot line
-;         jsr     _plot_line_recursive
-; 
-;         ; recover middle from orig coords
-;         lda     dy
-;         sta     mid_y
-;         lda     dx
-;         sta     mid_x
-; 
-;         ; and restore original coords
-;         pla
-;         sta     dy
-;         pla
-;         sta     dx
-; 
-;         jmp     plot_line_check_end_to_middle
-; 
-; :       lda     mid_x
-;         cmp     dx            ; mid_x != dx?
-;         bne     plot_line_start_to_middle
-; 
-; plot_line_check_end_to_middle:
-;         lda     mid_y
-;         cmp     oy           ; mid_y != oy?
-;         beq     :+
-; plot_line_end_to_middle:
-;         ; Backup vars we're going to overwrite
-;         lda     ox
-;         pha
-;         lda     oy
-;         pha
-;         ; set end to middle
-;         lda     mid_x
-;         sta     ox
-;         lda     mid_y
-;         sta     oy
-;         jsr     _plot_line_recursive
-; 
-;         ; Restore vars
-;         pla
-;         sta     oy
-;         pla
-;         sta     ox
-;         rts                 ; we're done!
-; 
-; :       lda     mid_x
-;         cmp     ox          ; mid_x != ox ?
-;         bne     plot_line_end_to_middle
-;         rts
-; .endproc
-
 .proc _plot_line_bresenham
         lda     ox            ; Copy parameters
         sta     _x0
@@ -243,9 +160,6 @@ out:    rts
 .endproc
 
 .bss
-; mid_x:          .res 1      ; _plot_line_recursive params
-; mid_y:          .res 1
-
 _x0:            .res 1        ; _plot_line_bresenham params
 _x1:            .res 1
 _y0:            .res 1

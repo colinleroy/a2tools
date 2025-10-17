@@ -48,10 +48,8 @@ extra_lsr:
         ; Set origin
 orig_x:
         lda     #$FF
-        sta     tmp4
-        lda     puck_gx
         clc
-        adc     tmp4
+        adc     puck_gx
         bcc     :+
         lda     #255
 :       tax
