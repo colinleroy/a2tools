@@ -14,7 +14,6 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _init_mouse, _read_mouse
-        .export     vbl_ready
 
         .export     _mouse_wait_vbl
         .export     _mouse_check_button
@@ -23,7 +22,7 @@
 
         .export     _mouse_setbarbox, _mouse_setplaybox
 
-        .import     ostype, hz
+        .import     ostype, _freq
 
         .importzp   ptr1, tmp1, tmp2
 
@@ -32,6 +31,7 @@
 
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"
+        .include    "freq.inc"
         .include    "my_pusher0.gen.inc"
         .include    "pointer.gen.inc"
         .include    "constants.inc"
@@ -154,8 +154,8 @@ next_slot:
         sta     yparam+1
 
         ; Set VBL rate
-        lda     hz
-        jsr     set_mouse_hz
+        lda     _freq
+        jsr     set_mouse_freq
 
         ; The AppleMouse II Card needs the ROM switched in
         ; to be able to detect an Apple //e and use RDVBL
@@ -208,13 +208,7 @@ yparam: ldy     #$FF            ; Patched at runtime
 jump:   jmp     $FFFF           ; Patched at runtime
 
 ;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
-.proc set_mouse_hz
-        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
-        cmp     #60
-        beq     :+
-        iny
-:       tya
-
+.proc set_mouse_freq
         ldx     ostype
         cpx     #$40
         bcs     out               ; Don't do that on IIc/gs
@@ -517,21 +511,17 @@ waste_end:
 :       lda     vbl_ready
         beq     :-
 
-        lda     hz              ; Shorten window at 50Hz to catch
-        cmp     #60             ; sync bugs on my own hardware
-        bne     :+              ; According to testing, we have
+        lda     _freq           ; Shorten window at 50Hz to catch
+        ; cmp     #TV_NTSC      ; sync bugs on my own hardware
+        bne     waste_3250      ; According to testing, we have
         rts                     ; ~1600 extra cycles before it starts
-:       jsr     waste_3250      ; flickering on real hardware.
-        rts
+                                ; flickering on real hardware.
 .endproc
 
+; Returns 0 if mouse button not pressed
 .proc _mouse_check_button
         jsr     _read_mouse
         lda     mouse_b
-        beq     :+
-        sec
-        rts
-:       clc
         rts
 .endproc
 

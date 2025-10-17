@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     hz
+        .export     _freq
         .import     _get_tv, _home, _strout, _read_key
 
         .importzp   ptr1
@@ -21,20 +21,15 @@
         .constructor calibrate_hz, 1
 
         .include    "apple2.inc"
+        .include    "freq.inc"
 
 .segment "ONCE"
 
-hz_vals:
-        .byte   60                ; TV_NTSC
-        .byte   50                ; TV_PAL
-        .byte   0                 ; TV_OTHER
-
 .proc calibrate_hz
         jsr     _get_tv
-        tax
-        lda     hz_vals,x
-        sta     hz
+        cmp     #TV_OTHER
         beq     :+
+        sta     _freq
         rts
 
         ; We don't know. Let's ask.
@@ -44,14 +39,12 @@ hz_vals:
         jsr     _strout
 
 :       jsr     _read_key
-        ldx     #60
+        sec
+        sbc     #'1'          ; '1'-'1'=0, TV_NTSC
+        cmp     #2            ; 0/1 accepted
+        bcs     :-
 
-        cmp     #'1'
-        beq     set60
-        cmp     #'2'
-        bne     :-
-        ldx     #50
-set60:  stx     hz
+        sta     _freq
         bit     $C080
         rts
 .endproc
@@ -60,4 +53,4 @@ iip_str:        .byte "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)", $0D, $00
 
 .segment "DATA"
 ; The only thing remaining from that code after init
-hz:             .res 1
+_freq:          .res 1

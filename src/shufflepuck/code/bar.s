@@ -186,11 +186,11 @@ wait_input:
 
         ; Or for mouse button
         jsr     _mouse_check_button
-        bcc     wait_input
+        beq     wait_input
 
         ; Wait for button to be up (otherwise the Champion sign flickers)
 :       jsr     _mouse_check_button
-        bcs     :-
+        bne     :-
 
         ; Reinit randomizer each click
         jsr     ___randomize
@@ -356,7 +356,7 @@ view_roster:
 
 :       jsr     display_scores      ; Don't add name, just list scores.
         jsr     _mouse_check_button ; and wait for button click
-        bcs     out
+        bne     out
         lda     KBD                 ; or keypress
         bpl     :-
         bit     KBDSTRB

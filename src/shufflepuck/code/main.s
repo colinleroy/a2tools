@@ -23,7 +23,7 @@
 
         .export   _abs_max_dx, _abs_max_dy, _set_max_puck_delta
 
-        .import   _hgr_force_mono40, vbl_ready
+        .import   _hgr_force_mono40
         .import   _mouse_setbarbox, _mouse_setplaybox
 
         .import   _choose_opponent, _add_hall_of_fame
@@ -54,7 +54,7 @@
         .import   _play_bar
         .import   _bar_update_champion
 
-        .import   hz
+        .import   _freq
 
         .import   _mouse_wait_vbl
 
@@ -67,6 +67,7 @@
         .import   ___randomize
 
         .include  "apple2.inc"
+        .include  "freq.inc"
         .include  "sprite.inc"
         .include  "puck_coords.inc"
         .include  "my_pusher_coords.inc"
@@ -316,8 +317,10 @@ game_loop:
 loop_start:
         ; Drop 1 frame out of 6 at 60Hz
         ; otherwise the game is harder
-        lda     hz
-        cmp     #60
+        lda     _freq
+
+        .assert TV_NTSC = 0, error
+        ; cmp     #TV_NTSC
         bne     frame_start
         dec     frame_counter
         bne     frame_start
