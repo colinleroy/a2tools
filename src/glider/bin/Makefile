@@ -35,15 +35,15 @@ levels = \
 	level_m \
 	level_n \
 
-lz4_files = \
+zx02_files = \
 	$(levels) \
 	splash \
 	lowcode \
 
 levels_backgrounds = $(levels:=.bg.gen.s)
 levels_code        = $(levels:%=$(SRC_DIR)/levels_data/%.s)
-assets_bin         = $(lz4_files:=.bin)
-assets_lz4         = $(lz4_files:=.lz4)
+assets_bin         = $(zx02_files:=.bin)
+assets_zx02        = $(zx02_files:=.zx02)
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
@@ -143,13 +143,10 @@ gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_
 gen_sound_clip: $(SRC_DIR)/../sound_player_generator/gen_sound_clip.c $(SRC_DIR)/../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
-lz4_compressor: $(SRC_DIR)/../lz4_compressor/lz4_compressor.c
-	gcc -g -O0 -DMAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) $^ -llz4 -o $@
-
 $(assets_bin): $(BINARY_NAME)
 
-%.lz4: %.bin lz4_compressor
-	./lz4_compressor $< > $@
+%.zx02: %.bin
+	zx02 -f $< $@
 
 $(levels_backgrounds): level%.bg.gen.s: level%.hgr
 
@@ -206,14 +203,13 @@ clean:
 	gen_font \
 	gen_sound_clip \
 	gen_sound_player \
-	lz4_compressor \
 	*.gen.s \
 	*.gen.inc \
 	*.snd.s \
 	splash.hgr \
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
-	*.dbg *.lbl *.map *.lz4 \
+	*.dbg *.lbl *.map *.zx02 \
 	glider.ld.cfg \
 	check_imports.sh
 
@@ -228,15 +224,15 @@ $(BINARY_NAME): glider.ld.cfg $(glider_SOURCES) check_imports.sh
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
-glider-$(GAME_LANG).po: $(BINARY_NAME) $(assets_lz4) $(SRC_DIR)/assets/SCORES.bin
+glider-$(GAME_LANG).po: $(BINARY_NAME) $(assets_zx02) $(SRC_DIR)/assets/SCORES.bin
 	cp $(CLEANDISK) $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ GLIDER.$(GAME_LANG)
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ GLIDER.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ GLIDER < $<; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SCORES BIN < $(SRC_DIR)/assets/SCORES.bin; \
-	for r in $(assets_lz4); do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lz4$///") BIN < $$r; \
+	for r in $(assets_zx02); do \
+		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
 	done;
 
 upload: all

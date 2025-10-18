@@ -16,13 +16,13 @@
         .export   _load_level_data, _load_splash_screen
         .export   _load_lowcode, _high_scores_io
 
-        .import   _open, _read, _write, _close, _memcpy
+        .import   _open, _read, _write, _close, _memmove
         .import   pushax, popax
         .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __HGR_START__, __LEVEL_SIZE__
-        .import   _decompress_lz4
+        .import   _decompress_zx02
 
         .importzp tmp1
 
@@ -69,7 +69,7 @@
 ; A: data IO mode
 ; X: Whether to uncompress data
 .proc _data_io
-        stx     do_uncompress     ; Save whether we need to uncompress lz4
+        stx     do_uncompress     ; Save whether we need to uncompress zx02
 
         sta     data_io_mode+1    ; Patch _open mode
 
@@ -149,12 +149,6 @@ data_io_func:
         rts
 
 uncompress:
-        ; Get uncompressed size (the first two bytes of the data we just read)
-        lda     __HGR_START__
-        ldx     __HGR_START__+1
-        sta     size
-        stx     size+1
-
         ; Compute where to move data, we want it to be
         ; the furthest possible in the available buffer
         ; so that decompression doesn't overwrite the last
@@ -168,26 +162,21 @@ uncompress:
         tax
         tya
         jsr     pushax        ; Push it for decompressor source
-        jsr     pushax        ; and for memcpy dest
+        jsr     pushax        ; and for memmove dest
 
-        ; Where to move data from (the HGR page excluding the 2
-        ; header bytes)
-        lda     #<(__HGR_START__+2)
-        ldx     #>(__HGR_START__+2)
+        ; Where to move data from (the HGR page)
+        lda     #<__HGR_START__
+        ldx     #>__HGR_START__
         jsr     pushax        ; Push source for memcpy
 
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
-        jsr     _memcpy
+        jsr     _memmove
 
         lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
-        jsr     pushax
 
-        lda     size          ; Inform lz4 decompressor of the uncompressed size
-        ldx     size+1        ; so it knows when to stop
-
-        jsr     _decompress_lz4
+        jsr     _decompress_zx02
         clc                   ; And we're done!
         rts
 

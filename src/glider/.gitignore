@@ -10,3 +10,4 @@ lz4_compressor
 *.hgr
 glider.ld.cfg
 *.lz4
+*.zx02
