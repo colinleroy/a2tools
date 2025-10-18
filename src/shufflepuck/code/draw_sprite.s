@@ -13,7 +13,8 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _clear_sprite, _draw_sprite, _draw_sprite_big
+        .export   _clear_sprite, _draw_sprite
+        .export   _draw_sprite_big, _draw_sprite_big_set_coords
         .export   _skip_top_lines
 
         .export   n_bytes_draw, n_lines_draw
@@ -24,7 +25,7 @@
 
         .import   my_pusher_data
 
-        .import   popax, umul8x8r16
+        .import   umul8x8r16
         .importzp ptr2, ptr1
         .importzp _zp8p, _zp10, _zp11
 
@@ -247,14 +248,12 @@ total_bytes:
         rts
 .endproc
 
-; X, Y: coords
-; A: bytes per line
-; TOS: sprite pointer
+; A, X: sprite address
+; Y: bytes per line
+; Coords must be previously set by calling
+; _draw_sprite_big_set_coords
 .proc _draw_sprite_big
-        stx     x_coord+1
-        sty     cur_y
-        sta     bytes_per_line+1
-        jsr     popax
+        sty     bytes_per_line+1
         sta     sprite_pointer+1
         stx     sprite_pointer+2
 
@@ -293,6 +292,12 @@ sprite_pointer:
         rts
 .endproc
 
+.proc _draw_sprite_big_set_coords
+        stx     _draw_sprite_big::x_coord+1
+        sty     cur_y
+        sta     n_lines_draw
+        rts
+.endproc
 
 ; Only our pusher is drawn via _eor, so take shortcuts
 .proc _draw_eor_my_pusher
@@ -368,7 +373,7 @@ store_byte:
         inc     cur_y
 
         lda     load_background+2
-        adc     #$04-1            ; Carry is set
+        adc     #$04-1        ; Carry is set
         cmp     #$40
         bcc     do_next_line
         bcs     init_line

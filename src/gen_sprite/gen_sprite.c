@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
   if (enable_big_draw) {
     fprintf(fp, "         .export _big_draw_%s\n", sprite_name);
     fprintf(fp,
-            "         .import _draw_sprite_big, pushax\n");
+            "         .import _draw_sprite_big, _draw_sprite_big_set_coords\n");
     fprintf(fp, "         .importzp n_lines_draw, tmp3, tmp4\n");
   }
 
@@ -330,17 +330,11 @@ int main(int argc, char *argv[]) {
     fprintf(fp,
             ".proc _big_draw_%s\n"
             "        lda     #%s_HEIGHT\n"
-            "        sta     n_lines_draw\n"
-            "        stx     tmp3         ; Backup XY before pushax\n"
-            "        sty     tmp4\n"
+            "        jsr     _draw_sprite_big_set_coords\n"
             "\n"
-            "        lda     #<(%s_x0)    ; Account for Y offset by one\n"
+            "        lda     #<(%s_x0)\n"
             "        ldx     #>(%s_x0)\n"
-            "        jsr     pushax\n"
-            "\n"
-            "        ldx     tmp3\n"
-            "        ldy     tmp4\n"
-            "        lda     #%s_BPLINE\n"
+            "        ldy     #%s_BPLINE\n"
             "\n"
             "        jmp     _draw_sprite_big\n"
             ".endproc\n",

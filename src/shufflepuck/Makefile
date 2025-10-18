@@ -32,6 +32,17 @@ opponents = \
 	i \
 	n \
 
+opponents_with_sprites = \
+	a \
+	b \
+	c \
+	d \
+	e \
+	f \
+	g \
+	h \
+	i \
+
 ifdef DEBUG_OPPONENT
 	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")
 	DEBUG_OPPONENT_NUM := $(shell echo $$(($(DEBUG_OPPONENT_NUM) - 97)))
@@ -83,7 +94,7 @@ sprites_pixel_perfect = \
 	puck6.pixel_perfect.gen.s \
 	hand.pixel_perfect.gen.s \
 
-sprites_unperfect = $(opponents:%=sprite_%.unperfect.gen.s)
+sprites_unperfect = $(opponents_with_sprites:%=sprite_%.unperfect.gen.s)
 names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
 
 lose_unperfect = \
