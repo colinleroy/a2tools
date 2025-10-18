@@ -89,6 +89,14 @@
         jmp     _real_main
 .endproc
 
+.proc pause
+:       jsr     _check_keyboard
+        bcc     :-
+        lda     #$00
+        sta     _last_key
+        rts
+.endproc
+
 .segment "LOWCODE"
 
 .proc _draw_opponent_parts
@@ -102,14 +110,6 @@
         ldx     #(98/7)
         ldy     #76
         jmp     __OPPONENT_START__+OPPONENT::SPRITE
-.endproc
-
-.proc pause
-:       jsr     _check_keyboard
-        bcc     :-
-        lda     #$00
-        sta     _last_key
-        rts
 .endproc
 
 .proc _check_keyboard
@@ -266,14 +266,6 @@ clear_and_go_bar:
         beq     next_or_new_opponent    ; Always branch
 
 cont_game:
-        ; Restore table from the backup
-        jsr     _restore_table
-
-        ; But if we can't, redraw the opponent
-        lda     _cache_working
-        bne     draw_scores
-        jsr     _draw_opponent_parts
-
 draw_scores:
         ; Draw scores
         jsr     _draw_scores
@@ -413,6 +405,15 @@ reset_point:
         lda     #$00
         sta     bounces
 
+        jsr     _clear_screen
+        ; Restore table from the backup
+        jsr     _restore_table
+        jsr     _draw_scores
+        ; If we can't, redraw the opponent
+        lda     _cache_working
+        bne     reset_point_cont
+        jsr     _draw_opponent_parts
+
 reset_point_cont:
         ; Move the puck to the serving point
         jsr     _puck_reinit_my_order
@@ -445,6 +446,7 @@ update_screen:
         sta     puck_dx
         sta     puck_dy
         jsr     _clear_screen
+
         jmp     new_point
 .endproc
 
