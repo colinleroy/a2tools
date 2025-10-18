@@ -62,6 +62,7 @@
         .import   _build_hgr_tables
         .import   _init_caches
 
+        .import   _play_crash, _draw_crash_lines, _crash_lines_scale
         .import   _text_mono40, _home, _exit
 
         .import   ___randomize
@@ -95,6 +96,23 @@
         lda     #$00
         sta     _last_key
         rts
+.endproc
+
+.proc quit
+        lda     #140
+        sta     puck_gx
+        lda     #190
+        sta     puck_gy
+        sec
+        jsr     _crash_lines_scale
+        jsr     _draw_crash_lines
+        ldy     #0
+        jsr     _play_crash
+        ; Wait 200ms
+        lda     #200
+        ldx     #0
+        jsr     _platform_msleep
+        jmp     _exit
 .endproc
 
 .segment "LOWCODE"
@@ -203,7 +221,7 @@ store_opponent:
         sta     opponent
         cmp     #CH_ESC
         bne     new_game
-        jmp     _exit
+        jmp     quit
 
 new_game:
         ; Bind mouse to table
