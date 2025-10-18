@@ -11,6 +11,8 @@ SYMBOLS {
     __HGR_SIZE__:      type = export, value = $2000; # HGR page length
     __OPPONENT_START__:type = export, value = $4000;
     __OPPONENT_SIZE__ :type = export, value = $2D00;
+    __SDATA_START__:   type = export, value = $6D00;
+    __SDATA_SIZE__:    type = export, value = $3400;
     __LOWCODE_START__: type = export, value = $C00;  # Lowcode + Splash
     __LOWCODE_SIZE__:  type = export, value = __OPPONENT_START__-__LOWCODE_START__;  # Lowcode + Splash
     __SPLC_START__:    type = export, value = __LCADDR__;
@@ -21,7 +23,7 @@ SYMBOLS {
     __LC_LAST__ :type = export, value = $00;
 }
 FEATURES {
-    STARTADDRESS: default = __OPPONENT_START__+__OPPONENT_SIZE__;
+    STARTADDRESS: default = __SDATA_START__+__SDATA_SIZE__;
 }
 MEMORY {
     ZP:     file = "", define = yes, start = $0080,        size = $001A;
@@ -37,6 +39,7 @@ MEMORY {
     HALLFAME:file = "hallfame_img.bin",start = __HGR_START__,     size = __HGR_SIZE__;
     BAR_CODE:file = "bar_code.bin",    start = __OPPONENT_START__,size = __OPPONENT_SIZE__;
     BARSND:  file = "bar_snd.bin",     start = __HGR_START__,     size = __HGR_SIZE__+__OPPONENT_SIZE__;
+    SDATA:   file = "sdata.bin",       start = __SDATA_START__,   size = __SDATA_SIZE__;
 
 ### LEVEL_MEMORY_DECLARATIONS ###
 }
@@ -46,8 +49,9 @@ SEGMENTS {
     EXEHDR:   load = HEADER,         type = ro,  optional = yes;
     STARTUP:  load = MAIN,           type = ro;
     LOWCODE:  load = LOWCODE,        type = ro,  align = $100;
+    SDATA:    load = SDATA,          type = ro,  align = $100;
     CODE:     load = MAIN,           type = ro;
-    RODATA:   load = MAIN,           type = ro,  align = $100;
+    RODATA:   load = MAIN,           type = ro;
     DATA:     load = MAIN,           type = rw;
     INIT:     load = MAIN,           type = rw;
     ONCE:     load = MAIN,           type = ro,  define   = yes;

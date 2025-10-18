@@ -27,7 +27,7 @@
         .import   _load_bar_high
         .import   _text_mono40, _hgr_force_mono40
         .import   _home
-        .import   _load_lc
+        .import   _load_data
         .import   _load_lowcode
         .import   _init_mouse
         .import   _load_hgr_mono_file
@@ -50,7 +50,7 @@ no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 
         jsr     _hgr_force_mono40
 
-        jsr     _load_lc
+        jsr     _load_data
         bcc     :+
         jmp     _print_load_error
 

@@ -72,6 +72,7 @@ zx02_files = \
 	lc_code \
 	bar_snd \
 	bar_code \
+	sdata \
 
 assets_backgrounds = $(assets:=.bg.gen.s)
 assets_bin         = $(zx02_files:=.bin)
@@ -286,9 +287,6 @@ gen_transform: generators/gen_transform.c generators/one-point-perspective.h
 transform.s: gen_transform
 	./$< > $@
 
-lz4_compressor: ../lz4_compressor/lz4_compressor.c
-	gcc -g -O0 -DMAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) $^ -llz4 -o $@
-
 $(assets_bin): $(BINARY_NAME)
 
 %.zx02: %.bin
@@ -311,27 +309,27 @@ $(assets_backgrounds): %.bg.gen.s: %.hgr
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: assets/%.png
 my%.pixel_perfect.gen.s: assets/my%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA nomask
+	./gen_sprite $< 255 pixel_perfect SDATA nomask
 their%.pixel_perfect.gen.s: assets/their%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 puck0.pixel_perfect.gen.s: assets/puck0.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
 puck1.pixel_perfect.gen.s: assets/puck1.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
 puck2.pixel_perfect.gen.s: assets/puck2.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 puck3.pixel_perfect.gen.s: assets/puck3.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 puck4.pixel_perfect.gen.s: assets/puck4.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
 puck5.pixel_perfect.gen.s: assets/puck5.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 puck6.pixel_perfect.gen.s: assets/puck6.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 pointer.pixel_perfect.gen.s: assets/pointer.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect barcode
 hand.pixel_perfect.gen.s: assets/hand.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect SDATA
 
 $(opponents_sprites): %.unperfect.gen.s: assets/opponents/%.png
 %.unperfect.gen.s: assets/opponents/%.png gen_sprite
@@ -344,7 +342,7 @@ $(sounds): %.snd.s: assets/sounds/%.wav
 crash.snd.s: assets/sounds/crash.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $(SAMPLING_HZ) $<_raw RODATA > $@
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw SDATA > $@
 	rm $<_raw
 puc%.snd.s: assets/sounds/puc%.wav gen_sound_clip
 	rm -f $<_raw
@@ -391,7 +389,6 @@ clean:
 	gen_sound_clip \
 	gen_sound_player \
 	gen_transform \
-	lz4_compressor \
 	*.gen.s \
 	*.gen.inc \
 	*.snd.s \
@@ -400,7 +397,7 @@ clean:
 	table.hgr \
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
-	*.dbg *.lbl *.map *.lz4 *.zx02 \
+	*.dbg *.lbl *.map *.zx02 \
 	shflpuck.ld.cfg
 
 check_imports.sh: $(shflpuck_SOURCES) check_imports.sh

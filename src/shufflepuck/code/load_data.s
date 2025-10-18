@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _load_lowcode, _load_lc
+        .export   _load_lowcode, _load_data
         .export   _load_table_high, _backup_table, _backup_table_high, _restore_table
         .export   _load_opponent
         .export   _load_bar_high, _backup_bar_high, _restore_bar
@@ -33,6 +33,7 @@
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __SPLC_START__, __SPLC_SIZE__
+        .import   __SDATA_START__, __SDATA_SIZE__
         .import   __HGR_START__, __HGR_SIZE__
         .import   __OPPONENT_START__, __OPPONENT_SIZE__
         .import   _decompress_zx02
@@ -296,8 +297,6 @@ finish_decompress:
         jmp     _data_io
 .endproc
 
-.segment "LOWCODE"
-
 .proc _load_lc
         jsr     set_compressed_buf_dynseg
 
@@ -309,6 +308,29 @@ finish_decompress:
         jsr     pushax
         lda     #<lc_name
         ldx     #>lc_name
+
+        jmp     read_compressed
+.endproc
+
+.segment "LOWCODE"
+
+.proc _load_data
+        jsr     _load_lc
+        bcc     _load_sdata
+        rts
+.endproc
+
+.proc _load_sdata
+        jsr     set_compressed_buf_dynseg
+
+        lda     #<__SDATA_START__
+        ldx     #>__SDATA_START__
+        jsr     pushax
+        lda     #<__SDATA_SIZE__
+        ldx     #>__SDATA_SIZE__
+        jsr     pushax
+        lda     #<sdata_name
+        ldx     #>sdata_name
 
         jmp     read_compressed
 .endproc
@@ -556,6 +578,7 @@ barsnd_name = barsnd_backup_name + 5
 
 lowcode_name:        .asciiz "LOW.CODE"
 lc_name:             .asciiz "LC.CODE"
+sdata_name:          .asciiz "SDATA"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
 load_err_str:        .asciiz "COULD NOT LOAD "
 
