@@ -51,23 +51,29 @@ sprites_pixel_perfect = \
 	plane_destroyed.pixel_perfect.gen.s \
 	rubber_band.pixel_perfect.gen.s \
 
+icons_unperfect = \
+	battery_reverted.quick.gen.s \
+	rubber_band_reverted.quick.gen.s \
+	mini_score.quick.gen.s \
+	mini_plane.quick.gen.s \
+
+# balloon, chainsaw, socket are aligned.
+# the others are stuffed in the middle to
+# minimize space waste
 sprites_unperfect = \
 	balloon.unperfect.gen.s \
-	battery.unperfect.gen.s \
-	battery_reverted.unperfect.gen.s \
-	chainsaw.unperfect.gen.s \
 	clock.unperfect.gen.s \
-	mini_score.unperfect.gen.s \
-	mini_plane.unperfect.gen.s \
-	rubber_band_reverted.unperfect.gen.s \
-	rubber_box.unperfect.gen.s \
+	battery.unperfect.gen.s \
+	switch.unperfect.gen.s \
+	chainsaw.unperfect.gen.s \
 	sheet.unperfect.gen.s \
 	socket.unperfect.gen.s \
-	switch.unperfect.gen.s \
+	rubber_box.unperfect.gen.s \
 
 sprites = \
 	$(sprites_pixel_perfect) \
-	$(sprites_unperfect)
+	$(sprites_unperfect) \
+	$(icons_unperfect) \
 
 sounds = \
 	bubble.snd.s \
@@ -80,6 +86,8 @@ sounds = \
 # Our code
 
 glider_SOURCES := \
+	plane.pixel_perfect.gen.s \
+	$(sprites) \
 	$(SRC_DIR)/code/main.s \
 	$(SRC_DIR)/code/hz.s \
 	$(SRC_DIR)/code/keyboard.s \
@@ -107,11 +115,9 @@ glider_SOURCES := \
 	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	font.gen.s \
-	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
 	splash.bg.gen.s \
 	$(sounds) \
-	$(sprites) \
 	$(levels_backgrounds) \
 	$(levels_code)
 
@@ -132,7 +138,7 @@ all dist: \
 	glider-$(GAME_LANG).po
 
 gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
-	gcc -DENABLE_QUICK_DRAW=1 -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
+	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_font: $(SRC_DIR)/../gen_font/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
@@ -169,16 +175,29 @@ splash.hgr: $(SRC_DIR)/assets/intl/$(GAME_LANG)/splash.xcf $(SRC_DIR)/../surl-se
 	$(SRC_DIR)/../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
 
+plane.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/plane.png gen_sprite
+	./gen_sprite $< 280 pixel_perfect DATA align
+
+balloon.unperfect.gen.s: $(SRC_DIR)/assets/sprites/balloon.png gen_sprite
+	./gen_sprite $< 255 unperfect DATA align
+
+chainsaw.unperfect.gen.s: $(SRC_DIR)/assets/sprites/chainsaw.png gen_sprite
+	./gen_sprite $< 255 unperfect DATA align
+
+socket.unperfect.gen.s: $(SRC_DIR)/assets/sprites/socket.png gen_sprite
+	./gen_sprite $< 255 unperfect DATA align
+
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/%.png
 %.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect
 
 $(sprites_unperfect): %.unperfect.gen.s: $(SRC_DIR)/assets/sprites/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/sprites/%.png gen_sprite
-	./gen_sprite $< 255 unperfect DATA align
+	./gen_sprite $< 255 unperfect DATA
 
-plane.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/plane.png gen_sprite
-	./gen_sprite $< 280 pixel_perfect DATA align
+$(icons_unperfect): %.quick.gen.s: $(SRC_DIR)/assets/sprites/%.png
+%.quick.gen.s: $(SRC_DIR)/assets/sprites/%.png gen_sprite
+	./gen_sprite $< 255 unperfect DATA quick nomask
 
 font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
 	./gen_font $< 280

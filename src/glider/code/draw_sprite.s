@@ -236,8 +236,11 @@ sprite_store_byte:
 out:    rts
 
 _draw_sprite_fast:
-        ldy     sprite_y
+        sty     sprite_y
         sty     cur_y
+
+        sta     fast_sprite_pointer+1
+        stx     fast_sprite_pointer+2
 
         ldx     n_bytes_draw
         clc

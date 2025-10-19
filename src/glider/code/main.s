@@ -41,7 +41,7 @@
         .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   plane_sprite_num, level_done
 
-        .import   hz
+        .import   _freq
 
         .import   _mouse_wait_vbl
         .import   _mouse_reset_ref_x
@@ -235,7 +235,8 @@ game_logic:
         lda     time_counter            ; Decrement time counter seconds if not 0
         beq     :+
         dec     time_counter
-        lda     hz                      ; Reset time counter frames to Hz
+        ldx     _freq                   ; Reset time counter frames to Hz
+        lda     hz_vals,x
         sta     time_counter+1
 
 :       ; Check coordinates and update them depending on vents
@@ -311,7 +312,8 @@ game_over:
         sta     frame_counter
 
         ; Set time counter frames
-        lda     hz
+        ldx     _freq
+        lda     hz_vals,x
         sta     time_counter+1
 
         ; Sprites
@@ -383,6 +385,12 @@ game_over:
         ; Go to level 0
         jmp     load_level
 .endproc
+
+        .data
+
+hz_vals:
+        .byte   60                ; TV_NTSC
+        .byte   50                ; TV_PAL
 
         .bss
 

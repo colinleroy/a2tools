@@ -1,0 +1,3 @@
+TV_NTSC  = 0
+TV_PAL   = 1
+TV_OTHER = 2

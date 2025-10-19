@@ -1,4 +1,4 @@
-        .export     hz
+        .export     _freq
         .import     _get_tv, _read_key
 
         .importzp   ptr1
@@ -6,20 +6,15 @@
         .constructor calibrate_hz, 1
 
         .include    "apple2.inc"
+        .include    "freq.inc"
 
 .segment "ONCE"
 
-hz_vals:
-        .byte   60                ; TV_NTSC
-        .byte   50                ; TV_PAL
-        .byte   0                 ; TV_OTHER
-
 .proc calibrate_hz
         jsr     _get_tv
-        tax
-        lda     hz_vals,x
-        sta     hz
+        cmp     #TV_OTHER
         beq     :+
+        sta     _freq
         rts
 
         ; We don't know. Let's ask.
@@ -40,14 +35,11 @@ hz_vals:
 
 read_kbd:
         jsr     _read_key
-        ldx     #60
-
-        cmp     #'1'
-        beq     set60
-        cmp     #'2'
-        bne     read_kbd
-        ldx     #50
-set60:  stx     hz
+        sec
+        sbc     #'1'          ; '1'-'1'=0, TV_NTSC
+        cmp     #2            ; 0/1 accepted
+        bcs     read_kbd
+        sta     _freq
         bit     $C080
         rts
 .endproc
@@ -56,4 +48,4 @@ iip_str:        .asciiz "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)"
 
 .segment "DATA"
 ; The only thing remaining from that code after init
-hz:             .res 1
+_freq:          .res 1

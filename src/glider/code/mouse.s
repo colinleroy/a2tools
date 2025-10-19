@@ -16,7 +16,7 @@
         .export     _init_mouse, _read_mouse
         .export     vbl_ready
 
-        .import     ostype, hz
+        .import     ostype, _freq
 
         .export     _mouse_reset_ref_x
         .export     _mouse_update_ref_x
@@ -176,8 +176,8 @@ next_slot:
         sta     yparam+1
 
         ; Set VBL rate
-        lda     hz
-        jsr     set_mouse_hz
+        lda     _freq
+        jsr     set_mouse_freq
 
         ; The AppleMouse II Card needs the ROM switched in
         ; to be able to detect an Apple //e and use RDVBL
@@ -369,17 +369,12 @@ mouse_out_not_handled:
 .endproc
 
 .proc waste_3250
-        lda     hz              ; Shorten window at 50Hz to catch
-        cmp     #60             ; sync bugs on my own hardware
-        beq     waste_end
-
         ldy     #4
 :       ldx     #161
 :       dex                         ; 2
         bne     :-                  ; 5
         dey
         bne     :--
-waste_end:
         rts
 .endproc
 
@@ -389,7 +384,9 @@ waste_end:
         lda     #0
         sta     vbl_ready
 
-        ; jsr     waste_3250
+        lda     _freq
+        ; cmp     #TV_NTSC 
+        ; bne     waste_3250
         rts
 .endproc
 
@@ -405,13 +402,7 @@ waste_end:
 .endproc
 
 ;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
-.proc set_mouse_hz
-        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
-        cmp     #60
-        beq     :+
-        iny
-:       tya
-
+.proc set_mouse_freq
         ldx     ostype
         cpx     #$40
         bcs     out               ; Don't do that on IIc/gs

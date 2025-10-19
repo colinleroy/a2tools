@@ -30,13 +30,14 @@
 sprites_bgbackup:      .res MAX_SPRITES*128
 
 .align $100
-_hgr_hi:                .res 192
+_hgr_hi:               .res 192
 plane_bgbackup:        .res plane_BYTES
-.align $100
-_hgr_low:               .res 192
-rubber_band_bgbackup:   .res rubber_band_BYTES
-_hgr_bit:               .res 7
+rubber_band_bgbackup:  .res rubber_band_BYTES
 
 .align $100
 _div7_table:            .res 256
 _mod7_table:            .res 256
+
+.align $100
+_hgr_low:               .res 192
+_hgr_bit:               .res 7

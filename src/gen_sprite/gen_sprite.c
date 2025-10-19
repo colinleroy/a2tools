@@ -29,6 +29,7 @@ enum Pixel {
 int max_shift = 7;
 char *segment = "RODATA";
 int enable_big_draw = 0;
+int enable_quick_draw = 0;
 int enable_mask = 1;
 int align = 0;
 
@@ -150,6 +151,9 @@ int main(int argc, char *argv[]) {
       if (!strcmp(argv[i], "big")) {
         enable_big_draw = 1;
       }
+      if (!strcmp(argv[i], "quick")) {
+        enable_quick_draw = 1;
+      }
       if (!strcmp(argv[i], "nomask")) {
         enable_mask = 0;
       }
@@ -189,8 +193,12 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);
   fclose(fp);
 
-  snprintf(filename, sizeof(filename) - 1, "%s.%s.gen.s", sprite_name,
-           max_shift == 1 ? "unperfect":"pixel_perfect");
+  if (enable_quick_draw) {
+    snprintf(filename, sizeof(filename) - 1, "%s.quick.gen.s", sprite_name);
+  } else {
+    snprintf(filename, sizeof(filename) - 1, "%s.%s.gen.s", sprite_name,
+            max_shift == 1 ? "unperfect":"pixel_perfect");
+  }
   fp = fopen(filename, "wb");
   if (fp == NULL) {
     printf("Can not open %s\n", filename);
@@ -201,12 +209,13 @@ int main(int argc, char *argv[]) {
     fprintf(fp, "         .export _%s\n", sprite_name);
   }
 
-  #ifdef ENABLE_QUICK_DRAW
+  if (enable_quick_draw) {
     fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
     fprintf(fp,
             "         .import _draw_sprite_fast, fast_sprite_pointer\n"
             "         .import fast_n_bytes_per_line_draw, fast_sprite_x\n");
-  #endif
+  }
+
   if (enable_big_draw) {
     fprintf(fp, "         .export _big_draw_%s\n", sprite_name);
     fprintf(fp,
@@ -301,11 +310,10 @@ int main(int argc, char *argv[]) {
     }
     /* Otherwise, put everything in the same segment if specified */
   }
-  #ifdef ENABLE_QUICK_DRAW
+  if (enable_quick_draw) {
     fprintf(fp,
             ".proc _quick_draw_%s\n"
             "        stx     fast_sprite_x+1\n"
-            "        sty     sprite_y\n"
             "\n"
             "        lda     #%s_BYTES-1\n"
             "        sta     n_bytes_draw\n"
@@ -314,9 +322,7 @@ int main(int argc, char *argv[]) {
             "        sta     fast_n_bytes_per_line_draw+1\n"
             "\n"
             "        lda     #<%s_x0\n"
-            "        sta     fast_sprite_pointer+1\n"
-            "        lda     #>%s_x0\n"
-            "        sta     fast_sprite_pointer+2\n"
+            "        ldx     #>%s_x0\n"
             "\n"
             "        jmp     _draw_sprite_fast\n"
             ".endproc",
@@ -325,7 +331,8 @@ int main(int argc, char *argv[]) {
             sprite_name,
             sprite_name,
             sprite_name);
-  #endif
+  }
+
   if (enable_big_draw) {
     fprintf(fp,
             ".proc _big_draw_%s\n"
