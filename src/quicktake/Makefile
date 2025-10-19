@@ -96,6 +96,7 @@ qtknconv_SOURCES := \
 	../lib/progress_bar.c
 
 qtknconv_CC65SOURCES := \
+	../lib/square_table.s \
 	qtk_bithuff.s \
 	qtkn_platform.s \
 	scaler.s \
@@ -107,7 +108,6 @@ qtknconv_CC65SOURCES := \
 	../lib/mult8x8x16.s \
 	../lib/mult16x16mid16.s \
 	../lib/approxdiv16x8.s \
-	../lib/square_table.s \
 	../lib/a2_features.s \
 	../lib/check_floppy.s
 	
@@ -122,13 +122,13 @@ jpegconv_SOURCES := \
 	../lib/progress_bar.c
 
 jpegconv_CC65SOURCES := \
+	../lib/square_table.s \
 	jpeg_arrays.s \
 	jpeg_platform.s \
 	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
-	../lib/square_table.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
