@@ -21,7 +21,7 @@
         .import     _big_draw_moving_barcode_lexan1, _big_draw_moving_barcode_lexan2, _big_draw_moving_barcode_lexan3
 
         .import     _strlen, _rand, ___randomize
-        .import     _exit, pushax, _memmove, _strcpy, _bzero
+        .import     _quit, pushax, _memmove, _strcpy, _bzero
 
         .importzp   tmp1, _zp6
 
@@ -228,7 +228,7 @@ return_opponent:                  ; Return the opponent number
 kbd:
         cmp     #CH_ESC           ; Same value as EXIT sign?
         bne     wait_input        ; No, go wait for input again
-        jmp     _exit             ; Yes, exit
+        jmp     _quit             ; Yes, exit
 
 open_menu:
         lda     #1                ; Flag menu open and jump back

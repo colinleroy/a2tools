@@ -20,7 +20,7 @@
         .export   won_tournament
         .export   game_cancelled
         .export   _init_puck_position, _set_puck_position
-
+        .export   _quit
         .export   _abs_max_dx, _abs_max_dy, _set_max_puck_delta
 
         .import   _hgr_force_mono40
@@ -98,7 +98,7 @@
         rts
 .endproc
 
-.proc quit
+.proc _quit
         lda     #140
         sta     puck_gx
         lda     #190
@@ -221,7 +221,7 @@ store_opponent:
         sta     opponent
         cmp     #CH_ESC
         bne     new_game
-        jmp     quit
+        jmp     _quit
 
 new_game:
         ; Bind mouse to table
