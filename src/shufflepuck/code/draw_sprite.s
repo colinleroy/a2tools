@@ -19,7 +19,7 @@
 
         .export   n_bytes_draw, n_lines_draw
         .export   _draw_eor_my_pusher, _clear_eor_my_pusher
-        
+
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 

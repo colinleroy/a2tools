@@ -317,11 +317,11 @@ puck0.pixel_perfect.gen.s: assets/puck0.png gen_sprite
 puck1.pixel_perfect.gen.s: assets/puck1.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
 puck2.pixel_perfect.gen.s: assets/puck2.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect SDATA
+	./gen_sprite $< 255 pixel_perfect SPLC
 puck3.pixel_perfect.gen.s: assets/puck3.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SDATA
 puck4.pixel_perfect.gen.s: assets/puck4.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect SPLC
+	./gen_sprite $< 255 pixel_perfect SDATA
 puck5.pixel_perfect.gen.s: assets/puck5.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SDATA
 puck6.pixel_perfect.gen.s: assets/puck6.png gen_sprite
