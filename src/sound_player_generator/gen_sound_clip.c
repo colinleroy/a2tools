@@ -103,8 +103,7 @@ int main(int argc, char *argv[]) {
 
   printf("         .segment \"%s\"\n\n", segment);
 
-  printf(".align $100\n"
-         ".proc _%s_snd\n", filename);
+  printf(".proc _%s_snd\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     int byte = get_byte_from_level(c);
     if (byte > 255) {
