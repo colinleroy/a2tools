@@ -284,6 +284,14 @@ clear_and_go_bar:
         beq     next_or_new_opponent    ; Always branch
 
 cont_game:
+        ; Restore table from the backup
+        jsr     _restore_table
+
+        ; But if we can't, redraw the opponent
+        lda     _cache_working
+        bne     draw_scores
+        jsr     _draw_opponent_parts
+
 draw_scores:
         ; Draw scores
         jsr     _draw_scores
@@ -422,15 +430,6 @@ reset_point:
         ; Reset bounces counter (for Nerual's DX calculation)
         lda     #$00
         sta     bounces
-
-        jsr     _clear_screen
-        ; Restore table from the backup
-        jsr     _restore_table
-        jsr     _draw_scores
-        ; If we can't, redraw the opponent
-        lda     _cache_working
-        bne     reset_point_cont
-        jsr     _draw_opponent_parts
 
 reset_point_cont:
         ; Move the puck to the serving point
