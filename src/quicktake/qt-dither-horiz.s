@@ -97,6 +97,7 @@ reset_bayer_x:
 :       jmp     BRANCH_TO
 .endmacro
 
+.assert DITHER_THRESHOLD = $80, error
 .macro SIERRA_DITHER_PIXEL
         ; Add the two errors (the one from previous pixel and the one
         ; from previous line). As they're max 128/2 and 128/4, don't bother
@@ -104,53 +105,53 @@ reset_bayer_x:
 sierra_buf:
         lda     safe_err_buf,y
         adc     err_nextx
+        clc
         bpl     err_pos
 err_neg:
-        clc
         adc     opt_val
-        bcs     check_low     ; We're not negative anymore
-        sec                   ; Still negative. Put sign into carry
-        jmp     forward_err   ; the pixel is black, just forward the error to next line
+        bcc     compute_err    ; Still negative. The pixel is black
+        bmi     white_pix      ; Over threshold, white pixel
+        lsr     a              ; Under threshold, black pixel, error is positive
+        sta     err_nextx      ; Compute /2 and /4 without pulling sign
+        lsr     a
+        jmp     forward_err
 
 err_pos:
-        clc
         adc     opt_val
-        bcs     white_pix     ; Overflowed so the pixel is white.
-
-check_low:                    ; No overflow, must check low byte for threshold
-        cmp     #<DITHER_THRESHOLD
-        bcc     forward_err   ; Pixel is black!
+        bcs     white_pix      ; Overflowed so the pixel is white.
+        bmi     white_pix      ; No overflow but > $80, white pixel
+        lsr     a              ; Under threshold, black pixel, error is positive
+        sta     err_nextx      ; Compute /2 and /4 without pulling sign
+        lsr     a
+        jmp     forward_err
 
 white_pix:
-        tax                   ; Backup our pixel + err(x+1,y)+err(x,y+1) calculation
+        tax                    ; Backup our pixel + err(x+1,y)+err(x,y+1) calculation
         lda     pixel_val
         ora     pixel_mask
         sta     pixel_val
-        txa                   ; Restore it
+        txa                    ; Restore it
 
-        cmp     #$80          ; Set carry according to sign (needed when coming from err_pos)
-
-forward_err:                  ; And forward error to next pixels
-        ror     a
-        sta     err_nextx     ; err/2 for (x+1,y)
+compute_err:
+        cmp     #$80           ; Set carry according to sign
+        ror     a              ; And forward error to next pixels
+        sta     err_nextx      ; err/2 for (x+1,y)
         cmp     #$80
         ror     a
 
-        tax                   ; remember err/4 for x,y+1
+forward_err:
+        tax                    ; remember err/4 for x,y+1
 
         ; previous err + err/4 for x-1,y+1
-        clc                   ; May be set by ror
+        clc                    ; May be set by ror
         adc     err_nexty
 sierra_buf_off:
         sta     safe_err_buf-1,y
-        stx     err_nexty     ; store err/4 for x,y+1
+        stx     err_nexty      ; store err/4 for x,y+1
 .endmacro
 
 ; Prepare line's dithering
 .macro LINE_PREPARE_DITHER
-line_prepare_dither_handler:
-        jmp     LINE_DITHER_SETUP   ; PATCHED to prepare_dither_{bayer,sierra,none}
-
 prepare_dither_bayer:
         lda     _bayer_map_y
         sta     _bayer_map_x
@@ -219,22 +220,6 @@ load_normal:
         sta     buf_ptr_load+1
 .endmacro
 
-.macro PROGRESS_BAR_UPDATE BRANCH_TO
-        dec     pgbar_update
-        bne     BRANCH_TO
-
-        lda     #16
-        sta     pgbar_update
-
-        jsr     _update_progress_bar
-        jsr     _kbhit
-        beq     BRANCH_TO
-        jsr     _cgetc
-        cmp     #$1B          ; Esc
-        bne     BRANCH_TO
-        rts                   ; Exit _do_dither_horiz
-.endmacro
-
 _do_dither_horiz:
         bit     $C083         ; WR-enable LC
         bit     $C083
@@ -281,8 +266,12 @@ x_init:
         sta     img_x_init
         sta     img_x_reinit
 
+first_dither_handler:
+        jmp     prepare_dither_sierra
+
 ; Line loop start
-dither_setup_line_start_landscape:
+        LINE_PREPARE_DITHER
+
         ldx     #0
         stx     img_xh
 
@@ -295,7 +284,6 @@ line_buf_start_byte = *+1
         lda     hgr_start_mask
         sta     pixel_mask
 
-        LINE_PREPARE_DITHER
         LOAD_DATA
 
 img_x_init = *+1
@@ -359,14 +347,26 @@ img_x_reinit = *+1
 read_buffer_bump = *+1
         lda     #<(_buffer+$80)       ; Bump the buffer loader to second half of page
         sta     buf_ptr_load+1
-        inc     sierra_buf+2        ; Bump sierra err buf to second page
+        inc     sierra_buf+2          ; Bump sierra err buf to second page
         inc     sierra_buf_off+2
         jmp     img_x_to_hgr          ; Keep going...
 
 ; ===========================================
+do_pgbar_update:
+        lda     #16
+        sta     pgbar_update
+
+        jsr     _update_progress_bar
+        jsr     _kbhit        ; Check for key
+        beq     line_wrapup   ; no key
+        jsr     _cgetc        ; Get key
+        cmp     #$1B          ; Esc?
+        bne     line_wrapup
+        rts                   ; Exit _do_dither_horiz
 
 line_done:
-        PROGRESS_BAR_UPDATE line_wrapup
+        dec     pgbar_update
+        beq     do_pgbar_update
 
 line_wrapup:
         jmp $FFFF             ; PATCHED with either advance_bayer_y or next_line
@@ -415,7 +415,8 @@ hgr_line_ptr_b:
         ; The inc(/dec) is patched according to the rotation of the image
 img_y_to_hgr:
         inc     cur_hgr_line
-        jmp     dither_setup_line_start_landscape
+line_prepare_dither_handler:
+        jmp     prepare_dither_sierra
 
 all_done:
         rts
@@ -553,6 +554,8 @@ set_dither_bayer:
         ldx     #>(prepare_dither_bayer)
         sta     line_prepare_dither_handler+1
         stx     line_prepare_dither_handler+2
+        sta     first_dither_handler+1
+        stx     first_dither_handler+2
 
         lda     #<(advance_bayer_y)
         ldx     #>(advance_bayer_y)
@@ -568,6 +571,8 @@ set_dither_none:
         ldx     #>(prepare_dither_none)
         sta     line_prepare_dither_handler+1
         stx     line_prepare_dither_handler+2
+        sta     first_dither_handler+1
+        stx     first_dither_handler+2
 
         lda     #<(dither_none)
         ldx     #>(dither_none)
@@ -578,6 +583,8 @@ set_dither_sierra:
         ldx     #>(prepare_dither_sierra)
         sta     line_prepare_dither_handler+1
         stx     line_prepare_dither_handler+2
+        sta     first_dither_handler+1
+        stx     first_dither_handler+2
 
         lda     #<(dither_sierra)
         ldx     #>(dither_sierra)

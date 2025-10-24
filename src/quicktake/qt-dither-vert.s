@@ -101,26 +101,27 @@ reset_bayer_x:
 
 .macro SIERRA_DITHER_PIXEL
         lda     safe_err_buf,y
-
         adc     err2
+        clc
         bpl     err_pos
 err_neg:
-        clc
         adc     opt_val
-        bcs     check_low     ; We're not negative anymore
-        sec                   ; Still negative. Put sign into carry
-        bcs     forward_err   ; (= BRA here)
+        bcc     compute_err    ; Still negative. The pixel is black
+        bmi     white_pix      ; Over threshold, white pixel
+        lsr     a              ; Under threshold, black pixel, error is positive
+        sta     err2           ; Compute /2 and /4 without pulling sign
+        lsr     a
+        jmp     forward_err
 
 err_pos:
-        ; Add current pixel value
-        clc
         adc     opt_val
-        bcs     white_pix     ; Overflowed so $FF.
+        bcs     white_pix      ; Overflowed so the pixel is white.
+        bmi     white_pix      ; No overflow but > $80, white pixel
+        lsr     a              ; Under threshold, black pixel, error is positive
+        sta     err2           ; Compute /2 and /4 without pulling sign
+        lsr     a
+        jmp     forward_err
 
-        ; Must check low byte
-check_low:
-        cmp     #<DITHER_THRESHOLD
-        bcc     forward_err
 white_pix:
         tax                   ; Backup low byte
         lda     _line_buf,y
@@ -128,13 +129,14 @@ white_pix:
         sta     _line_buf,y
         txa                   ; Restore low byte
 
-        cmp     #$80          ; Keep low byte sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)
-forward_err:
-        ror     a
-        sta     err2
+compute_err:
+        cmp     #$80           ; Set carry according to sign
+        ror     a              ; And forward error to next pixels
+        sta     err2           ; err/2 for (x+1,y)
         cmp     #$80
         ror     a
 
+forward_err:
         ; *(cur_err_x_yplus1+img_x)   = err1;
         sta     safe_err_buf,y
 
