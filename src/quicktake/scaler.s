@@ -15,10 +15,10 @@
         .import         _width
 
         .import         _cputs, _cgetc, _reload_menu
-        .import         pusha0, pushax, popax, incsp2
+        .import         decsp4, pusha0, pushax, popax, incsp2
         .import         mulax10, tosudiva0, tosmulax
 
-        .importzp       tmp1, _zp2
+        .importzp       tmp1, _zp2, c_sp
 
 y_ptr = _zp2
 
@@ -52,52 +52,66 @@ full_band:
 
 no_crop:
         lda     #>_raw_image
-        sta     dst_ptr+2
-
-        clc
+        sta     store_dest_pixel+2
 
         ldy     #$00
 next_y:
         lda     _orig_y_table_l,y
-        sta     cur_orig_y_addr+1
+        sta     load_source_pixel+1
         ldx     _orig_y_table_h,y
-        stx     cur_orig_y_addr+2
+        stx     load_source_pixel+2
 
         iny
         sty     y_ptr
 
         ldy     #$00
         ldx     _orig_x_offset    ; Preload the first X offset, and
-        jmp     cur_orig_y_addr   ; skip the first page increment
+        jmp     load_source_pixel ; skip the first page increment
+
+inc_orig_y_high:                  ; Out-of-band page increment of source data
+        inc     load_source_pixel+2
+        ldx     _special_x_orig_offset,y
+        jmp     load_source_pixel
+
+inc_histogram_high:               ; Out-of-band page increment of histogram
+        inc     _histogram_high,x
+        jmp     check_x
+
 next_x:
         ldx     _orig_x_offset,y  ; if (*cur_orig_x == 0) cur+=256
-        bne     cur_orig_y_addr
-        ldx     _special_x_orig_offset,y
-        inc     cur_orig_y_addr+2
+        beq     inc_orig_y_high
 
-cur_orig_y_addr:
+load_source_pixel:
         lda     $FFFF,x           ; patched, get current pixel
-dst_ptr:
+store_dest_pixel:
         sta     _raw_image,y      ; Store scaled
 
         tax                       ; update histogram
         inc     _histogram_low,x
-        bne     :+
-        inc     _histogram_high,x
+        beq     inc_histogram_high
 
-:       iny
+check_x:
+        iny
         bne     next_x
-        inc     dst_ptr+2         ; Next output page
+        inc     store_dest_pixel+2; Next output page
 
         ldy     y_ptr
 y_end:  cpy     #$FF              ; Patched
         bcc     next_y
 
+        jsr     decsp4            ; Call write
+        ldy     #$03
+        lda     #$00              ; ofd is never going to be > 255
+        sta     (c_sp),y
+        dey
         lda     _ofd
-        jsr     pusha0
+        sta     (c_sp),y
+        dey
+        lda     #>_raw_image
+        sta     (c_sp),y
+        dey
         lda     #<_raw_image
-        ldx     #>_raw_image
-        jsr     pushax
+        sta     (c_sp),y
         lda     _output_write_len
         ldx     _output_write_len+1
         jmp     _write
