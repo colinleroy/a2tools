@@ -71,8 +71,8 @@ read_buffer:
         lda     #<_buffer
         ldx     #>_buffer
         jsr     pushax
-        lda     #<2048      ; BUFFER_SIZE FIXME
-        ldx     #>2048
+        lda     #<BUFFER_SIZE
+        ldx     #>BUFFER_SIZE
         jsr     _read
         lda     #>_buffer
         sta     _cur_buf_page+1
