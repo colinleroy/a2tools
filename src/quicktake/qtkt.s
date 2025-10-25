@@ -242,7 +242,7 @@ last_read:
         .res        2
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
-LAST_TWO_LINES = _raw_image + ((BAND_HEIGHT-1) * RAW_WIDTH)
+LAST_LINE = _raw_image + (BAND_HEIGHT * RAW_WIDTH)
 
 .macro SET_BRANCH val, label
         lda     val
@@ -388,8 +388,8 @@ not_top:                                ; Subsequent bands
         lda     #<(_raw_image)
         ldx     #>(_raw_image)
         jsr     pushax
-        lda     #<(LAST_TWO_LINES+RAW_WIDTH)
-        ldx     #>(LAST_TWO_LINES+RAW_WIDTH)
+        lda     #<(LAST_LINE)
+        ldx     #>(LAST_LINE)
         jsr     pushax
         lda     #<(RAW_WIDTH + 1)
         ldx     #>(RAW_WIDTH + 1)
