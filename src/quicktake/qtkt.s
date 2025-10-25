@@ -38,20 +38,10 @@ hn_val            = _zp13                ; Used across bands
 SCRATCH_HEIGHT= (BAND_HEIGHT + 1)
 RAW_IMAGE_SIZE= ((SCRATCH_HEIGHT-1) * RAW_WIDTH + 644)
 
-.segment        "DATA"
-
-_magic:
-        .byte        $71,$6B,$74,$6B,$00
-_model:
-        .addr        model_str
-_cache_start:
-        .addr        _cache
-
-_reading_str: .byte          "Reading     ", $0D, $0A, $00
-_decoding_str:.byte          "Decoding    ", $0D, $0A, $00
-
 .segment        "LC"
 .align 256
+_orig_x_offset:         .res 256
+
 ; gstep correction (value byte for high nibble)
 high_nibble_gstep_low:
         .repeat 16
@@ -207,57 +197,16 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
 ; QTKT file magic
 model_str:
         .byte        $31,$30,$30,$00
+_magic:
+        .byte        $71,$6B,$74,$6B,$00
+_model:
+        .addr        model_str
+_cache_start:
+        .addr        _cache
 
-.segment        "BSS"
-.align 256
-; Disk cache
-_cache:
-        .res        CACHE_SIZE
+_reading_str: .byte          "Reading     ", $0D, $0A, $00
+_decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
-.align 256
-; Destination buffer for the band (8bpp grayscale)
-_raw_image:
-        .res        RAW_IMAGE_SIZE
-
-; Defined here to avoid holes due to alignment
-_histogram_low:         .res 256
-_histogram_high:        .res 256
-_orig_x_offset:         .res 256
-_special_x_orig_offset: .res 256
-
-; No need to align anymore
-_orig_y_table_l:        .res BAND_HEIGHT
-_orig_y_table_h:        .res BAND_HEIGHT
-
-; Whether to keep floppy motor on (patched to softswitch in the code)
-motor_on:
-        .res        2
-
-; How many full reads before end of data
-full_reads:
-        .res        1
-last_read:
-        .res        2
-
-; Offset to scratch start of last scratch lines, row 20 col 0
-last_line = _raw_image + (BAND_HEIGHT * RAW_WIDTH)
-
-.macro SET_BRANCH val, label
-        lda     val
-        sta     label
-.endmacro
-
-.macro UPDATE_BRANCH from, to
-        .assert (to-from-2) >= -128, error
-        .assert (to-from-2) <= 127, error
-        lda     #<(to-from-2)
-        sta     from+1
-.endmacro
-
-.segment        "CODE"
-
-CACHE_END = _cache + CACHE_SIZE
-.assert <CACHE_END = 0, error
 
 ; Patcher for direct load, and end-of-cache high byte check.
 set_cache_data:
@@ -312,6 +261,57 @@ fill_cache:
         lda     #<_decoding_str
         ldx     #>_decoding_str
         jmp     _cputsxy
+
+.segment        "BSS"
+.align 256
+; Disk cache
+_cache:
+        .res        CACHE_SIZE
+
+CACHE_END = _cache + CACHE_SIZE
+.assert <CACHE_END = 0, error
+
+
+.align 256
+; Destination buffer for the band (8bpp grayscale)
+_raw_image:
+        .res        RAW_IMAGE_SIZE
+
+; Defined here to avoid holes due to alignment
+_histogram_low:         .res 256
+_histogram_high:        .res 256
+_special_x_orig_offset: .res 256
+
+; No need to align anymore
+_orig_y_table_l:        .res BAND_HEIGHT
+_orig_y_table_h:        .res BAND_HEIGHT
+
+; Whether to keep floppy motor on (patched to softswitch in the code)
+motor_on:
+        .res        2
+
+; How many full reads before end of data
+full_reads:
+        .res        1
+last_read:
+        .res        2
+
+; Offset to scratch start of last scratch lines, row 20 col 0
+last_line = _raw_image + (BAND_HEIGHT * RAW_WIDTH)
+
+.macro SET_BRANCH val, label
+        lda     val
+        sta     label
+.endmacro
+
+.macro UPDATE_BRANCH from, to
+        .assert (to-from-2) >= -128, error
+        .assert (to-from-2) <= 127, error
+        lda     #<(to-from-2)
+        sta     from+1
+.endmacro
+
+.segment        "CODE"
 
 ; Main loop, decodes a band
 _qt_load_raw:

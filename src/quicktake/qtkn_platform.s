@@ -29,7 +29,7 @@
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
-        .import       _memset, _memcpy, aslax4
+        .import       _memset, aslax4
 .ifdef DEBUG_HD
         .import       tosdiva0          ; Force real div for sha1sum comparison
 .else

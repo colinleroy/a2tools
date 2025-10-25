@@ -225,6 +225,10 @@ finish_scale:
         sta     _output_write_len
         stx     _output_write_len+1
 
+        ; Write-enable LC, some vars can be put there.
+        bit     $C083
+        bit     $C083
+
         ; Compute column scaling table
         ldy     #$00
         sty     prev_xoff_h
