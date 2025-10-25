@@ -1,11 +1,9 @@
-        .importzp        c_sp, sreg
-        .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
-        .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
+        .importzp        c_sp
+        .importzp        tmp1
+        .importzp        _prev_ram_irq_vector
         .importzp        _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
 
-        .import          _memcpy, _memset
-				.import          pushax, decsp4, subysp, _cputsxy
-        .import          _height
+        .import          pushax, decsp4, _cputsxy
         .import          _width
         .import          _read, _ifd, _cache_end
 
@@ -242,7 +240,7 @@ last_read:
         .res        2
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
-LAST_LINE = _raw_image + (BAND_HEIGHT * RAW_WIDTH)
+last_line = _raw_image + (BAND_HEIGHT * RAW_WIDTH)
 
 .macro SET_BRANCH val, label
         lda     val
@@ -325,15 +323,8 @@ _qt_load_raw:
 top:
         jsr     set_cache_data          ; Initialize cache things
 
-        ; Compute how many full reads
-        ; and the size of the last read
-        ; lda     #((320*240/4)/CACHE_SIZE)
-        ; sta     full_reads
-        ; lda     #<(((320*240/4) .mod CACHE_SIZE)+1024)
-        ; sta     last_read
-        ; lda     #>(((320*240/4) .mod CACHE_SIZE)+1024)
-        ; sta     last_read+1
-
+        ; Compute how many full reads to do, and the size of the last read:
+        ; We don't need to read the whole file, take advantage of that.
         ldx     #80
         ldy     #2
         lda     _width                  ; How many outer loops per row ?
@@ -353,16 +344,15 @@ top:
 :       stx     loops
         sty     row_page_inc
 
-        ; Init the second line + 2 bytes of buffer with grey
-        lda     #<(_raw_image)
-        ldx     #>(_raw_image)
-        jsr     pushax
+        ; Init the first line of buffer with grey
+        .assert RAW_WIDTH = 768, error
+        ldy     #0
         lda     #$80
-        ldx     #$00
-        jsr     pushax
-        lda     #<(RAW_WIDTH + 1)
-        ldx     #>(RAW_WIDTH + 1)
-        jsr     _memset
+:       sta     _raw_image,y
+        sta     _raw_image+256,y
+        sta     _raw_image+512,y
+        iny
+        bne     :-
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row
@@ -385,15 +375,19 @@ not_top:                                ; Subsequent bands
 
         SET_HIGH_PAGES
 
-        lda     #<(_raw_image)
-        ldx     #>(_raw_image)
-        jsr     pushax
-        lda     #<(LAST_LINE)
-        ldx     #>(LAST_LINE)
-        jsr     pushax
-        lda     #<(RAW_WIDTH + 1)
-        ldx     #>(RAW_WIDTH + 1)
-        jsr     _memcpy
+        ; Copy last line + 2 px to start of buf
+        ldy     #0
+:       lda     last_line,y             ; First two pages
+        sta     _raw_image,y
+        lda     last_line+256,y
+        sta     _raw_image+256,y
+        iny
+        bne     :-
+        ldy     #(RAW_WIDTH-640+2)      ; Plus the rest of the useful data
+:       lda     last_line+512,y
+        sta     _raw_image+512,y
+        dey
+        bne     :-
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row

@@ -90,13 +90,13 @@ void qt_load_raw(uint16 top)
 
     next_ln_val = 0x80;
 
-    /* Init the second line + 1 bytes of buffer with grey. */
-    memset (raw_image, 0x80, RAW_WIDTH + 1);
+    /* Init the second line of buffer with grey. */
+    memset (raw_image, 0x80, 642);
   } else {
     idx = raw_image + (RAW_WIDTH);
-    /* Shift the last band's last line, plus 1 pixels,
+    /* Shift the last band's last line
      * to second line of the new band. */
-    memcpy(raw_image, last_two_lines+RAW_WIDTH, RAW_WIDTH + 1);
+    memcpy(raw_image, last_two_lines+RAW_WIDTH, 642);
   }
 
   /* In reality we do rows from 0 to BAND_HEIGHT, but decrementing is faster
