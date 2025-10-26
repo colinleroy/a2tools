@@ -282,10 +282,7 @@ START_LAST_ARRAYS = *
   .byte  >(((-1)<<14) + 1)
   .byte  >(((-1)<<15) + 1)
 .endproc
-END_ARRAYS = *
-.assert >START_LAST_ARRAYS = >END_ARRAYS, error ; align that better!
 
-.align 256
 .proc _gWinogradQuant
   .byte  $80
   .byte  $B2
@@ -352,3 +349,5 @@ END_ARRAYS = *
   .byte  $13
   .byte  $0A
 .endproc
+END_ARRAYS = *
+.assert >START_LAST_ARRAYS = >END_ARRAYS, error ; align that better!

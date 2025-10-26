@@ -28,10 +28,9 @@ slowtake_SOURCES := \
 	../lib/hgr_addrs.c
 
 slowtake_CC65SOURCES := \
-	../lib/hgr_addrs.s \
+	qt-dither-common.s \
 	qt-dither-horiz.s \
 	qt-dither-vert.s \
-	qt-dither-common.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -148,13 +147,14 @@ DEPS :=
 CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
+	--warn-align-waste
 
 slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DPROGRAM_NAME='"SLOWTAKE"' \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-C ../../config/apple2enh-hgr-alignbss.cfg $(TARGET)-iobuf-0800.o \
+	-C ../../config/apple2enh-hgr-alignbss.cfg \
 	--start-addr 0xC00  #One file buffer
 
 # 4 full tracks cache!
@@ -166,7 +166,7 @@ qtktconv_CLCFLAGS = \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQTKTCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o \
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 # 3.5 tracks cache
@@ -180,7 +180,7 @@ qtknconv_CLCFLAGS = \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQTKNCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o \
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_CLCFLAGS = \
@@ -195,7 +195,7 @@ jpegconv_CLCFLAGS = \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DJPEGCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o \
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
@@ -263,26 +263,26 @@ splash.hgr: splash.png
 splash.h: splash.hgr
 	../../bin/make-splash.sh splash.png
 
-slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^
+slowtake.bin: $(slowtake_CC65SOURCES) $(slowtake_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 slowtake.x86_64: $(slowtake_SOURCES) $(slowtake_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(qtktconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^
+qtknconv.bin: $(qtknconv_CC65SOURCES) $(qtknconv_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 qtknconv.x86_64: $(qtknconv_SOURCES) $(qtknconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(qtknconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 jpegconv.bin: $(jpegconv_CC65SOURCES) $(jpegconv_SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@

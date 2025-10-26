@@ -2,12 +2,13 @@
         .export         _update_progress_bar
         .export         _buffer, _err_buf, _line_buf
         .export         _opt_histogram
+        .export         _hgr_baseaddr_l
+        .export         _hgr_baseaddr_h
 
         .import         _load_thumb_data
 
         .import         _progress_bar, _scrw
         .import         _file_height, _file_width
-        .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _first_byte_idx, _resize
         .import         _x_offset, _crop_pos
 
@@ -120,7 +121,7 @@ _update_progress_bar:
         ldx     _file_height+1
         jmp     _progress_bar
 
-        .bss
+.segment "BSS"
 
 .align 256
 _buffer:            .res BUFFER_SIZE
@@ -129,3 +130,7 @@ _opt_histogram:     .res 256
 .assert <* = 0, error
 _err_buf:           .res 512+2
 _line_buf:          .res 192
+.align 256
+_hgr_baseaddr_l:      .res 192
+.align 256
+_hgr_baseaddr_h:      .res 192
