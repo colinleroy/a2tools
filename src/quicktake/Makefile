@@ -184,7 +184,7 @@ qtknconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_CLCFLAGS = \
-	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
+	-DCACHE_SIZE=15360  --asm-define CACHE_SIZE=15360 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
@@ -194,7 +194,7 @@ jpegconv_CLCFLAGS = \
 	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-DJPEGCONV=1 \
+	-DJPEGCONV=1        --asm-define JPEGCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
 

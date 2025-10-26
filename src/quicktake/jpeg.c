@@ -245,7 +245,6 @@ uint16 extendOffsets[] = {
 #endif
 
 //------------------------------------------------------------------------------
-#pragma code-name(push, "LC")
 static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 {
   int8 i = 15;
@@ -391,7 +390,6 @@ static uint8 readDHTMarker(void)
 
    return 0;
 }
-#pragma code-name(pop)
 
 //------------------------------------------------------------------------------
 

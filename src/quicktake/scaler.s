@@ -117,7 +117,9 @@ y_end:  cpy     #$FF              ; Patched
         jmp     _write
 .endproc
 
+.ifndef JPEGCONV
 .segment "LC"
+.endif
 
 .proc _build_scale_table
         jsr     pushax            ; Backup ofname

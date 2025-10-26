@@ -146,6 +146,10 @@ static uint8 identify(const char *name)
   return 0;
 }
 
+#ifdef JPEGCONV
+#pragma code-name (pop)
+#endif
+
 #pragma register-vars(pop)
 #pragma codesize(pop)
 #pragma allow-eager-inline(pop)
@@ -291,7 +295,9 @@ out:
   return 0;
 }
 
+#ifndef JPEGCONV
 #pragma code-name (pop)
+#endif
 
 #ifdef __CC65__
   #pragma static-locals(pop)

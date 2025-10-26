@@ -67,7 +67,8 @@ _gCoeffBuf:             .res 128
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
 
-        .segment "DATA"
+.segment "LC"
+
 .align 256
 .proc _mul145_l
   .repeat 256, I
