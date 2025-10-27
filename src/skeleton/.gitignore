@@ -1,0 +1,16 @@
+gen_sprite
+gen_font
+gen_sound_player
+gen_sound_clip
+gen_transform
+lz4_compressor
+transform.s
+*.gen.s
+*.gen.inc
+*.snd.s
+*.hgr-preview.png
+*.hgr
+*.ld.cfg
+*.lz4
+*.lzsa
+*.zx02

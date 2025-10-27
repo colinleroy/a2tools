@@ -1,0 +1,67 @@
+# No quit configuration (allowing for 4KB in LC)
+
+SYMBOLS {
+    __EXEHDR__:        type = import;
+    __FILETYPE__:      type = weak,   value = $0006; # ProDOS file type
+    __STACKSIZE__:     type = weak,   value = $0200; # 512b stack
+    __HIMEM__:         type = weak,   value = $BEFF; # Presumed RAM end
+    __LCADDR__:        type = weak,   value = $D400; # Behind quit code
+    __LCSIZE__:        type = weak,   value = $0C00; # Rest of bank two
+    __HGR_START__:     type = export, value = $2000; # HGR page location
+    __HGR_SIZE__:      type = export, value = $2000; # HGR page length
+    __LOWCODE_START__: type = export, value = $C00;  # Lowcode + Splash
+    __LOWCODE_SIZE__:  type = export, value = __HGR_START__+__HGR_SIZE__-__LOWCODE_START__;  # Lowcode + Splash
+    __SPLC_START__:    type = export, value = __LCADDR__;
+    __SPLC_SIZE__:     type = export, value = __LCSIZE__;
+
+    #Disable cc65's LC handling
+    __LC_START__ :type = export, value = $00;
+    __LC_LAST__ :type = export, value = $00;
+}
+FEATURES {
+    STARTADDRESS: default = $6000;
+}
+MEMORY {
+    ZP:     file = "", define = yes, start = $0080,        size = $001A;
+    HEADER: file = %O,               start = %S - $003A,   size = $003A;
+    MAIN:   file = %O, define = yes, start = %S,           size = __HIMEM__ - %S;
+    BSS:    file = "",               start = __ONCE_RUN__, size = __HIMEM__ - __STACKSIZE__ - __ONCE_RUN__;
+
+    #Ugly but functional
+    LOWCODE: file = "low_code.bin",    start = __LOWCODE_START__, size = __LOWCODE_SIZE__+__HGR_SIZE__;
+    SPLC:    file = "lc_code.bin",     start = __LCADDR__,   size = __LCSIZE__;
+
+### LEVEL_MEMORY_DECLARATIONS ###
+}
+
+SEGMENTS {
+    ZEROPAGE: load = ZP,             type = zp;
+    EXEHDR:   load = HEADER,         type = ro,  optional = yes;
+    STARTUP:  load = MAIN,           type = ro;
+    LOWCODE:  load = LOWCODE,        type = ro,  align = $100;
+    CODE:     load = MAIN,           type = ro;
+    RODATA:   load = MAIN,           type = ro;
+    DATA:     load = MAIN,           type = rw;
+    INIT:     load = MAIN,           type = rw;
+    ONCE:     load = MAIN,           type = ro,  define   = yes;
+    SPLC:     load = SPLC,           type = ro,  align = $100;
+    BSS:      load = BSS,            type = bss, align = $100, define   = yes;
+
+    splash:   load = LOWCODE,        type = ro, start = $2000;
+}
+
+FEATURES {
+    CONDES: type    = constructor,
+            label   = __CONSTRUCTOR_TABLE__,
+            count   = __CONSTRUCTOR_COUNT__,
+            segment = ONCE;
+    CONDES: type    = destructor,
+            label   = __DESTRUCTOR_TABLE__,
+            count   = __DESTRUCTOR_COUNT__,
+            segment = RODATA;
+    CONDES: type    = interruptor,
+            label   = __INTERRUPTOR_TABLE__,
+            count   = __INTERRUPTOR_COUNT__,
+            segment = RODATA,
+            import  = __CALLIRQ__;
+}
