@@ -178,8 +178,6 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     I3+2
         sta     I4+2
         sta     I5+2
-        sta     IFC1+2
-        sta     IFC2+2
 
         lda     #>IDX_BEHIND
         sta     IB1+2
@@ -188,10 +186,6 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB4+2
         sta     IB5+2
         sta     IB6+2
-        sta     IBFR1+2
-        sta     IBFR2+2
-        sta     IBFR3+2
-        sta     IBFR4+2
 .endmacro
 
 ; QTKT file magic
@@ -536,12 +530,12 @@ IB5:    lda     IDX_BEHIND+2,y
 IB6:    adc     IDX_BEHIND+4,y
         ror
         clc
-        adc     low_nibble_gstep_low,x ; Sets carry if overflow
+        adc     low_nibble_gstep_low,x  ; Sets carry if overflow
         sta     ln_val
         lda     low_nibble_gstep_high,x ; Carry set by previous adc if overflowed
         adc     #0
-        clc
         bne     clamp_low_nibble
+        clc                             ; may need to clear carry if Z in case of ($FF + 0 + C)
         lda     ln_val
 store_ln_val:
 I3:     sta     IDX+4,y
