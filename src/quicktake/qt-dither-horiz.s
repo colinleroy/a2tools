@@ -319,7 +319,7 @@ next_pixel:
         ; Advance to next HGR pixel after incrementing image X.
         ; The opcodes and targets are patched according to the rotation of the image.
 img_x_to_hgr:
-        asl     pixel_mask            ; Update pixel mask  (lsr or asl, or bit if inverted coords)
+        asl     pixel_mask            ; Update pixel mask  (lsr or asl)
 check_store_byte:
         bpl     pixel_handler         ; Check if byte done (bpl or bne, patched)
 

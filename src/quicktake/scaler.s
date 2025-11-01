@@ -54,15 +54,15 @@ no_crop:
         lda     #>_raw_image
         sta     store_dest_pixel+2
 
-        ldy     #$00
+        ldx     #$00
 next_y:
-        lda     _orig_y_table_l,y
+        lda     _orig_y_table_l,x
         sta     load_source_pixel+1
-        ldx     _orig_y_table_h,y
-        stx     load_source_pixel+2
+        lda     _orig_y_table_h,x
+        sta     load_source_pixel+2
 
-        iny
-        sty     y_ptr
+        inx
+        stx     y_ptr
 
         ldy     #$00
         ldx     _orig_x_offset    ; Preload the first X offset, and
@@ -95,8 +95,8 @@ check_x:
         bne     next_x
         inc     store_dest_pixel+2; Next output page
 
-        ldy     y_ptr
-y_end:  cpy     #$FF              ; Patched
+        ldx     y_ptr
+y_end:  cpx     #$FF              ; Patched
         bcc     next_y
 
         jsr     decsp4            ; Call write

@@ -147,7 +147,6 @@ DEPS :=
 CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
-	--warn-align-waste
 
 slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DPROGRAM_NAME='"SLOWTAKE"' \
