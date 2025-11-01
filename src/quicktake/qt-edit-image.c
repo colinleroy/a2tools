@@ -135,23 +135,19 @@ static void histogram_equalize(void) {
 #ifndef __CC65__
   uint8 x = 0;
 #endif
-  uint16 curr_hist = 0;
+  uint16 curr_hist = 0, r;
 
   if (auto_level) {
-    ifd = open(HIST_NAME, O_RDONLY);
-    if (ifd <= 0) {
+    lseek(ifd, 256UL*192UL, SEEK_SET);
+#ifndef __CC65__
+    r = read(ifd, histogram, 512);
+#else
+    r = read(ifd, err_buf, 512);
+#endif
+
+    if (r != 512) {
       goto fallback_std;
     }
-#ifndef __CC65__
-    read(ifd, histogram, 256*2);
-#else
-    if (read(ifd, err_buf, 512) < 512) {
-          close(ifd);
-          goto fallback_std;
-        }
-#endif
-    close(ifd);
-
     cputs("Histogram equalization...\r\n");
 #ifndef __CC65__
     cur_opt_histogram = opt_histogram;
@@ -233,7 +229,7 @@ fallback_std:
 uint8 *cur_thumb_data;
 #endif
 
-static void thumb_histogram(int ifd) {
+static void thumb_histogram(void) {
   uint8 x = 0, r_bytes;
   uint16 curr_hist = 0;
 
@@ -343,7 +339,6 @@ static void init_data (void)
   }
 
   init_hgr_base_addrs();
-  histogram_equalize();
   init_done = 1;
 }
 
@@ -1144,32 +1139,11 @@ void do_dither_horiz(void);
 void do_dither_vert(void);
 #endif
 
-void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
-  is_thumb = (p_width == THUMB_WIDTH*2);
-  is_qt100 = (serial_model == QT_MODEL_100);
-
-  file_width = p_width;
-  file_height = p_height;
-  x_offset = ((HGR_WIDTH - file_width) / 2);
-
-  init_data();
-
+void dither_to_hgr(const char *ofname) {
+  lseek(ifd, 0, SEEK_SET);
   clrscr();
+
   cprintf("Converting %s (Esc to stop)...\r\n", ofname);
-
-  ifd = open(ifname, O_RDONLY);
-  if (ifd <= 0) {
-    cprintf("Can't open %s\r\n", ifname);
-    cgetc();
-    return;
-  }
-
-  if (is_thumb) {
-    thumb_histogram(ifd);
-    /* Re-zero */
-    lseek(ifd, 0, SEEK_SET);
-    dither_alg = DITHER_BAYER;
-  }
 
   hgr_mixon();
   cputs("Rendering... (Press space to toggle menu once done.)\r\n");
@@ -1195,13 +1169,6 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   if (!is_thumb) {
     hgr_mixoff();
   }
-
-  close(ifd);
-#ifndef __CC65__
-  ifd = open("HGR", O_WRONLY|O_BINARY);
-  write(ifd, (char *)HGR_PAGE, HGR_LEN);
-  close(ifd);
-#endif
 }
 
 #pragma register-vars(pop)
@@ -1209,16 +1176,41 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 #pragma allow-eager-inline(pop)
 #pragma inline-stdfuncs(pop)
 
-void qt_edit_image(const char *ofname, uint16 src_width) {
+void qt_edit_image(const char *ofname, uint16 src_width, uint8 serial_model) {
+  init_data();
   set_scrollwindow(20, scrh);
   clear_dhgr();
+
+  is_thumb = (src_width == THUMB_WIDTH*2);
+  is_qt100 = (serial_model == QT_MODEL_100);
+  file_width = src_width;
+  file_height = is_thumb ? THUMB_HEIGHT*2 : HGR_HEIGHT;
+  x_offset = ((HGR_WIDTH - file_width) / 2);
+
+  ifd = open(is_thumb ? THUMBNAIL_NAME : TMP_NAME, O_RDONLY);
+  if (ifd <= 0) {
+    cprintf("Can't open file\r\n");
+    cgetc();
+    return;
+  }
+
+  if (is_thumb) {
+    thumb_histogram();
+    dither_alg = DITHER_BAYER;
+  } else {
+    histogram_equalize();
+  }
+
   do {
     if (angle >= 360)
       angle -= 360;
     if (angle < 0)
       angle += 360;
-    dither_to_hgr(TMP_NAME, ofname, FILE_WIDTH, FILE_HEIGHT, QT_MODEL_UNKNOWN);
-  } while (reedit_image(ofname, src_width));
+    dither_to_hgr(ofname);
+  } while (!is_thumb && reedit_image(ofname, src_width));
+
+  close (ifd);
+  ifd = -1;
 }
 
 uint8 qt_view_image(const char *filename) {

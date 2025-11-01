@@ -311,7 +311,7 @@ err_thumb_io:
     state_set(STATE_PREVIEW, tmp, NULL);
     sprintf(thumb_buf, "Thumbnail %d", i);
     clear_dhgr();
-    dither_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2, serial_model);
+    qt_edit_image(thumb_buf, THUMB_WIDTH*2, serial_model);
 
     clrscr();
     gotoxy(0,20);
@@ -412,16 +412,15 @@ static uint8 setup(int argc, char *argv[]) {
   print_welcome();
 
   if (state_load(STATE_EDIT, &is_reedit, &reedit_name) == 0) {
-      qt_edit_image(reedit_name, is_reedit);
+      qt_edit_image(reedit_name, is_reedit, QT_MODEL_UNKNOWN);
       state_set(STATE_EDIT, 0, NULL);
   } else if (argc == 3) {
     is_reedit = atoi(argv[2]);
     if (is_reedit)
-      qt_edit_image(argv[1], is_reedit);
+      qt_edit_image(argv[1], is_reedit, QT_MODEL_UNKNOWN);
   }
 
   /* Remove temporary files */
-  unlink(HIST_NAME);
   unlink(TMP_NAME);
 
   while (qt_serial_connect(target_speed) != 0) {
@@ -454,7 +453,6 @@ static uint8 setup(int argc, char *argv[]) {
 #pragma code-name(push, "LOWCODE")
 
 void unlink_temp_files(void) {
-  unlink(HIST_NAME);
   unlink(TMP_NAME);
   unlink(THUMBNAIL_NAME);
   if (!exec_pass) {

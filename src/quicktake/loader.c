@@ -33,14 +33,16 @@ display:
   }
   fp = fopen(argv[1],"r");
   if (argc < 4) {
+    size_t data_len;
     fseek(fp, 0, SEEK_END);
-    if (ftell(fp) == 256*192) {
+    data_len = ftell(fp) - 512; // sizeof(histogram)
+    if (data_len == 256*192) {
       w = 256;
       h = 192;
-    } else if (ftell(fp) == 320*240) {
+    } else if (data_len == 320*240) {
       w = 320;
       h = 240;
-    } else if (ftell(fp) == 640*480) {
+    } else if (data_len == 640*480) {
       w = 640;
       h = 480;
     } else {

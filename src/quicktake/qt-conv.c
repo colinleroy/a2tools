@@ -261,25 +261,20 @@ try_again:
   progress_bar(0, 8, 80, height, height);
 
   close(ifd);
-  close(ofd);
   #ifndef __CC65__
   close(fullsize_fd);
   #endif
-  ifd = ofd = -1;
+  ifd = -1;
 
-  /* Save histogram to /RAM */
-  unlink(HIST_NAME);
-  ofd = open(HIST_NAME, O_RDWR|O_CREAT, 00600);
-  if (ofd > 0) {
+  /* Append histogram */
 #ifndef __CC65__
-    write(ofd, histogram, sizeof(uint16)*256);
+  write(ofd, histogram, sizeof(uint16)*256);
 #else
-    write(ofd, histogram_low, sizeof(uint8)*256);
-    write(ofd, histogram_high, sizeof(uint8)*256);
+  // histogram_low and high must be contiguous
+  write(ofd, histogram_low, sizeof(uint8)*512);
 #endif
-    close(ofd);
-    ofd = -1;
-  }
+  close(ofd);
+  ofd = -1;
 
 #ifdef __CC65__
 #endif
