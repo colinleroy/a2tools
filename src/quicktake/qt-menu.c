@@ -264,7 +264,7 @@ static void take_picture(void) {
 void clear_dhgr(void);
 
 static void show_thumbnails(uint8 num_pics) {
-  uint8 i = 0;
+  int8 i = 1;
   uint16 tmp;
   thumb_info info;
   char c = 0;
@@ -275,7 +275,6 @@ static void show_thumbnails(uint8 num_pics) {
     return;
   }
 
-  set_scrollwindow(0, scrh);
   init_graphics(1, 0);
   hgr_mixon();
 
@@ -284,10 +283,7 @@ static void show_thumbnails(uint8 num_pics) {
   }
 
   do {
-    i++;
-    if (i > num_pics) {
-      i = 1;
-    }
+    set_scrollwindow(0, scrh);
 
     fd = open(THUMBNAIL_NAME, O_WRONLY|O_CREAT);
     if (fd <= 0) {
@@ -317,12 +313,34 @@ err_thumb_io:
     gotoxy(0,20);
 
     cprintf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
-           "G to get full picture, Escape to exit, any other key to continue",
+           "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
            thumb_buf, qt_get_quality_str(info.quality_mode),
            info.flash_mode ? "on":"off", info.date.day, info.date.month,
            info.date.year, info.date.hour, info.date.minute);
+
+get_key:
     c = tolower(cgetc());
-  } while (c != CH_ESC && c != 'g');
+    switch (c) {
+      case 'n':
+        i++;
+        if (i > num_pics) {
+          i = 1;
+        }
+        break;
+      case 'p':
+        i--;
+        if (i == 0) {
+          i = num_pics;
+        }
+        break;
+      case 'g':
+      case CH_ESC:
+        goto done;
+      default:
+        goto get_key;
+    }
+  } while (1);
+done:
   unlink(THUMBNAIL_NAME);
 
   if (c == 'g') {

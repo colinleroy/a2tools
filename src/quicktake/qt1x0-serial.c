@@ -536,7 +536,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
          THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
 
   gotoxy(0, status_line);
-  cputs("  Getting thumbnail...\r\n");
+  cprintf("  Getting thumbnail %d...\r\n", n_pic);
   gotoy(status_line+2);
   send_photo_thumbnail_command(n_pic);
 
