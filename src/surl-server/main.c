@@ -1488,7 +1488,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     }
     size = simple_serial_getc();
 
-    LOG("REQ: %s %s - start\n", surl_method_str(method), url);
+    LOG("REQ: %s %s (subs %s, size %d) - start\n", surl_method_str(method), url, subtitles_url, size);
     surl_stream_audio_video(url, translit, monochrome, subtitles, subtitles_url, size);
     free(translit);
     return NULL;

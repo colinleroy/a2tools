@@ -24,18 +24,18 @@
 #include "printer.h"
 #include "../log.h"
 
-#define MAX_VIDEO_OFFSET 126
-#define NUM_VIDEO_BASES  (HGR_LEN/MAX_VIDEO_OFFSET)+1
-#define MIN_VIDEO_REPS   3
-#define MAX_VIDEO_REPS   10
+#define MAX_VIDEO_OFFSET         126
+#define NUM_VIDEO_BASES          (HGR_LEN/MAX_VIDEO_OFFSET)+1
+#define MIN_VIDEO_REPS           3
+#define MAX_VIDEO_REPS           10
 
-#define MAX_AV_OFFSET    126
-#define NUM_AV_BASES     (HGR_LEN/MAX_AV_OFFSET)+4+1
-#define AV_TEXT_BASE_0   (HGR_LEN/MAX_AV_OFFSET)+1
+#define MAX_AV_OFFSET            126
+#define NUM_AV_BASES             (HGR_LEN/MAX_AV_OFFSET)+4+1
+#define AV_TEXT_BASE_0           (HGR_LEN/MAX_AV_OFFSET)+1
 
-#define SAMPLE_RATE (115200 / (1+8+1))
-#define AUDIO_MAX          256
-#define BUFFER_LEN         (60*10)
+#define SAMPLE_RATE              (115200 / (1+8+1))
+#define AUDIO_MAX                256
+#define BUFFER_LEN               (60*10)
 
 #define AUDIO_MAX_LEVEL          31
 #define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
