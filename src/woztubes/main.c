@@ -133,6 +133,11 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
       video_url = (char *)(BUF_8K_ADDR + url_len);
     }
 
+    /* Load mono files now as we'll need the iobuf later for the captions_url */
+    init_text();
+    backup_restore_hgrpage("r");
+    load_hgr_mono_file(2);
+
     if (enable_subtitles) {
       /* Build captions URL */
       sprintf((char *)BUF_1K_ADDR,
@@ -189,11 +194,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
       }
     }
 
-    /* Reload to overwrite DHGR data */
-    init_text();
-    backup_restore_hgrpage("r");
     init_graphics(monochrome, 0);
-    load_hgr_mono_file(2);
     surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
 
