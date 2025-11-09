@@ -93,6 +93,7 @@ static void save_picture(uint8 n_pic) {
 
   filename[0] = '\0';
 #ifdef __CC65__
+again:
   clrscr();
   cprintf("Saving picture %d\r\n\r\n"
 
@@ -106,6 +107,11 @@ static void save_picture(uint8 n_pic) {
   dirname = file_select(1, "Select directory");
   if (dirname == NULL) {
     return;
+  }
+  if (!strncmp(dirname, "/RAM", 4)) {
+    cputs("\r\nNot enough space available.");
+    cgetc();
+    goto again;
   }
   gotox(0);
   strcpy(filename, dirname);
