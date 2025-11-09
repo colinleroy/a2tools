@@ -176,6 +176,7 @@ static void get_one_picture(uint8 num_pics) {
   uint16 tmp;
 
   clrscr();
+
   cputs("Get a picture from the camera\r\n\r\n"
 
         "Picture number? ");
@@ -345,6 +346,7 @@ done:
 
   if (c == 'g') {
     init_text();
+    set_scrollwindow(0, scrh);
     save_picture(i);
   }
 }
