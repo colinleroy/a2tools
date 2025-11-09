@@ -273,7 +273,7 @@ _z8530_close:
 
 getClockSource:
         .assert SER_PARAMS::BAUDRATE = 0, error
-        lda     (ptr1)                  ; Baudrate index - cc65 value
+        lda     Speed                   ; Baudrate index - cc65 value
         cmp     #SER_BAUD_115200
         lda     #$00
         adc     #$00
@@ -435,12 +435,12 @@ SetupOut:
 ; Push a character out of serial
 _z8530_put:
         pha
-:       lda     #$00            ;
+:       lda     #RR_INIT_STATUS
 status_reg_w_1:
         sta     $C038           ; Patched (status reg)
 status_reg_w_2:
         lda     $C038
-        and     #%00000100      ; Init status ready?
+        and     #INIT_STATUS_READY
         beq     :-
 
         pla
@@ -550,6 +550,8 @@ _z8530_set_irq:
 
 _z8530_set_speed:
         sta     _baudrate
+        ldy     Opened            ; Don't write regs if not opened
+        beq     sout
         tay
 
         lda     BaudTable,y
@@ -561,14 +563,14 @@ _z8530_set_speed:
         ldx     #WR_BAUDH_CTRL
         stx     SCCBREG
         sta     SCCBREG
-        rts
+sout:   rts
 
 ; Fixme: assumes 8 data bits, TX on, RTS on. Same thing as previously:
 ; this is sufficient for surl-based uses. Slot ignored.
 
 _z8530_slot_dtr_onoff:
-        sty     tmp1
-        jsr     popa
+        sta     tmp1              ; DTR to tmp1
+        jsr     popa              ; Slot from TOS
         ldy     tmp1
         cpy     #0
         beq     :+
@@ -585,15 +587,22 @@ _z8530_slot_dtr_onoff:
         sta     SCCBREG
         rts
 
-; Fixme: assumes 8 data bits/1 stop bit. Same thing as previously:
-; this is sufficient for surl-based uses.
+; Fixme: assumes 1 stop bit. Same thing as previously:
+; this is sufficient for my uses.
 
 _z8530_set_parity:
-        tay
+        ldy     Opened            ; Don't write regs if not opened
+        beq     pout
+
+        tay                       ; Parity
+        lda     ParityTable,y
+        ldy     #SER_STOP_1       ; Stop bits
+        ora     StopTable,y
+        ldy     CurClockSource    ; Clock multiplier
+        ora     ClockMultiplier,y
 
         ldx     #WR_TX_RX_CTRL
-        lda     ParityTable,y
         stx     SCCBREG
         sta     SCCBREG
-        rts
+pout:   rts
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL

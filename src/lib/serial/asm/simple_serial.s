@@ -123,7 +123,6 @@ write_mode_str: .asciiz "w"
         lda     _ser_params,y
         sta     _open_slot
 
-        lda     _open_slot
         ldx     _baudrate
 
         ; open port

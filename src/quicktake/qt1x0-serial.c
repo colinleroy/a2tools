@@ -20,8 +20,6 @@ extern uint8 scrw, scrh;
 
 static uint8 qt1x0_send_ping(void);
 
-#pragma code-name(push, "LOWCODE")
-
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
   while (wait--) {
@@ -32,9 +30,21 @@ static uint8 get_ack(uint8 wait) {
   return -1;
 }
 
+#pragma code-name(push, "LOWCODE")
+
 /* Send an ack to the camera */
 static void send_ack() {
   simple_serial_putc(0x06);
+}
+
+static uint8 send_and_get_ack(uint8 wait) {
+  simple_serial_putc(0x06);
+  while (wait--) {
+    if (simple_serial_getc_with_timeout() == 0x00) {
+      return 0;
+    }
+  }
+  return -1;
 }
 
 /* Get first data from the camera after connecting */
@@ -49,11 +59,13 @@ static uint8 get_hello(void) {
       goto read;
     }
   }
+  cputs("Timeout. ");
   return QT_MODEL_UNKNOWN;
 
 read:
   buffer[0] = (unsigned char)c;
   if (buffer[0] != 0xA5) {
+    cprintf("Unexpected $%04X. ", c);
     return QT_MODEL_UNKNOWN;
   }
   simple_serial_read((char *)buffer + 1, 6);
@@ -97,7 +109,7 @@ static uint8 send_hello(uint16 speed) {
     return -1;
   }
   if (c != 0x00) {
-    cprintf("Error ($%02x).\r\n", c);
+    cprintf("Error ($%02X).\r\n", c);
     return -1;
   }
   buffer[0] = c;
@@ -134,7 +146,6 @@ uint8 qt1x0_wakeup(uint16 speed) {
   }
 
   if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
-    cputs("Timeout. ");
     /* Re-up current port */
     if (is_iigs) {
       simple_serial_dtr_onoff(1);
@@ -198,21 +209,23 @@ uint8 qt1x0_set_speed(uint16 speed) {
   /* We don't care about the bytes we receive here */
   simple_serial_flush();
 
-  send_ack();
-  return get_ack(5);
+  return send_and_get_ack(5);
 }
 
 /* End of RT_ONCE segment */
 #pragma code-name(pop)
 
 #pragma code-name(push, "LOWCODE")
-/* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
+static uint8 write_and_get_ack(const char *cmd, uint8 len, uint8 wait) {
   simple_serial_write(cmd, len);
 
-  if (get_ack(wait) != 0) {
+  return get_ack(wait);
+}
+/* Send a command to the camera */
+static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
+  if (write_and_get_ack(cmd, len, wait) != 0)
     return -1;
-  }
+
   if (s_ack)
     send_ack();
 

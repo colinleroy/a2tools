@@ -394,7 +394,9 @@ static uint8 setup(int argc, char *argv[]) {
 #ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
 #endif
-
+if (is_iigs) {
+  target_speed = 57600U;
+}
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD
   if (argc == 1) {
