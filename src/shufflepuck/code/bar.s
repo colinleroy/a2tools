@@ -308,9 +308,9 @@ skip_num_opponent:                ; Y didn't match so skip opponent
         lda     mouse_y
         cmp     #MENU_TOP
         bcc     out               ; Check Y is under the top
-        cmp     #CHAMPION_BOTTOM
+        cmp     #(CHAMPION_BOTTOM+2)
         bcc     do_tournament     ; and over the end of the TOURNAMENT line
-        cmp     #MENU_BOTTOM
+        cmp     #(MENU_BOTTOM+2)
         bcc     view_roster       ; or over the end of the VIEW ROSTER LINE
 out:    clc
         rts
