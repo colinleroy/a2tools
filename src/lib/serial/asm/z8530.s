@@ -393,9 +393,8 @@ BaudOK:
         ldy     #WR_TX_RX_MODE_CTRL     ; WR1 setup: Activate RX IRQ
         lda     #TX_RX_MODE_RXIRQ
         jsr     writeSCCReg
-        
-        lda     SCCBREG                 ; WR9 setup: Deactivate master IRQ
-        ldy     #WR_MASTER_IRQ_RST
+
+        ldy     #WR_MASTER_IRQ_RST      ; WR9 setup: Deactivate master IRQ
         lda     #MASTER_IRQ_SHUTDOWN
         jsr     writeSCCReg
 
