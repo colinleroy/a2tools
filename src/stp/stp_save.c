@@ -164,7 +164,7 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
 
   gotoxy(0, 12);
   if (dio_query_sectcount(dev_handle) != num_blocks) {
-    cprintf("Wrong volume size (%d blocks)", dio_query_sectcount(dev_handle));
+    cprintf("Wrong volume size (%u blocks)", dio_query_sectcount(dev_handle));
     goto err_out;
   }
   cprintf("Writing disk...              ");
@@ -173,7 +173,7 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
 
   do {
     gotoxy(0, 14);
-    cprintf("Receiving block %d/%d...   ", cur_block, num_blocks);
+    cprintf("Receiving block %u/%u...   ", cur_block, num_blocks);
     if (prodos_order) {
       /* ProDOS-ordered images are easy, 1:1 mapping */
       /* Get one track from network */
@@ -206,7 +206,7 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
 
     /* Write track */
     gotoxy(0, 14);
-    cprintf("Writing block %d/%d...     ", cur_block, num_blocks);
+    cprintf("Writing block %u/%u...     ", cur_block, num_blocks);
     for (i = BLOCKS_PER_TRACK, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
       if (dio_write(dev_handle, cur_block, cur_data) != 0) {
         goto err_out;
@@ -215,7 +215,7 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
     }
     if (IS_NOT_NULL(verif_data)) {
       gotoxy(0, 14);
-      cprintf("Verifying block %d/%d...    ", verif_cur_block, num_blocks);
+      cprintf("Verifying block %u/%u...    ", verif_cur_block, num_blocks);
       for (i = BLOCKS_PER_TRACK, cur_data = verif_data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
         if (dio_read(dev_handle, verif_cur_block, cur_data) != 0) {
           goto err_out;
@@ -295,7 +295,7 @@ int stp_save(char *full_filename, char *out_dir) {
     filetype = "TXT";
   }
 
-  is_prodos_disk = !strcasecmp(filetype, "PO");
+  is_prodos_disk = (!strcasecmp(filetype, "PO") || !strcasecmp(filetype,"HDV"));
   is_dos_disk = !strcasecmp(filetype, "DSK");
   if (is_prodos_disk || is_dos_disk) {
     char prodos = is_prodos_disk || resp.size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
