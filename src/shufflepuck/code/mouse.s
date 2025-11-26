@@ -107,7 +107,17 @@ barbox: .word   0
         lda     #>$C000
         sta     ptr1+1
 
-        lda     #0
+        ; Use softswitch VBL sync on IIe/IIe enh
+        lda     ostype
+        cmp     #$30
+        bcc     :+
+        cmp     #$40
+        bcs     :+
+
+        lda     #$4C
+        sta     _mouse_wait_vbl
+
+:       lda     #0
         jsr     set_mouse_speed
 
         ; Search for AppleMouse II firmware in slots 1 - 7
@@ -506,16 +516,28 @@ waste_end:
 .endproc
 
 .proc _mouse_wait_vbl
+        bit     _softswitch_wait_vbl ; Patched with JMP on IIe
+
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready
         beq     :-
 
+pal_slow:
         lda     _freq           ; Shorten window at 50Hz to catch
         ; cmp     #TV_NTSC      ; sync bugs on my own hardware
         bne     waste_3250      ; According to testing, we have
         rts                     ; ~1600 extra cycles before it starts
                                 ; flickering on real hardware.
+.endproc
+
+; IIe only
+.proc _softswitch_wait_vbl
+        bit     $C019               ; Softswitch VBL
+        bpl     _softswitch_wait_vbl; Wait for bit 7 on (VBL ended)
+:       bit     $C019               ; Softswitch VBL
+        bmi     :-                  ; Wait for bit 7 off (VBL started)
+        jmp     _mouse_wait_vbl::pal_slow
 .endproc
 
 ; Returns 0 if mouse button not pressed
