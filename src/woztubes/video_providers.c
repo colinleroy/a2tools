@@ -22,8 +22,9 @@ static char *protocol_strings[N_INSTANCE_TYPES][N_PROTOCOL_STRINGS] = {
 
     /* Get captions, first the one in the user's preferred language, then the first one.
      * It could be two, it could be the same, or it could be zero. LG is a placeholder and
-     * will be replaced by the user's preferred language. */
-    "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath"
+     * will be replaced by the user's preferred language. fileUrl is preferred as captionPath
+     * is deprecated. */
+    "(.data[]|select(.language.id == \"LG\")|.fileUrl//.captionPath),.data[0].fileUrl//.data[0].captionPath"
   },
 
   { /* SEPIASEARCH */
