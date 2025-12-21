@@ -3,6 +3,7 @@
                 .import         serial_read_byte_no_irq_timeout
                 .import         _serial_putc_direct
                 .import         throbber_on, throbber_off
+                .import         _serial_shorten_timeout
 
                 .export         _vsdrive_install, _vsdrive_uninstall
                 .destructor     _vsdrive_uninstall, 9
@@ -176,6 +177,11 @@ READBLK:
         ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
 
+        ; Shorten timeout
+        lda        _serial_shorten_timeout
+        pha
+        lda        #$C0
+        sta        _serial_shorten_timeout
         ; Pull and verify command envelope from host
         jsr        serial_read_byte_no_irq_timeout
         bcs        IOFAIL
@@ -238,6 +244,8 @@ RDLOOP:
 
 IOFAIL:
         jsr        throbber_off
+        pla
+        sta        _serial_shorten_timeout
         lda        #IOERR
         sec
         rts
@@ -269,7 +277,11 @@ WRLOOP:
         lda        CHECKSUM                   ; Send checksum
         jsr        _serial_putc_direct
 
-; READ ECHO'D COMMAND AND VERIFY
+        lda        _serial_shorten_timeout
+        pha
+        lda        #$C0
+        sta        _serial_shorten_timeout
+        ; READ ECHO'D COMMAND AND VERIFY
         jsr        serial_read_byte_no_irq_timeout
         bcs        IOFAIL
         cmp        #VD_ENVELOPE_CMD           ; S/B Command envelope
@@ -288,6 +300,8 @@ WRLOOP:
         bne        IOFAIL
 IOSUCCESS:
         jsr        throbber_off
+        pla
+        sta        _serial_shorten_timeout
         lda        #SUCCESS
         clc
         rts

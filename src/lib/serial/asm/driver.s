@@ -41,6 +41,7 @@
 .endif
 
         .export     _ser_data_reg, _ser_status_reg
+        .export     _serial_shorten_timeout
 
 ; Low-level control
 .ifdef SERIAL_LOW_LEVEL_CONTROL
@@ -104,9 +105,10 @@ no:     sec
 .endproc
 
 .proc serial_read_byte_no_irq_timeout
+        lda     _serial_shorten_timeout
+        sta     timeout_cnt+1
         lda     #$00
         sta     timeout_cnt
-        sta     timeout_cnt+1
 :       jsr     _serial_read_byte_direct
         bcc     out
 
@@ -118,7 +120,8 @@ no:     sec
 out:    rts
 .endproc
 
-serial_slot:      .byte   2
+serial_slot:             .byte 2
+_serial_shorten_timeout: .byte 0
 
 .segment "ONCE"
 
