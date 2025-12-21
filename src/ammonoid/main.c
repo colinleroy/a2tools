@@ -915,8 +915,7 @@ void help(void) {
 
   must_clear[0] = must_clear[1] = 1;
   help_message();
-  display_pane(0);
-  display_pane(1);
+  display_pane(!active_pane);
 }
 
 static void handle_input(void) {
@@ -1164,7 +1163,6 @@ void main(int argc, char **argv) {
   help_message();
 
   must_clear[0] = must_clear[1] = 1;
-  display_active_pane();
   display_pane(!active_pane);
   while (1) {
     display_active_pane();
