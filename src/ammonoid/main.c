@@ -393,8 +393,8 @@ static void open_directory(unsigned char target_pane) {
       info_message("Can not open image.", 1);
     }
   } else if (entry->d_type == PRODOS_T_BIN && entry->d_auxtype != 0) {
-execbin:
     if (confirm("Execute binary file? (y/N)", 0)) {
+execbin:
       exec(new_path, NULL);
     }
   } else if (entry->d_type == PRODOS_T_SYS) {
