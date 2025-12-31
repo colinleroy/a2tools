@@ -395,6 +395,7 @@ static void open_directory(unsigned char target_pane) {
   } else if (entry->d_type == PRODOS_T_BIN && entry->d_auxtype != 0) {
     if (confirm("Execute binary file? (y/N)", 0)) {
 execbin:
+      chdir(pane_directory[active_pane]);
       exec(new_path, NULL);
     }
   } else if (entry->d_type == PRODOS_T_SYS) {
