@@ -129,7 +129,7 @@ static char cancel_transfer(void) {
 #define SECTORS_PER_TRACK (TRACK_SIZE/SECTOR_SIZE)
 #define BLOCKS_PER_TRACK (TRACK_SIZE/PRODOS_BLOCK_SIZE)
 
-static int stp_write_disk(char *out_dir, char prodos_order) {
+static int stp_write_disk(char *out_dir, char prodos_order, unsigned char offset) {
 #ifdef __CC65__
   char dev;
   dhandle_t dev_handle;
@@ -170,6 +170,10 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
   cprintf("Writing disk...              ");
 
   progress_bar(0, 15, NUMCOLS - 1, 0, num_blocks);
+
+  if (offset) {
+    surl_receive_bindata(data, offset, 1);
+  }
 
   do {
     gotoxy(0, 14);
@@ -281,7 +285,7 @@ int stp_save(char *full_filename, char *out_dir) {
   char *full_path = NULL;
   char start_y = 10;
 #ifdef __APPLE2__
-  char is_prodos_disk, is_dos_disk;
+  char is_prodos_disk, is_dos_disk, is_2mg;
 #endif
   filename = strdup(full_filename);
 
@@ -295,7 +299,8 @@ int stp_save(char *full_filename, char *out_dir) {
     filetype = "TXT";
   }
 
-  is_prodos_disk = (!strcasecmp(filetype, "PO") || !strcasecmp(filetype,"HDV"));
+  is_2mg = !strcasecmp(filetype,"2MG");
+  is_prodos_disk = (!strcasecmp(filetype, "PO") || !strcasecmp(filetype,"HDV") || is_2mg);
   is_dos_disk = !strcasecmp(filetype, "DSK");
   if (is_prodos_disk || is_dos_disk) {
     char prodos = is_prodos_disk || resp.size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
@@ -307,7 +312,7 @@ int stp_save(char *full_filename, char *out_dir) {
       return -1;
     }
     clrzone(0, 14, NUMCOLS - 1, 14);
-    return stp_write_disk(out_dir, prodos);
+    return stp_write_disk(out_dir, prodos, is_2mg ? 64:0);
   } else if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
