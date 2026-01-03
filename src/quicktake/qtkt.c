@@ -126,10 +126,8 @@ void qt_load_raw(uint16 top)
       if (cur_cache_ptr == cache_end) {
         full_reads--;
         if (full_reads == 0) {
-          printf("Doing small read %d\n", last_read);
           read(ifd, cur_cache_ptr = cache, last_read);
         } else {
-          printf("Doing full read %d\n", CACHE_SIZE);
           read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
         }
       }
@@ -213,6 +211,5 @@ void qt_load_raw(uint16 top)
     }
 
     at_very_first_row = 0;
-    printf("total read %lu, pos in cache %lu\n", bytes_read, cur_cache_ptr-cache_start);
   }
 }
