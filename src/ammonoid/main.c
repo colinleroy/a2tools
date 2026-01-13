@@ -16,6 +16,7 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 #include "malloc0.h"
+#include "get_buf_size.h"
 #include "dget_text.h"
 #include "surl.h"
 #include "vsdrive.h"
@@ -787,12 +788,22 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
             out = fopen(dest, "w");
             if (out) {
               size_t r;
-              while ((r = fread(copy_buf, 1, COPY_BUF_SIZE, in)) > 0) {
-                if (fwrite(copy_buf, 1, r, out) < r) {
+              size_t buf_size = get_buf_size();
+              unsigned char *buffer = malloc(buf_size);
+              unsigned char *buf_ptr = buffer;
+              if (IS_NULL(buffer)) {
+                buf_ptr = copy_buf;
+                buf_size = COPY_BUF_SIZE;
+              }
+              while ((r = fread(buf_ptr, 1, buf_size, in)) > 0) {
+                if (fwrite(buf_ptr, 1, r, out) < r) {
                   printf(": %s\n", strerror(errno));
                   err = 1;
                   break;
                 }
+              }
+              if (IS_NOT_NULL(buffer)) {
+                free(buffer);
               }
               fclose(out);
             } else {
@@ -883,7 +894,8 @@ void help(void) {
   set_hscrollwindow(0, total_width);
   clrscr();
 
-  cputs("Left/Right: switch active pane\r\n");
+  /* 22 lines */
+  cputs("Left/Right/Tab: switch active pane\r\n");
   if (is_iie) {
     cputs("Up/Down");
   } else {
@@ -929,6 +941,10 @@ static void handle_input(void) {
     /* Switch to left pane */
     case CH_CURS_RIGHT:
       active_pane = 1;
+      return;
+    /* Switch pane */
+    case '\t':
+      active_pane = !active_pane;
       return;
     /* Scrollup in current pane */
     case CH_CURS_UP:

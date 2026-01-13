@@ -28,6 +28,7 @@ ammonoid_SOURCES := \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
 	../lib/vsdrive.s \
+	../lib/get_buf_size.c \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -71,4 +72,3 @@ upload: all
 dist: ammonoid.po
 	mkdir -p ../../dist/
 	cp $< ../../dist/
-
