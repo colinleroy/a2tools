@@ -4,6 +4,9 @@ GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = HOMECONTROL
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 PROGRAM=homectrl grphview
 homectrl_SOURCES := \
 	main.c \
@@ -96,14 +99,16 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 all: homecontrol.po
 	
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)HOMECTRL.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 homecontrol.po: homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ HOMECONTROL
-	java -jar ../../bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
 
 homecontrolperso.po: homecontrol.po
 	cp $< $@; \

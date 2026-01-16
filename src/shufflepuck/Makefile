@@ -1,3 +1,6 @@
+FLOP_NAME = SHUFFLEPUCK
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 SAMPLING_HZ := 8000
@@ -410,16 +413,22 @@ $(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
 		-C shflpuck.ld.cfg -o $@ $(shflpuck_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SHFLPUCK.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
+	java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)SHFLPUCK < $(BINARY_NAME); \
+	for r in $(assets_zx02); do \
+		java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
+	done; \
+
 shufflepuck.po: $(BINARY_NAME) $(assets_zx02)
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ SHUFFLEPUCK
-	java -jar ../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < ../../bin/loader.system; \
-	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	java -jar ../../bin/ac.jar -as $@ SHFLPUCK < $<; \
-	for r in $(assets_zx02); do \
-		java -jar ../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
-	done; \
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \

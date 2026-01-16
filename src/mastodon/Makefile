@@ -7,6 +7,9 @@ GENERAL_CFLAGS := \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = MASTODON
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 common_CC65SOURCES := \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -161,16 +164,22 @@ all dist: mastodon.po
 
 perso: all mastoperso.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)MASTODON.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)IMGLOW BIN < IMGLOW; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 mastodon.po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ MASTODON
-	java -jar ../../bin/ac.jar -p $@ MASTODON.SYSTEM SYS < ../../bin/loader.system; \
-	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	java -jar ../../bin/ac.jar -p $@ IMGLOW BIN < IMGLOW; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 mastoperso.po: mastodon.po
 	cp $< $@; \

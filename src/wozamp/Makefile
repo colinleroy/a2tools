@@ -8,6 +8,9 @@ GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = WOZAMP
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 wozamp_SOURCES := \
 	main.c \
 	config.c \
@@ -99,14 +102,20 @@ videoplay_CLCFLAGS = -t $(TARGET) \
 
 DISK_PROGS = splash.h splash-video.h wozamp.bin videoplay.bin
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)WOZAMP.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 wozamp.po: $(DISK_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ WOZAMP
-	java -jar ../../bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 wozampperso.po: wozamp.po
 	cp $< $@; \

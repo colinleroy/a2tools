@@ -7,6 +7,9 @@ GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 	-DPROGRAM_NAME='"AMMONOID"' \
 
+FLOP_NAME = AMMONOID
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \
 	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
@@ -53,15 +56,21 @@ ammonoid.bin: $(ammonoid_CL65SOURCES) $(ammonoid_SOURCES)
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)AMMONOID.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
+	for r in *.bin ../image-viewer/imgview.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 ammonoid.po: ammonoid.bin ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ AMMONOID
-	java -jar ../../bin/ac.jar -p $@ AMMONOID.SYSTEM SYS < ../../bin/loader.system; \
-	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	for r in *.bin ../image-viewer/imgview.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/ || \

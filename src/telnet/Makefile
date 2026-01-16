@@ -8,6 +8,9 @@ GENERAL_CFLAGS := \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = TELNET
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 PROGRAM=telnet
 SOURCES := \
 	telnet.c \
@@ -62,14 +65,20 @@ GCCLDFLAGS =
 
 all: telnet.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)TELNET.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 telnet.po: $(PROGRAM).bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ TELNET
-	java -jar ../../bin/ac.jar -p $@ TELNET.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 $(PROGRAM).bin: $(SOURCES) $(CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"telnet.dbg" -Ln telnet.lbl $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^

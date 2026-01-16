@@ -5,6 +5,9 @@ GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = IMAGEVIEWER
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 imgview_SOURCES := \
 	imageview.c \
 	../lib/progress_bar.c \
@@ -69,14 +72,20 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 all: imageviewer.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)IMGVIEW.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 imageviewer.po: imgview.bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ IMGVIEW
-	java -jar ../../bin/ac.jar -p $@ IMGVIEW.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 imgview.bin: $(imgview_SOURCES) $(imgview_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"imgview.dbg" $(CFLAGS) $(imgview_CLCFLAGS) -vm -m imgview.map -o $@ $^

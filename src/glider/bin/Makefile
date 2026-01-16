@@ -14,6 +14,8 @@ SRC_DIR := .
 endif
 
 BINARY_NAME = glider.bin
+FLOP_NAME = GLIDER.$(GAME_LANG)
+CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 
 .PHONY: all clean
 
@@ -242,17 +244,23 @@ $(BINARY_NAME): glider.ld.cfg $(glider_SOURCES) check_imports.sh
 		-C glider.ld.cfg -o $@ $(glider_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
-CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar $(SRC_DIR)/../../bin/ac.jar -p $(IMG) $(PREFIX)GLIDER.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -as $(IMG) $(PREFIX)GLIDER < $(BINARY_NAME); \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -p $(IMG) $(PREFIX)SCORES BIN < $(SRC_DIR)/assets/SCORES.bin; \
+	for r in $(assets_zx02); do \
+		java -jar $(SRC_DIR)/../../bin/ac.jar -p $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
+	done;
+
 glider-$(GAME_LANG).po: $(BINARY_NAME) $(assets_zx02) $(SRC_DIR)/assets/SCORES.bin
 	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ GLIDER.$(GAME_LANG)
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ GLIDER.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ GLIDER < $<; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SCORES BIN < $(SRC_DIR)/assets/SCORES.bin; \
-	for r in $(assets_zx02); do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.zx02$///") BIN < $$r; \
-	done;
+	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar $(SRC_DIR)/../../bin/ac.jar -d $(SRC_DIR)/$(IMG) GLIDER
+	PREFIX=GLIDER/ IMG=$(SRC_DIR)/$(IMG) make add_disk
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/glider/$(GAME_LANG)/ || \

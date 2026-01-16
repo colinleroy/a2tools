@@ -10,6 +10,9 @@ GENERAL_CFLAGS := \
 	-DSTP_DATA_SIZE=8192 \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = STP
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 PROGRAM=stp
 SOURCES := \
 	stp_main.c \
@@ -87,14 +90,20 @@ all dist: stp.po
 
 perso: all stpperso.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)STP.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 stp.po: $(PROGRAM).bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ STP
-	java -jar ../../bin/ac.jar -p $@ STP.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 stpperso.po: stp.po
 	cp $< $@; \

@@ -7,6 +7,9 @@ GENERAL_CFLAGS := \
 	--asm-define SERIAL_LOW_LEVEL_CONTROL \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
+FLOP_NAME = QUICKTAKE
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 ifdef DEBUG_HD
 debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_HD=$(DEBUG_HD) --asm-define DEBUG_HD=1
 endif
@@ -245,16 +248,22 @@ all: quicktake.po
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT BIN 0x2000 < about; \
+	for r in *.bin ../image-viewer/imgview.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 quicktake.po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ QUICKTAKE
-	java -jar ../../bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
-	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	java -jar ../../bin/ac.jar -p $@ ABOUT BIN 0x2000 < about; \
-	for r in *.bin ../image-viewer/imgview.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 splash.hgr: splash.png
 	../surl-server/hgr-convert $<

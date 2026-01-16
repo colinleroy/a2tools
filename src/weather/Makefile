@@ -11,6 +11,9 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
 	-Werror -DSTP_DATA_SIZE=8192
 
+FLOP_NAME = WEATHER
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 .PHONY: all clean
 
 weather_SOURCES := \
@@ -44,16 +47,22 @@ weather_CLCFLAGS = -t $(TARGET) -I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
 	-vm -m weather.map $(GENERAL_CFLAGS) -O --start-addr 0x4000
 
-all: weather$(iigs_suffix).po
+all: weather.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
-weather$(iigs_suffix).po: weather.bin
-	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ WEATHER
-	java -jar ../../bin/ac.jar -p $@ WEATHER.SYSTEM SYS < ../../bin/loader.system; \
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)WEATHER.SYSTEM SYS < ../../bin/loader.system; \
 	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
+
+weather.po: weather.bin
+	cp $(CLEANDISK) $@; \
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 clean:
 	rm -f *.bin *.o *.map *.dbg *.lbl *.po
@@ -66,6 +75,6 @@ upload: all
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/ && \
 	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/
 
-dist: weather$(iigs_suffix).po
+dist: weather.po
 	mkdir -p ../../dist/
 	cp $< ../../dist/

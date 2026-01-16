@@ -1,6 +1,9 @@
 TARGET := apple2
 CPU := 6502
 
+FLOP_NAME = WOZTUBES
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
@@ -78,14 +81,20 @@ woztubes_CLCFLAGS = -t $(TARGET) -I ../lib -I . \
 
 all: woztubes.po
 
-CLEANDISK = ../../disks/ProDOS_2_4_3.po
+add_disk:
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)WOZTUBES.SYSTEM SYS < ../../bin/loader.system; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
+
 woztubes.po: splash.h woztubes.bin
 	cp $(CLEANDISK) $@; \
-	java -jar ../../bin/ac.jar -n $@ WOZTUBES
-	java -jar ../../bin/ac.jar -p $@ WOZTUBES.SYSTEM SYS < ../../bin/loader.system; \
-	for r in *.bin; do \
-		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
+	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
+	IMG=$@ PREFIX= make add_disk
+
+hdv: 
+	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
+	PREFIX=$(FLOP_NAME)/ make add_disk
 
 woztubesperso.po: woztubes.po
 	cp $< $@; \

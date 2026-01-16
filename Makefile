@@ -9,6 +9,7 @@ dist: all
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
+	make -C src -f Makefile hdv
 
 upload: dist
 	for dir in $(SUBDIRS); do \
