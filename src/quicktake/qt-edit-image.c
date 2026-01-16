@@ -411,6 +411,9 @@ static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
 
 start_edit:
+  if (ifd == -1) {
+    ifd = open(TMP_NAME, O_RDONLY);
+  }
   do {
     clrscr();
     cputs("Rotate: L:left - U:180 - R:right");
@@ -614,6 +617,13 @@ open_again:
   _filetype = PRODOS_T_FOT;
   _auxtype = HGR_PAGE;
 #endif
+
+  /* We only have one file buffer */
+  if (ifd != -1) {
+    close(ifd);
+    ifd = -1;
+  }
+
   ofd = open((char *)buffer, O_WRONLY|O_CREAT);
   if (ofd <= 0) {
     cprintf("Please insert image floppy for %s, or Escape to return\r\n", (char *)buffer);
