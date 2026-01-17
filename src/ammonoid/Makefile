@@ -40,7 +40,6 @@ ammonoid_SOURCES := \
 	../lib/a2_features.s \
 
 ammonoid_CLCFLAGS = -t $(TARGET) -I ../lib \
-	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
 	-vm -m ammonoid.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x1003
 
