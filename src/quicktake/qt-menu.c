@@ -108,12 +108,13 @@ again:
   if (dirname == NULL) {
     return;
   }
-  if (!strncmp(dirname, "/RAM", 4)) {
+  if (!strcmp(dirname, "/RAM") || !strncmp(dirname, "/RAM/", 5)) {
     cputs("\r\nNot enough space available.");
     cgetc();
     goto again;
   }
   gotox(0);
+  cputs("Enter filename: ");
   strcpy(filename, dirname);
   strcat(filename, "/");
   free(dirname);
@@ -478,7 +479,6 @@ if (is_iigs) {
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
 
 void unlink_temp_files(void) {
   unlink(TMP_NAME);
@@ -489,6 +489,8 @@ void unlink_temp_files(void) {
   /* Don't unlink AUXHGR, as we want *conv to start writing GREY
    * *after* that file. */
 }
+
+#pragma code-name(push, "LOWCODE")
 
 int main(int argc, char *argv[])
 {
