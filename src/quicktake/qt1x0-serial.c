@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +31,6 @@ static uint8 get_ack(uint8 wait) {
   return -1;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 /* Send an ack to the camera */
 static void send_ack() {
   simple_serial_putc(0x06);
@@ -46,6 +45,8 @@ static uint8 send_and_get_ack(uint8 wait) {
   }
   return -1;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 /* Get first data from the camera after connecting */
 static uint8 get_hello(void) {
@@ -395,6 +396,7 @@ static uint8 receive_data(uint32 size, int fd) {
     simple_serial_read((char *)buffer, BLOCK_SIZE);
     if (write(fd, buffer, BLOCK_SIZE) < BLOCK_SIZE) {
       err = -1;
+      errno = EIO;
     }
     DUMP_DATA(buffer, BLOCK_SIZE);
 
@@ -406,6 +408,7 @@ static uint8 receive_data(uint32 size, int fd) {
   simple_serial_read((char *)buffer, rem);
   if (write(fd, buffer, rem) < rem) {
     err = -1;
+    errno = EIO;
   }
 
   DUMP_DATA(buffer, rem);
@@ -436,6 +439,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   sleep(1);
 
   if (qt1x0_send_ping() != 0) {
+    errno = EIO;
     return -1;
   }
 
@@ -446,8 +450,10 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   DUMP_START("header");
 
-  if (send_photo_header_command(n_pic) != 0)
+  if (send_photo_header_command(n_pic) != 0) {
+    errno = EIO;
     return -1;
+  }
 
   simple_serial_read((char *)buffer, 64);
 
@@ -467,7 +473,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 #endif
 
   if (pic_size_int > avail) {
-    cputs("  Not enough space available.\r\n");
+    errno = ENOSPC;
     return -1;
   }
 

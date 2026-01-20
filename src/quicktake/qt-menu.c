@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,7 +90,7 @@ static void save_picture(uint8 n_pic) {
   char filename[64];
   struct statvfs sv;
   char *dirname;
-  int fd;
+  int fd, saved_errno;
 
   filename[0] = '\0';
 #ifdef __CC65__
@@ -163,10 +164,14 @@ again:
     exec_pass = 1;
     qt_convert_image(filename);
   } else {
+    saved_errno = errno;
     close(fd);
     unlink(filename);
+    errno = saved_errno;
 err_io:
-    cputs("Error saving picture.\r\n");
+    cputs("  Error saving picture: ");
+    cputs(strerror(errno));
+    cputs("\r\n");
     cgetc();
   }
 }

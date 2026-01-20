@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,7 +166,6 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
 
 static uint16 my_speed = 9600;
 
-#pragma code-name(push, "LOWCODE")
 /* Ping the camera */
 static uint8 qt200_send_ping(void) {
   int c;
@@ -188,8 +188,6 @@ static uint8 qt200_send_ping(void) {
   }
   return 0;
 }
-
-#pragma code-name(pop)
 
 /* Send the speed upgrade command */
 uint8 qt200_set_speed(uint16 speed) {
@@ -338,12 +336,13 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
     printf("Communication error.\n");
     cgetc();
 #endif
+    errno = EIO;
     return -1;
   }
 
   bzero(buffer, BLOCK_SIZE);
 
-	data_cmd[NUM_PIC_IDX] = n_pic;
+  data_cmd[NUM_PIC_IDX] = n_pic;
 
   cputs("  Getting size...\r\n");
   size_cmd[NUM_PIC_IDX] = n_pic;
@@ -351,6 +350,7 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   DUMP_START("pic_size");
   if (send_command(size_cmd, sizeof size_cmd, 1, 5) != 0) {
     DUMP_END();
+    errno = EIO;
     return -1;
   }
   DUMP_END();
@@ -365,7 +365,7 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 #endif
 
   if (picture_size > avail) {
-    cputs("  Not enough space available.\r\n");
+    errno = ENOSPC;
     return -1;
   }
 
@@ -386,9 +386,11 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
     cputs("Could not send get command\r\n");
     cgetc();
 #endif
+    errno = EIO;
     return -1;
   }
   if (write(fd, buffer,response_len) < response_len) {
+    errno = EIO;
     err = -1;
   }
   while (response_continues) {
@@ -397,10 +399,12 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
     simple_serial_putc(ACK);
     if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
+      errno = EIO;
       err = -1;
       break;
     }
     if (write(fd, buffer, response_len) < response_len) {
+      errno = EIO;
       err = -1;
     }
   }
