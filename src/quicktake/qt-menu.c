@@ -91,28 +91,17 @@ static void save_picture(uint8 n_pic) {
   struct statvfs sv;
   char *dirname;
   int fd, saved_errno;
+  off_t avail_bytes;
 
   filename[0] = '\0';
 #ifdef __CC65__
 again:
   clrscr();
-  cprintf("Saving picture %d\r\n\r\n"
-
-        "Make sure to save the picture to a floppy with enough free space.\r\n"
-        "\r\n"
-        "Do not use /RAM, which will be used for temporary storage.\r\n\r\n"
-        "Please swap disks if needed and press a key.\r\n\r\n",
-      n_pic);
-  cgetc();
+  cprintf("Saving picture %d...\r\n\r\n", n_pic);
 
   dirname = file_select(1, "Select directory");
   if (dirname == NULL) {
     return;
-  }
-  if (!strcmp(dirname, "/RAM") || !strncmp(dirname, "/RAM/", 5)) {
-    cputs("\r\nNot enough space available.");
-    cgetc();
-    goto again;
   }
   gotox(0);
   cputs("Enter filename: ");
@@ -152,12 +141,19 @@ again:
   sv.f_bsize=512;
 #endif
 
+  avail_bytes = sv.f_bfree * sv.f_bsize;
+  if (!strncmp(dirname, "/RAM", 4) && avail_bytes < (256UL * 1024UL)) {
+    cputs("\r\nNot enough space available.");
+    cgetc();
+    goto again;
+  }
+
   fd = open(filename, O_WRONLY|O_CREAT);
   if (fd <= 0) {
     goto err_io;
   }
 
-  if (qt_get_picture(n_pic, fd, sv.f_bfree * sv.f_bsize) == 0) {
+  if (qt_get_picture(n_pic, fd, avail_bytes) == 0) {
     uint16 tmp = n_pic;
     close(fd);
     state_set(STATE_GET, tmp, NULL);
