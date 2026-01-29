@@ -26,7 +26,8 @@
         .import         _malloc0, _free, _clreol, _clrzone, _revers
 
         .import         _gotoy, _gotox, _gotoxy, _wherex, _wherey
-        .import         _cgetc, _cputc, _tolower, _beep
+        .import         _cgetc, _cputc, _tolower, _beep, _mkdir
+        .import         _dget_text_single
         .import         tosumula0, tosaddax, booleq
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
         .import         return0
@@ -35,6 +36,7 @@
 
         .importzp       _zp6, _zp8
         .include        "apple2.inc"
+        .include        "fcntl.inc"
 
 PATHNAME_MAX         = 65
 PRODOS_FILENAME_MAX  = 17
@@ -390,9 +392,20 @@ gotox_sx:
         jsr       load_last_dir_zp8     ; Check if last_dir != ""
         lda       (_zp8),y
         bne       :+
+.ifndef NO_FILESEL_MKDIR
+        sta       creating_dir          ; Don't create directory in volume list
+.endif
         jsr       _get_device_entries   ; If it is "", load devices
         jmp       @clear
-:       jsr       _get_dir_entries      ; Else load last_dir's contents
+:       ; Directory creation?
+.ifndef NO_FILESEL_MKDIR
+        bit       creating_dir
+        bpl       :+
+        jsr       clr_file_select
+        jsr       create_directory
+:
+.endif
+        jsr       _get_dir_entries      ; Else load last_dir's contents
 
 @clear:
         jsr       clr_file_select
@@ -433,7 +446,23 @@ gotox_sx:
         lda       #<any_key_up_str
         ldx       #>any_key_up_str
         jsr       _cputs
+.ifndef NO_FILESEL_MKDIR
+        jsr       gotox_sx
+        jsr       _start_line
+        lda       #<mkdir_str
+        ldx       #>mkdir_str
+        jsr       _cputs
+.endif
         jsr       _cgetc                ; Wait for keypress
+        jsr       _tolower
+.ifndef NO_FILESEL_MKDIR
+        cmp       #'n'
+        bne       :+
+        lda       #$FF
+        sta       creating_dir
+        jmp       @list_again
+.endif
+:
         jmp       @up                   ; And go up
 
 @calc_bounds:
@@ -503,11 +532,22 @@ gotox_sx:
         jsr       _revers
         jsr       gotox_sx
         jsr       _empty_line
+
+@end_footer:
         jsr       gotox_sx
         jsr       _start_line
         lda       #<nav_str
         ldx       #>nav_str
         jsr       _cputs
+
+.ifndef NO_FILESEL_MKDIR
+        jsr       gotox_sx
+        jsr       _start_line
+        lda       #<mkdir_str
+        ldx       #>mkdir_str
+        jsr       _cputs
+.endif
+
         jsr       gotox_sx
         jsr       _start_line
         lda       #<enter_escape_str
@@ -519,6 +559,14 @@ gotox_sx:
         jsr       _tolower
         sta       tmp_c
 
+.ifndef NO_FILESEL_MKDIR
+@check_n:
+        cmp       #'n'
+        bne       @check_r
+        lda       #$FF
+        sta       creating_dir
+        jmp       @list_again
+.endif
 @check_r:
         cmp       #'r'
         bne       @check_ch_curs_right
@@ -604,6 +652,74 @@ gotox_sx:
 :       jmp       popax                 ; Pop result for return
 .endproc
 
+.ifndef NO_FILESEL_MKDIR
+
+.proc create_directory
+        jsr       gotox_sx
+        jsr       _start_line
+        lda       #<new_name_str
+        ldx       #>new_name_str
+        jsr       _cputs
+
+        jsr       gotox_sx
+        jsr       _start_line
+        lda       #<new_dir_name
+        ldx       #>new_dir_name
+        jsr       pushax
+        lda       #(PRODOS_FILENAME_MAX-1)
+        ldx       #0
+        stx       new_dir_name; Zero filename while we're at it
+        jsr       pushax
+        txa
+        jsr       _dget_text_single
+        lda       new_dir_name
+        beq       @out
+
+        ; Append new name to _last_dir
+        lda       #<_last_dir
+        ldx       #>_last_dir
+        jsr       _strlen
+
+        ; Check overflow
+        cmp       #(PATHNAME_MAX-PRODOS_FILENAME_MAX)
+        bcc       :+
+        jsr       _beep
+        lda       #0
+        jmp       @out
+
+:       pha                   ; Backup original length
+        clc
+
+        tay
+        lda       #'/'        ; Append /
+        sta       _last_dir,y
+        lda       #$00        ; Zero end of string
+        sta       _last_dir+1,y
+
+        lda       #<_last_dir ; Append new directory name
+        ldx       #>_last_dir
+        jsr       pushax
+        jsr       pushax      ; Push a second time for _mkdir
+        lda       #<new_dir_name
+        ldx       #>new_dir_name
+        jsr       _strcat
+
+        lda       #<O_RDWR
+        ldx       #>O_RDWR
+        jsr       pushax      ; Mkdir is *not* fastcall
+        ldy       #4
+        jsr       _mkdir
+
+        pla                   ; Restore previous _last_dir
+        tax
+        lda       #0
+        sta       _last_dir,x
+@out:
+        sta       creating_dir
+        rts
+.endproc
+.endif
+
         .rodata
 
 SxDy_str:                     .asciiz "S%dD%d"
@@ -613,14 +729,20 @@ no_dir_str:                   .asciiz "No directory*"
 empty_str:                    .asciiz "Empty*"
 
 star_str:                     .asciiz " *"
+new_name_str:                 .byte   "Directory name:", $0D,$0A,$00
 nav_str:                      .byte   "Arrows: nav; R: refresh", $0D,$0A,$00
-any_key_up_str:               .asciiz "Any key to go up"
-enter_escape_str:             .asciiz "Enter: choose; Esc: cancel"
+enter_escape_str:             .byte "Enter: choose; Esc: cancel",$00
+any_key_up_str:               .byte "Any key to go up",$0D,$0A,$00
+.ifndef NO_FILESEL_MKDIR
+mkdir_str:                    .byte   "N: Create directory", $0D,$0A,$00
+.endif
 EOL:                          .byte $0D,$0A,$00
 
         .bss
 
-_last_dir:                    .res 65
+_last_dir:                    .res PATHNAME_MAX+1
+new_dir_name:                 .res PRODOS_FILENAME_MAX
+
 _file_entries:                .res 2
 d:                            .res 2
 num_entries:                  .res 1
@@ -637,3 +759,6 @@ start:                        .res 1
 stop:                         .res 1
 loop_count:                   .res 1
 i:                            .res 1
+.ifndef NO_FILESEL_MKDIR
+creating_dir:                 .res 0
+.endif

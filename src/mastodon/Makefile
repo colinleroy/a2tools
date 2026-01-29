@@ -153,7 +153,9 @@ mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-add
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-6502.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTART_ADDR=0x5DA0 --start-addr 0x5DA0
-mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
+mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg \
+	-DNO_FILESEL_MKDIR --asm-define NO_FILESEL_MKDIR \
+	--start-addr 0xC03 #One file buffer
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
