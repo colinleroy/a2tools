@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean burgerdisk_utils.po && mame apple2gs -window -flop1 burgerdisk_utils.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
