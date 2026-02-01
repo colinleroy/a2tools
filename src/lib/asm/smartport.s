@@ -15,11 +15,12 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 ;
 
-        .export         _is_slot_smartport, _smartport_get_status
+        .export         _getfirstsmartportslot, _getnextsmartportslot
+        .export         _smartportgetunitcount, _smartport_get_status
         .export         _smartport_dev_size, _smartport_dev_name
 
-        .import         return0, return1, popa
-        .importzp       ptr1, sreg
+        .import         return0, return1, pusha, popa
+        .importzp       ptr1, sreg, tmp1
 
 UNIT_NUMBER_OFF=1
 STATUS_CODE_OFF=4
@@ -42,41 +43,58 @@ STATUS_DIB_ENDNAME  = STATUS_DIB_NAME+16
         jmp       (ptr1)
 .endproc
 
-; params: slot in A
-; returns 1 if smartport, 0 otherwise
-.proc _is_slot_smartport
-        ora       #$C0
+.proc _getfirstsmartportslot
+        lda       #$08
+        ; Fallthrough
+.endproc
+
+; params: Last slot number in A
+.proc _getnextsmartportslot
+        pha                   ; Push for symmetry
+next:   pla                   ; Pull last slot ID,
+        sec                   ; decrement it,
+        sbc       #$01
+        pha                   ; and save it for next slot
+        bmi       done        ; < 0, we're done
+
+        ora       #$C0        ; Point to slot ROM
         sta       ptr1+1
         lda       #$00
         sta       ptr1
 
-        ; Check zero bytes at offsets $03 and $07 while A == $00
-        ldy       #$03
-        cmp       (ptr1),y
-        bne       no
-        ldy       #$07
-        cmp       (ptr1),y
-        bne       no
+        ldx       #$03        ; Compare 4 magic bytes
+        ldy       #$07        ; at offsets 7, 5, 3, 1
+:       lda       (ptr1),y
+        cmp       smartport_id_bytes,x
+        bne       next        ; No match!
+        dey
+        dey
+        dex
+        bpl       :-
 
-        ; Should have $20 at $01
-        ldy       #$01
-        lda       #$20
-        cmp       (ptr1),y
-        bne       no
+        ; If we arrive here, we have a match!
 
-        ; Should have $03 at $05
-        ldy       #$05
-        lda       #$03
-        cmp       (ptr1),y
-        bne       no
+done:   pla                   ; Get saved slot ID (or $FF for INVALID_DEVICE)
+        ldx       #>$0000
+        rts
+.endproc
 
-        jmp       return1
-no:     jmp       return0
+; params: Slot number in A
+.proc _smartportgetunitcount
+        jsr       pusha       ; Push slot number
+        lda       #$00
+        jsr       pusha       ; Unit number
+        jsr       _smartport_get_status
+        bcs       done
+
+        lda       sp_buffer+0 ; Get number of units
+        ldx       #>$0000
+done:   rts
 .endproc
 
 ; params: normal/DIB in A
-;         unit number
-;         slot
+;         unit number in TOS
+;         slot after it.
 ; returns NULL on error, pointer to buffer on success
 .proc _smartport_get_status
         sta       smartport_status_params+STATUS_CODE_OFF
@@ -84,7 +102,7 @@ no:     jmp       return0
         sta       smartport_status_params+UNIT_NUMBER_OFF
         jsr       popa
         jsr       smartport_dispatch
-command:.byte     $00                   ; STATUS
+command:.byte     $00
         .word     smartport_status_params
         bcs       sp_error
 
@@ -131,6 +149,9 @@ sp_error:
         inx
 :       rts
 .endproc
+
+.segment "RODATA"
+smartport_id_bytes:       .byte $20, $00, $03, $00
 
 .segment "DATA"
 smartport_status_params:  .byte $03     ; CmdList Byte
