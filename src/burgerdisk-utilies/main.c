@@ -7,7 +7,6 @@
 void main(void) {
   unsigned char slot, unit_count, unit;
   unsigned char *buffer;
-  unsigned long device_blocks;
 
   slot = getfirstsmartportslot();
   while (slot != INVALID_DEVICE) {
@@ -23,9 +22,9 @@ void main(void) {
         cputs(" Unit ");
         cutoa(unit);
         cputs(" size ");
-        cutoa(smartport_dev_size(buffer)/1024);
+        cutoa(smartport_unit_size(buffer)/1024);
         cputs("kB - ");
-        cputs(smartport_dev_name(buffer));
+        cputs(smartport_unit_name(buffer));
         cputs("\r\n");
       }
     }

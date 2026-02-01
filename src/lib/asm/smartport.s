@@ -17,7 +17,7 @@
 
         .export         _getfirstsmartportslot, _getnextsmartportslot
         .export         _smartportgetunitcount, _smartport_get_status
-        .export         _smartport_dev_size, _smartport_dev_name
+        .export         _smartport_unit_size, _smartport_unit_name
 
         .import         return0, return1, pusha, popa
         .importzp       ptr1, sreg, tmp1
@@ -113,10 +113,13 @@ sp_error:
         jmp       return0
 .endproc
 
-.proc _smartport_dev_size
-        sta       ptr1
+.proc _smartport_unit_size
+        sta       ptr1        ; Store buffer
         stx       ptr1+1
 
+        ; The response gives the unit's number of blocks, we'll
+        ; return bytes (bytes = blocks<<9). Get the three bytes
+        ; into sreg+1/sreg/x so that we can shift one instead of nine.
         ldy       #STATUS_DIB_BLOCK_HI
         lda       (ptr1),y
         sta       sreg+1
@@ -125,18 +128,20 @@ sp_error:
         sta       sreg
         dey
         lda       (ptr1),y
-        asl
-        tax
-        rol       sreg
+        asl                   ; Shift low byte,
+        tax                   ; move to X
+        rol       sreg        ; shift higher bytes,
         rol       sreg+1
-        lda       #$00
+        lda       #$00        ; and zero A
         rts
 .endproc
 
-.proc _smartport_dev_name
-        sta       ptr1
+.proc _smartport_unit_name
+        sta       ptr1        ; Store buffer
         stx       ptr1+1
 
+        ; Shortcut: overwrite the 16th character of the unit name
+        ; with terminator, in order to avoid having to copy the data.
         ldy       #STATUS_DIB_ENDNAME
         lda       #$00
         sta       (ptr1),y

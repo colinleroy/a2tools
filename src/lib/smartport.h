@@ -21,7 +21,10 @@ unsigned char __fastcall__ smartportgetunitcount(unsigned char slot);
  * Returns the raw response's buffer address, or NULL on failure. */ 
 unsigned char * __fastcall__ smartport_get_status(unsigned char slot, unsigned char unit, unsigned char status_type);
 
-unsigned long smartport_dev_size(unsigned char *dib_buffer);
-char *smartport_dev_name(unsigned char *dib_buffer);
+/* Returns the unit's storage size in bytes, from a STATUS DIB response buffer */
+unsigned long smartport_unit_size(unsigned char *dib_buffer);
+
+/* Returns the unit's storage name, from a STATUS DIB response buffer */
+const char *smartport_unit_name(unsigned char *dib_buffer);
 
 #endif
