@@ -22,8 +22,11 @@
         .import         return0, return1, pusha, popa
         .importzp       ptr1, sreg, tmp1
 
-UNIT_NUMBER_OFF=1
-STATUS_CODE_OFF=4
+
+PARAM_COUNT =0
+UNIT_NUMBER =1
+PARAM_BUFFER=2
+STATUS_CODE =4
 
 STATUS_DIB_BLOCK_HI = 3
 STATUS_DIB_NAME     = 5
@@ -84,33 +87,40 @@ done:   pla                   ; Get saved slot ID (or $FF for INVALID_DEVICE)
         jsr       pusha       ; Push slot number
         lda       #$00
         jsr       pusha       ; Unit number
+        jsr       pusha       ; StatusCode
+        lda       #<ptr1      ; Use ptr1-4 as 8 bytes buffer
+        ldx       #>ptr1
         jsr       _smartport_get_status
-        bcs       done
+        bcc       ok
+error:  lda       #$00
+        beq       done
 
-        lda       sp_buffer+0 ; Get number of units
-        ldx       #>$0000
-done:   rts
+ok:     lda       ptr1        ; Get number of units
+done:   ldx       #>$0000
+        rts
 .endproc
 
-; params: normal/DIB in A
-;         unit number in TOS
-;         slot after it.
-; returns NULL on error, pointer to buffer on success
+; params: response_buffer in AX,
+;         normal/DIB in TOS
+;         unit number after,
+;         slot after it
+; returns smartport error code (0 on success)
 .proc _smartport_get_status
-        sta       smartport_status_params+STATUS_CODE_OFF
+        sta       smartport_params+PARAM_BUFFER
+        stx       smartport_params+PARAM_BUFFER+1
+        lda       #$03
+        sta       smartport_params+PARAM_COUNT
         jsr       popa
-        sta       smartport_status_params+UNIT_NUMBER_OFF
+        sta       smartport_params+STATUS_CODE
+        jsr       popa
+        sta       smartport_params+UNIT_NUMBER
         jsr       popa
         jsr       smartport_dispatch
 command:.byte     $00
-        .word     smartport_status_params
-        bcs       sp_error
+        .word     smartport_params
 
-        lda       #<sp_buffer
-        ldx       #>sp_buffer
+        ldx       #>$0000
         rts
-sp_error:
-        jmp       return0
 .endproc
 
 .proc _smartport_unit_size
@@ -158,11 +168,6 @@ sp_error:
 .segment "RODATA"
 smartport_id_bytes:       .byte $20, $00, $03, $00
 
-.segment "DATA"
-smartport_status_params:  .byte $03     ; CmdList Byte
-                          .byte $01     ; UnitNumber
-                          .addr sp_buffer
-                          .byte $03     ; DIB
-
 .segment "BSS"
-sp_buffer: .res 512
+smartport_params:         .res 9
+smartport_buffer:         .res 9
