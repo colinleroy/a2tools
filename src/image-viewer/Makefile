@@ -12,6 +12,7 @@ imgview_SOURCES := \
 	imageview.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
+	../lib/dget_text_single.c
 
 imgview_CC65SOURCES := \
 	../lib/hgr_addrs.s \
