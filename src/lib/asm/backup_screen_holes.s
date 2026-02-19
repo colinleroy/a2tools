@@ -26,7 +26,7 @@ start_page:
         bpl      :-
         lda     ptr1
         bmi     next_hole
-        ora     $80
+        ora     #$80
         sta     ptr1
         jmp     copy_hole
 next_hole:
