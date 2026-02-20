@@ -602,8 +602,10 @@ zoom_level_2:
 
 save:
   strcpy((char *)buffer, ofname);
-  if ((cp = strrchr ((char *)buffer, '.')))
+  /* Remove extension if existing */
+  if ((cp = strrchr((char *)buffer, '.')) > strrchr((char *)buffer, '/')) {
     *cp = 0;
+  }
   strcat ((char *)buffer, ".dhgr");
   hgr_mixon();
   cputs("Save to: ");
