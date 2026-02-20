@@ -38,9 +38,9 @@ if [ "$1" != "" ]; then
   #get result from HD
   java -jar ../../bin/ac.jar -g ../../disks/smart0.po GREY > GREY.A2
   echo Files sha1sum:
-  expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
-
-  final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)
+  #Cut histogram
+  expected_sha1sum=$(dd if=GREY of=/dev/stdout count=$((256*192)) bs=1 2>/dev/null|sha1sum|cut -d' ' -f1)
+  final_sha1sum=$(dd if=GREY.A2 of=/dev/stdout count=$((256*192)) bs=1 2>/dev/null|sha1sum|cut -d' ' -f1)
   echo "Ref:      $expected_sha1sum"
   echo "Got:      $final_sha1sum"
 
