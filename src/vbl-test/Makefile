@@ -10,8 +10,8 @@ vbltest_SOURCES := \
 	irq.s
 
 vbltest_CLCFLAGS = -t $(TARGET) -I ../lib \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m vbltest.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x1003
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh.cfg \
+	-vm -m vbltest.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x6000
 
 all: \
 	vbl-test.po
