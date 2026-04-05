@@ -5,6 +5,7 @@
 #include <math.h>
 #include <SDL.h>
 #include "../lib/extended_conio.h"
+#include "qt-conv.h"
 
 static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
   if (x < surface->w && y < surface->h)
@@ -35,7 +36,7 @@ display:
   if (argc < 4) {
     size_t data_len;
     fseek(fp, 0, SEEK_END);
-    data_len = ftell(fp) - 512; // sizeof(histogram)
+    data_len = ftell(fp) - PNM_HEADER_SIZE - 512; // 512=sizeof(histogram)
     if (data_len == 256*192) {
       w = 256;
       h = 192;
@@ -50,7 +51,7 @@ display:
       w = 640;
       h = 480;
     }
-    rewind(fp);
+
     if (argc == 3) {
       fp2 = fopen(argv[2], "r");
     }
@@ -74,10 +75,11 @@ display:
     video_inited = 1;
   }
 
-  rewind(fp);
+  fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
   if (fp2) {
-    rewind(fp2);
+    fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
   }
+
   SDL_LockSurface(screen);
   unsigned char c, c2;
   int x, y;

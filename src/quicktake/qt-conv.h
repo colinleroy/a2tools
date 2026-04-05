@@ -26,6 +26,13 @@ extern uint8 *cur_cache_ptr;
 #define QTKN_MAGIC      "qktn"
 #define JPEG_EXIF_MAGIC "\377\330\377\341"
 
+#define PNM_HEADER      "P5\n256 192\n255\n"
+#define PNM_HEADER_480  "P5\n640 480\n255\n"
+#define PNM_HEADER_240  "P5\n320 240\n255\n"
+/* Don't count trailing null byte */
+#define PNM_HEADER_SIZE (sizeof(PNM_HEADER)-1)
+
+
 #define FILE_HEIGHT HGR_HEIGHT
 #define THUMB_WIDTH 80
 #define THUMB_HEIGHT 60

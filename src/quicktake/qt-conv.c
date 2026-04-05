@@ -233,6 +233,11 @@ try_again:
 
   #ifndef __CC65__
   fullsize_fd = open ("LARGE_"TMP_NAME, O_RDWR|O_CREAT, 00600);
+  if (height == 480) {
+    write(fullsize_fd, PNM_HEADER_480, PNM_HEADER_SIZE);
+  } else {
+    write(fullsize_fd, PNM_HEADER_240, PNM_HEADER_SIZE);
+  }
   #endif
 
   if (ofd < 0) {
@@ -241,6 +246,8 @@ try_again:
     cgetc();
     exit(0);
   }
+
+  write(ofd, PNM_HEADER, PNM_HEADER_SIZE);
 
   build_scale_table(ofname);
 

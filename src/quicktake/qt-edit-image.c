@@ -138,7 +138,7 @@ static void histogram_equalize(void) {
   uint16 curr_hist = 0, r;
 
   if (auto_level) {
-    lseek(ifd, 256UL*192UL, SEEK_SET);
+    lseek(ifd, 256UL*192UL + PNM_HEADER_SIZE, SEEK_SET);
 #ifndef __CC65__
     r = read(ifd, histogram, 512);
 #else
@@ -1152,7 +1152,7 @@ void do_dither_vert(void);
 #endif
 
 void dither_to_hgr(const char *ofname) {
-  lseek(ifd, 0, SEEK_SET);
+  lseek(ifd, is_thumb ? 0 : PNM_HEADER_SIZE, SEEK_SET);
   clrscr();
 
   cprintf("Converting %s (Esc to stop)...\r\n", ofname);

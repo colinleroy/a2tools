@@ -296,7 +296,7 @@ jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 loader.x86_64: loader.c
-	gcc -o $@ -I/usr/include/SDL $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
+	gcc -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
 
 clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po
