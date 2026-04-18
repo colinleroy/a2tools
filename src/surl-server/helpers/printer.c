@@ -85,7 +85,7 @@ static char *printer_convert_to_pdf(const char *filename) {
   strcpy(final_filename, filename);
   strcpy(strrchr(final_filename, '.'), ".pdf");
 
-  LOG("Printer: converting to pdf.\n");
+  LOG("Printer: converting %s to pdf %s.\n", filename, final_filename);
   input = open(filename, O_RDONLY);
   if (input > 0) {
     output = open (final_filename, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
@@ -106,12 +106,14 @@ static char *printer_convert_to_pdf(const char *filename) {
         return NULL;
       }
     } else {
+      LOG("Can not open output file %s\n", final_filename);
       free(final_filename);
       close(input);
       return NULL;
     }
     close(input);
   } else {
+    LOG("Can not open input file %s\n", filename);
     free(final_filename);
     return NULL;
   }
@@ -214,7 +216,7 @@ static void handle_document(unsigned char first_byte) {
   strftime(timestamp, sizeof timestamp, "%Y-%m-%d-%H-%M-%S", localtime(&now));
   snprintf(filename, FILENAME_MAX, "%s/iwprint-%s-%d.ps", prints_directory, timestamp, filenum++);
 
-  LOG("Printer: Receiving data!\n");
+  LOG("Printer: Receiving data to %s\n", filename);
 
   imagewriter_init(g_imagewriter_dpi, default_papersize_num, g_imagewriter_banner, filename,
                    g_imagewriter_multipage, default_charset_num);
@@ -226,7 +228,7 @@ static void handle_document(unsigned char first_byte) {
       LOG("Printer: got %zu bytes...\n", n_bytes);
     }
     imagewriter_loop(c);
-    // if (n_bytes % 10000 == 0) {
+    // if (n_bytes % 5000 == 0) {
     //   char XOFF = 0x13, XON = 0x11;
     //   simple_serial_write_fast_fd(aux_ttyfd, &XOFF, 1);
     //   printf("XOFFing\n");
