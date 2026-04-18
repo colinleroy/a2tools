@@ -131,12 +131,6 @@
         stx     zp_jmp+2
 .endmacro
 
-.macro STORE_JUMP_TGT_4
-          .byte $8E             ; stx abs
-          .byte zp_jmp+2
-          .byte $00
-.endmacro
-
 .macro PREPARE_VIDEO_E4
         tya                     ; 2      Get video byte in A
         cpy     #PAGE_TOGGLE    ; 4      Check for page toggle
