@@ -14,7 +14,6 @@
 #include "scrollwindow.h"
 #include "simple_serial.h"
 #include "clrzone.h"
-#include "vsdrive.h"
 #include "a2_features.h"
 #include "extrazp.h"
 #include "iw_print.h"
@@ -36,7 +35,6 @@ static int open_port(char port_num) {
     }
     if (serial_opened) {
       simple_serial_close();
-      vsdrive_uninstall();
       serial_opened = 0;
     }
   } else {
@@ -54,13 +52,6 @@ open_again:
     printer_opened = (simple_serial_open_printer() == 0);
     if (!printer_opened) {
       goto check_configure;
-    }
-  } else {
-    serial_opened = (simple_serial_open() == 0);
-    if (!serial_opened && !already_asked) {
-      goto check_configure;
-    } else {
-      vsdrive_install();
     }
   }
   simple_serial_set_irq(1);
@@ -172,8 +163,6 @@ static void get_next_image(char *imgname) {
     return;
   }
 
-  open_port(ser_params.data_slot);
-
   d = opendir(imgname);
   if (!d) {
     *filename = '/';
@@ -260,7 +249,6 @@ choose_again:
     char *tmp;
     cputs("Image (HGR): ");
 
-    open_port(ser_params.data_slot);
     tmp = file_select(0, "Select an HGR file");
     if (tmp == NULL)
       goto out;
@@ -271,8 +259,6 @@ choose_again:
   }
 
 next_image:
-  open_port(ser_params.data_slot);
-
   fd = open(imgname, O_RDONLY);
   if (fd <= 0) {
     init_text();
