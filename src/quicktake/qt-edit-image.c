@@ -658,7 +658,7 @@ write_error:
   close(ofd);
 
   gotox(0);
-  cprintf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
+  cprintf("Done. Go back to (E)dition, (V)iew/print, or main (M)enu? (E/v/m)");
 
   c = tolower(cgetc());
   if (c == 'v') {
