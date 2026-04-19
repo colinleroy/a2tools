@@ -536,6 +536,7 @@ _z8530_set_irq:
         bra     :++
 :       lda     #TX_RX_MODE_OFF
 :       ldy     #WR_TX_RX_MODE_CTRL
+        ldx     Channel
         jmp     writeSCCReg
 .endif ; .ifdef SERIAL_ENABLE_IRQ
 
