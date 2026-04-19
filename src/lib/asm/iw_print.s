@@ -3,16 +3,15 @@
         .import     _hgr_baseaddr_h, _hgr_baseaddr_l
 
         .import     _serial_putc_direct
-        .import     _simple_serial_write
         .import     _simple_serial_getc_immediate
         .import     _simple_serial_getc_with_timeout
-
+        .import     simple_serial_compute_ptr_end
         .import     _progress_bar, _scrw
 
         .import     _kbhit, _cgetc
 
         .import     pushax, subysp
-        .importzp   _zp10p, sreg, c_sp
+        .importzp   _zp10p, sreg, c_sp, ptr3, ptr4
 
         .include    "apple2.inc"
 
@@ -42,6 +41,30 @@ line_ptr =  _zp10p
         jsr     _serial_putc_direct
         lda     #$0A
         jmp     _serial_putc_direct
+.endproc
+
+; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
+.proc _simple_serial_write_slow
+        jsr     simple_serial_compute_ptr_end
+        bne     write_check   ; A not 0 there (throbber)
+write_again:
+        jsr     wait_imagewriter_ready
+        bne     out
+
+        ldy     #$00
+        lda     (ptr4),y
+        jsr     _serial_putc_direct
+        inc     ptr4
+        bne     write_check
+        inc     ptr4+1
+write_check:
+        lda     ptr4
+        cmp     ptr3
+        bne     write_again
+        ldx     ptr4+1
+        cpx     ptr3+1
+        bne     write_again
+out:    rts
 .endproc
 
 .proc _dhgr_to_iw
@@ -96,18 +119,26 @@ hgr_1x:
 .proc start_print
         jsr     wait_imagewriter_ready
         beq     :+
-        rts
+abort:  rts
 
 :       lda     #<disable_auto_line_feed
         ldx     #>disable_auto_line_feed
         jsr     pushax
         lda     #<.sizeof(disable_auto_line_feed)
         ldx     #>.sizeof(disable_auto_line_feed)
-        jsr     _simple_serial_write
+        jsr     _simple_serial_write_slow
 
+        jsr     wait_imagewriter_ready
+        bne     abort
         ; Blank lines for margin
         jsr     serial_crlf
+
+        jsr     wait_imagewriter_ready
+        bne     abort
         jsr     serial_crlf
+
+        jsr     wait_imagewriter_ready
+        bne     abort
         jsr     serial_crlf
 
         ; Clear 80COL so we can read AUX if needed.
@@ -124,9 +155,10 @@ next_four_lines:
         lda     #<setup_binary_print_cmd
         ldx     #>setup_binary_print_cmd
         jsr     pushax
+
         lda     #<.sizeof(setup_binary_print_cmd)
         ldx     #>.sizeof(setup_binary_print_cmd)
-        jsr     _simple_serial_write
+        jsr     _simple_serial_write_slow
 
         ; Tell printer how many chars for this line
         ldy     #<send_560_chars_cmd
@@ -138,9 +170,10 @@ next_four_lines:
         ldx     #>send_280_chars_cmd
 :       tya
         jsr     pushax
+
         lda     #<.sizeof(send_560_chars_cmd)
         ldx     #>.sizeof(send_560_chars_cmd)
-        jsr     _simple_serial_write
+        jsr     _simple_serial_write_slow
 
         ; Here we iterate on blocks of 7 pixels by 4 or 8 lines,
         ; so that we can fetch the pixel in main and aux a bit
@@ -200,12 +233,15 @@ white_pixel:
         
         jsr     wait_imagewriter_ready
         bne     out
-
         lda     print_byte    ; Send this byte!
         jsr     _serial_putc_direct
 
         bit     scale_row     ; Should we send it twice for X doubling?
         bpl     :+
+
+        jsr     wait_imagewriter_ready
+        bne     out
+        lda     print_byte    ; Send again
         jsr     _serial_putc_direct
 
 :       asl     hgr_mask      ; on to next HGR dot
@@ -214,8 +250,11 @@ white_pixel:
         ldx     cur_hgr_byte  ; Did we finish that row's HGR bytes?
         inx
         cpx     bytes_per_line
-        bcc     next_hgr_byte
+        bcs     :+
+        jmp     next_hgr_byte
 
+:       jsr     wait_imagewriter_ready
+        bne     out
         jsr     serial_crlf   ; Prepare for next line
 
         jsr     print_progress_bar
@@ -289,7 +328,7 @@ out:
 .endproc
 
 .proc wait_imagewriter_ready
-        lda    #$10
+        lda    #$20
         sta    wait_xon
 
         jsr    _simple_serial_getc_immediate
@@ -308,6 +347,11 @@ wait_ready:
 not_ready:
         lda    #$FF
         rts
+
+restart:
+        ; wait a bit more...
+        jsr    _simple_serial_getc_with_timeout
+        jmp    ready
 .endproc
 
         .bss
