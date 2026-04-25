@@ -370,7 +370,11 @@ gotox_sx:
         jsr       _wherey
         sta       sy
         clc
+.ifndef NO_FILESEL_MKDIR
+        adc       #4
+.else
         adc       #3
+.endif
         adc       loop_count
         sta       ey
 
