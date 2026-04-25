@@ -409,6 +409,7 @@ void clear_dhgr(void);
 
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
+  char direct_print;
 
 start_edit:
   if (ifd == -1) {
@@ -416,6 +417,7 @@ start_edit:
   }
   do {
     clrscr();
+    direct_print = 0;
     cputs("Rotate: L:left - U:180 - R:right");
     if (angle == 90 || angle == 270) {
       if (resize)
@@ -434,7 +436,7 @@ start_edit:
            brighten > 0 ? "+":"",
            brighten);
     cprintf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\r\n"
-           "S: Save - Escape: Exit - Any other key: Hide help",
+           "S: Save - P: Save & Print - Escape: Exit - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
     c = tolower(cgetc());
@@ -448,6 +450,9 @@ start_edit:
             if (c == 'y')
               goto done;
             break;
+          case 'p':
+            direct_print = 1;
+            // Fallthrough
           case 's':
             clrscr();
             goto save;
@@ -658,12 +663,17 @@ write_error:
   close(ofd);
 
   gotox(0);
-  cprintf("Done. Go back to (E)dition, (V)iew/print, or main (M)enu? (E/v/m)");
 
-  c = tolower(cgetc());
-  if (c == 'v') {
+  if (direct_print) {
+    cputs("Done. Please wait...");
+    c = 'p';
+  } else {
+    cputs("Done. Go back to (E)dition, (V)iew, (P)rint, or main (M)enu? (E/v/p/m)");
+    c = tolower(cgetc());
+  }
+  if (c == 'v' || c == 'p') {
     state_set(STATE_EDIT, src_width, (char *)buffer);
-    qt_view_image((char *)buffer);
+    qt_view_image((char *)buffer, c == 'v' ? NULL:"-p");
     goto done;
   }
   if (c != 'm') {
@@ -1225,11 +1235,12 @@ void qt_edit_image(const char *ofname, uint16 src_width, uint8 serial_model) {
   ifd = -1;
 }
 
-uint8 qt_view_image(const char *filename) {
-  if (filename)
-    snprintf((char *)args, sizeof(args) - 1, "%s "PROGRAM_NAME, filename);
-  else
+uint8 qt_view_image(const char *filename, const char *cmd) {
+  if (filename) {
+    snprintf((char *)args, sizeof(args) - 1, "%s "PROGRAM_NAME" %s", filename, cmd?cmd:"");
+  } else {
     snprintf((char *)args, sizeof(args) - 1, "___SEL___ "PROGRAM_NAME);
+  }
 
   init_text();
   return exec("imgview", (char *)args);

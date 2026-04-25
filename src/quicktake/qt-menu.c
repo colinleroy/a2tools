@@ -534,7 +534,7 @@ menu:
       qt_convert_image(NULL);
       goto menu;
     case 'v':
-      qt_view_image(NULL);
+      qt_view_image(NULL, NULL);
       goto menu;
     case 'a':
       show_about();
