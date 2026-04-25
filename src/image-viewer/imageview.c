@@ -206,7 +206,7 @@ start_from_first:
 static void print_help(void) {
   gotoxy(0, 20);
   if (has_128k)
-    cputs("P: print to Imagewriter II - C: toggle color - Space: next\r\n"
+    cputs("P: print to Imagewriter - C: toggle color - Space: next\r\n"
           "Esc: exit - Any other key: toggle help.");
   else
     cputs("P: print - Space: next - Esc: exit\r\n"
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
   int fd, ramfd;
   static char imgname[FILENAME_MAX];
   uint16 len;
-  uint8 i, tries = 0;
+  uint8 i, tries = 0, do_print = 0;
   static char cmdline[127];
   #define BLOCK_SIZE 512
   const char *filename = NULL;
@@ -233,6 +233,10 @@ int main(int argc, char *argv[]) {
 #ifndef __CC65__
   scrw = 80; scrh = 24;
 #endif
+
+  if (argc > 2 && !strcmp(argv[3], "-p")) {
+    do_print = 1;
+  }
 
 choose_again:
   init_text();
@@ -310,7 +314,12 @@ redisplay:
   init_graphics(monochrome, is_dhgr);
 #endif
 again:
-  i = tolower(cgetc());
+  if (do_print) {
+    i = 'p';
+    do_print = 0;
+  } else {
+    i = tolower(cgetc());
+  }
   switch(i) {
     case 'c':
       monochrome = !monochrome;
@@ -347,8 +356,10 @@ out:
   if (argc > 2) {
     cmdline[0] = '\0';
     for (i = 3; i < argc; i++) {
-      strcat(cmdline, argv[i]);
-      strcat(cmdline, " ");
+      if (argv[i][0] != '-') {
+        strcat(cmdline, argv[i]);
+        strcat(cmdline, " ");
+      }
     }
     exec(argv[2], cmdline);
   }
