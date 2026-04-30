@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "raspberrrypi_hat-cache")(type "Legacy")(uri "/home/colin/Documents/git-oss/kicad-library/template/raspberrrypi_hat/raspberrrypi_hat-cache.lib")(options "")(descr ""))
+)
