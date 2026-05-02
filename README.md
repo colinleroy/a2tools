@@ -45,7 +45,7 @@ Create floppy images:
 make dist
 ```
 
-You can then transfer the images in dist/ using ADTPro.
+You can then transfer the images in dist/ using ADTPro, or putting them on a MicroSD card for your modern storage ([BurgerDisk](https://www.colino.net/wordpress/shop/apple-ii-hardware/burgerdisk/), [DominoDisk](https://www.colino.net/wordpress/shop/apple-ii-hardware/dominodisk/), [FloppyEmu](https://www.bigmessowires.com/floppy-emu/), etc).
 
 ## Building only the proxy
 
