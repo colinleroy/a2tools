@@ -451,7 +451,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "db25-din5-adapter.kicad_pro",
+    "filename": "md8-to-din5.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -490,7 +490,7 @@
       "plot": "",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "../../../../../../../tmp/db25-din5-adapter/db25-din5-adapter.stl",
+      "step": "",
       "svg": "",
       "vrml": ""
     },
@@ -611,7 +611,7 @@
   },
   "sheets": [
     [
-      "7108ec36-da4c-4f22-b5ad-0a42d2aa000b",
+      "5af1a32a-9bb5-46ca-a335-22fbb04e4388",
       "Root"
     ]
   ],
