@@ -19,8 +19,6 @@
 
 extern uint8 scrw, scrh;
 
-static uint8 qt1x0_send_ping(void);
-
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
   while (wait--) {
@@ -36,17 +34,28 @@ static void send_ack() {
   simple_serial_putc(0x06);
 }
 
-static uint8 send_and_get_ack(uint8 wait) {
-  simple_serial_putc(0x06);
-  while (wait--) {
-    if (simple_serial_getc_with_timeout() == 0x00) {
-      return 0;
-    }
-  }
-  return -1;
-}
-
 #pragma code-name(push, "LOWCODE")
+/* Send a command to the camera */
+static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, uint8 wait) {
+  char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
+  if (ping) {
+    simple_serial_write(ping_str, sizeof ping_str);
+    if (get_ack(5) != 0)
+      return -1;
+  }
+  if (len == 0) {
+    return 0;
+  }
+
+  simple_serial_write(cmd, len);
+  if (get_ack(wait) != 0)
+    return -1;
+
+  if (s_ack)
+    send_ack();
+
+  return 0;
+}
 
 /* Get first data from the camera after connecting */
 static uint8 get_hello(void) {
@@ -85,7 +94,8 @@ static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHKSUM_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
-  int c, chk;
+  int c;
+  unsigned char chk;
 
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
@@ -98,7 +108,7 @@ static uint8 send_hello(uint16 speed) {
   for (c = 0, chk = 0; c < CHKSUM_IDX; c++) {
     chk += str_hello[c];
   }
-  str_hello[CHKSUM_IDX] = chk & 0xFF;
+  str_hello[CHKSUM_IDX] = chk;
 
   DUMP_START("qt_speed");
   DUMP_DATA(str_hello, CHKSUM_IDX+1);
@@ -191,7 +201,8 @@ uint8 qt1x0_set_speed(uint16 speed) {
 
     case 9600:
     default:
-      return qt1x0_send_ping();
+      /* just ping */
+      return send_command(NULL, 0, 1, 0, 0);
   }
 
   cprintf("Setting speed to %u...\r\n", speed);
@@ -204,44 +215,18 @@ uint8 qt1x0_set_speed(uint16 speed) {
   }
   send_ack();
 
-  platform_msleep(200);
+  // platform_msleep(200);
   simple_serial_set_speed(spd_code);
 
   /* We don't care about the bytes we receive here */
   simple_serial_flush();
 
-  return send_and_get_ack(5);
+  send_ack();
+  return get_ack(5);
 }
 
 /* End of RT_ONCE segment */
 #pragma code-name(pop)
-
-static uint8 write_and_get_ack(const char *cmd, uint8 len, uint8 wait) {
-  simple_serial_write(cmd, len);
-
-  return get_ack(wait);
-}
-
-#pragma code-name(push, "LOWCODE")
-
-/* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
-  if (write_and_get_ack(cmd, len, wait) != 0)
-    return -1;
-
-  if (s_ack)
-    send_ack();
-
-  return 0;
-}
-#pragma code-name(pop)
-
-/* Ping the camera */
-static uint8 qt1x0_send_ping(void) {
-  char str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
-
-  return send_command(str, sizeof str, 0, 5);
-}
 
 #define PNUM_IDX       0x06
 #define PSIZE_IDX      0x07
@@ -257,11 +242,7 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
 
   str[PNUM_IDX] = pnum;
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 1, 5);
+  return send_command(str, sizeof str, 1, 1, 5);
 }
 
 /* Gets photo header */
@@ -284,11 +265,7 @@ static uint8 send_photo_header_command(uint8 pnum) {
 
   str[PNUM_IDX] = pnum;
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 1, 5);
+  return send_command(str, sizeof str, 1, 1, 5);
 }
 
 #pragma code-name(push, "LC")
@@ -301,11 +278,7 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
   str[PNUM_IDX] = pnum;
   memcpy(str + PSIZE_IDX, picture_size, 3);
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 1, 5);
+  return send_command(str, sizeof str, 1, 1, 5);
 }
 
 /* Get the camera information summary */
@@ -313,22 +286,14 @@ static uint8 send_get_information_command(void) {
   //           {????,????,????,????,????,????,????,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x80,0x00};
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 1, 5);
+  return send_command(str, sizeof str, 1, 1, 5);
 }
 
 /* Take a picture */
 uint8 qt1x0_take_picture(void) {
   char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 0, 20);
+  return send_command(str, sizeof str, 1, 0, 20);
 }
 
 /* Set the camera name */
@@ -343,12 +308,9 @@ uint8 qt1x0_set_camera_name(const char *name) {
   if (len > 31)
     len = 31;
 
-  if (qt1x0_send_ping() != 0) {
-    return - 1;
-  }
-
   memcpy(str + NAME_SET_IDX, name, len);
-  return send_command(str, sizeof str, 0, 5);
+
+  return send_command(str, sizeof str, 1, 0, 5);
 }
 
 /* Set the camera time */
@@ -369,11 +331,7 @@ uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
   str[SET_MIN_IDX]   = minute;
   str[SET_SEC_IDX]   = second;
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 0, 5);
+  return send_command(str, sizeof str, 1, 0, 5);
 }
 
 static uint8 receive_data(uint32 size, int fd) {
@@ -437,11 +395,6 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
-
-  if (qt1x0_send_ping() != 0) {
-    errno = EIO;
-    return -1;
-  }
 
   bzero(buffer, BLOCK_SIZE);
 
@@ -524,10 +477,6 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   /* Seems useless but needed for IIc+ */
   sleep(1);
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
   bzero(buffer, BLOCK_SIZE);
 
   status_line = wherey();
@@ -568,14 +517,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 uint8 qt1x0_delete_pictures(void) {
   char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  if (serial_model == QT_MODEL_100)
-    return send_command(str, sizeof str, 0, 20);
-  else
-    return send_command(str, sizeof str, 0, 60);
+  return send_command(str, sizeof str, 1, 0, 60);
 }
 
 /* Set quality */
@@ -584,12 +526,9 @@ uint8 qt1x0_set_quality(uint8 quality) {
   //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
   char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
   str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
 
-  return send_command(str, sizeof str, 0, 5);
+  return send_command(str, sizeof str, 1, 0, 5);
 }
 
 /* Set flash mode */
@@ -598,12 +537,9 @@ uint8 qt1x0_set_flash(uint8 mode) {
   //           {????,????,????,????,????,????,????,????,????,????,????,????,FLSH,????}
   char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
 
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
   str[SET_FLASH_IDX] = mode;
 
-  return send_command(str, sizeof str, 0, 5);
+  return send_command(str, sizeof str, 1, 0, 5);
 }
 
 /* Get information from the camera */
@@ -624,10 +560,6 @@ uint8 qt1x0_get_information(camera_info *info) {
   cputs("Getting information...\r\n");
 
   DUMP_START("summary");
-
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
 
   if (send_get_information_command() != 0)
     return -1;
