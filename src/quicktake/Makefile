@@ -21,6 +21,7 @@ endif
 slowtake_SOURCES := \
 	qt-menu.c \
 	qt-serial.c \
+	qt-callbacks.s \
 	qt1x0-serial.c \
 	qt200-serial.c \
 	qt-edit-image.c \

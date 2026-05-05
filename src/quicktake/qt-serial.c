@@ -47,51 +47,7 @@ extern unsigned char buffer[BUFFER_SIZE];
 #define CAM_CAN_GET_THUMBNAIL   0x20
 #define CAM_CAN_DELETE_PICTURES 0x40
 
-#pragma warn(return-type, push, off)
-#pragma warn(unused-param, push, off)
-
-uint8 cam_features = 0x00;
-static uint8 cam_wakeup(uint16 speed) {
-  __asm__("jmp (%w)", 0xC01 + (CAM_WAKEUP*2));
-}
-
-static uint8 cam_set_speed(uint16 speed) {
-  __asm__("jmp (%w)", 0xC01 + (CAM_SET_SPEED*2));
-}
-
-static uint8 cam_set_camera_name(const char *name){
-  __asm__("jmp (%w)", 0xC01 + (CAM_SET_CAMERA_NAME*2));
-}
-static uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second){
-  __asm__("jmp (%w)", 0xC01 + (CAM_SET_CAMERA_TIME*2));
-}
-uint8 qt_get_information(camera_info *info){
-  __asm__("jmp (%w)", 0xC01 + (CAM_GET_INFORMATION*2));
-}
-static uint8 cam_set_quality(uint8 quality){
-  __asm__("jmp (%w)", 0xC01 + (CAM_SET_QUALITY*2));
-}
-static uint8 cam_set_flash(uint8 mode){
-  __asm__("jmp (%w)", 0xC01 + (CAM_SET_FLASH*2));
-}
-
-/* Camera pictures functions */
-static uint8 cam_take_picture(void){
-  __asm__("jmp (%w)", 0xC01 + (CAM_TAKE_PICTURE*2));
-}
-uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail){
-  __asm__("jmp (%w)", 0xC01 + (CAM_GET_PICTURE*2));
-}
-static uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info){
-  
-    __asm__("jmp (%w)", 0xC01 + (CAM_GET_THUMBNAIL*2));
-
-}
-static uint8 cam_delete_pictures(void){
-  __asm__("jmp (%w)", 0xC01 + (CAM_DELETE_PICTURES*2));
-}
-#pragma warn(return-type, pop)
-#pragma warn(unused-param, pop)
+extern uint8 cam_features;
 
 #pragma code-name(push, "RT_ONCE")
 
@@ -102,9 +58,6 @@ uint8 load_camera_driver(const char *drv_name) {
   }
   read(fd, (char *)0xC00, (size_t)0x2000-0xC00);
   close(fd);
-  
-  __asm__("lda $C00");
-  __asm__("sta %v", cam_features);
 
   return 0;
 }

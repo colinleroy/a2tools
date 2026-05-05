@@ -91,6 +91,19 @@ uint8 qt_set_flash(uint8 mode);
 const char *qt_get_quality_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
+/* Callbacks */
+uint8 cam_wakeup(uint16 speed);
+uint8 cam_set_speed(uint16 speed);
+uint8 cam_set_camera_name(const char *name);
+uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+uint8 qt_get_information(camera_info *info);
+uint8 cam_set_quality(uint8 quality);
+uint8 cam_set_flash(uint8 mode);
+uint8 cam_take_picture(void);
+uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail);
+uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+uint8 cam_delete_pictures(void);
+
 /* Debug helpers */
 #ifndef __CC65__
 extern FILE *dbgfp;
