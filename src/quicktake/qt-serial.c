@@ -27,8 +27,6 @@ FILE *dbgfp = NULL;
 
 extern unsigned char buffer[BUFFER_SIZE];
 
-#pragma code-name(push, "RT_ONCE")
-
 #define CAM_WAKEUP          0
 #define CAM_SET_SPEED       1
 #define CAM_SET_CAMERA_NAME 2
@@ -94,6 +92,8 @@ static uint8 cam_delete_pictures(void){
 }
 #pragma warn(return-type, pop)
 #pragma warn(unused-param, pop)
+
+#pragma code-name(push, "RT_ONCE")
 
 uint8 load_camera_driver(const char *drv_name) {
   int fd = open(drv_name, O_RDONLY);
