@@ -16,10 +16,37 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 #include "a2_features.h"
+#include "qt1x0-serial.h"
 
 #pragma code-name(push, "QT1X0")
 #pragma rodata-name(push, "QT1X0")
 #pragma data-name(push, "QT1X0")
+
+/* Camera features */
+unsigned char qt1x0_features = 0b11111111;
+//                               ||||||||_ SET_CAMERA_NAME
+//                               |||||||__ SET_CAMERA_TIME
+//                               ||||||___ SET_QUALITY,
+//                               |||||____ SET_FLASH,
+//                               ||||_____ TAKE_PICTURE,
+//                               |||______ GET_THUMBNAIL,
+//                               ||_______ DELETE_PICTURES,
+//                               |________ RESERVED,
+
+/* Camera callbacks */  
+void *qt1x0_callbacks[] = {
+  /* WAKEUP */          qt1x0_wakeup,
+  /* SET_SPEED */       qt1x0_set_speed,
+  /* SET_CAMERA_NAME */ qt1x0_set_camera_name,
+  /* SET_CAMERA_TIME */ qt1x0_set_camera_time,
+  /* GET_INFORMATION */ qt1x0_get_information,
+  /* SET_QUALITY */     qt1x0_set_quality,
+  /* SET_FLASH */       qt1x0_set_flash,
+  /* TAKE_PICTURE */    qt1x0_take_picture,
+  /* GET_PICTURE */     qt1x0_get_picture,
+  /* GET_THUMBNAIL */   qt1x0_get_thumbnail,
+  /* DELETE_PICTURES */ qt1x0_delete_pictures,
+};
 
 extern uint8 scrw, scrh;
 
@@ -169,7 +196,9 @@ uint8 qt1x0_wakeup(uint16 speed) {
     return QT_MODEL_UNKNOWN;
   }
 
+  simple_serial_set_parity(SER_PAR_EVEN);
   cputs("Done. ");
+
   return model;
 }
 

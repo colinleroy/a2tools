@@ -62,23 +62,29 @@ static uint8 print_menu(void) {
   cputs("Menu\r\n\r\n");
   if (camera_connected) {
     cputs(" G. Get one picture\r\n");
-    if (serial_model != QT_MODEL_200) {
-      cputs(" P. Preview pictures\r\n"
-            " D. Delete all pictures\r\n"
-            " S. Snap a picture\r\n");
+    if (cam_features & CAM_CAN_GET_THUMBNAIL)
+      cputs(" P. Preview pictures\r\n");
+    if (cam_features & CAM_CAN_DELETE_PICTURES)
+      cputs(" D. Delete all pictures\r\n");
+    if (cam_features & CAM_CAN_TAKE_PICTURE) {
+      cputs(" S. Snap a picture\r\n");
     }
   } else {
     cputs(" C. Connect camera\r\n");
   }
   cputs(  " R. Re-edit a raw picture from floppy\r\n"
            " V. View a converted picture from floppy\r\n");
-  if (camera_connected  && serial_model != QT_MODEL_200) {
-    cprintf(" N. Set camera name\r\n"
-           " T. Set camera time\r\n"
-           " Q. Set quality to %s\r\n"
-           " F. Set flash to %s\r\n",
-           qt_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
-           qt_get_flash_str((cam_info.flash_mode + 1) % 3));
+  if (camera_connected) {
+    if (cam_features & CAM_CAN_SET_CAMERA_NAME)
+      cputs(" N. Set camera name\r\n");
+    if (cam_features & CAM_CAN_SET_CAMERA_TIME)
+      cputs(" T. Set camera time\r\n");
+    if (cam_features & CAM_CAN_SET_QUALITY)
+      cprintf(" Q. Set quality to %s\r\n", 
+              qt_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH));
+    if (cam_features & CAM_CAN_SET_FLASH)
+      cprintf(" F. Set flash to %s\r\n",
+              qt_get_flash_str((cam_info.flash_mode + 1) % 3));
   }
   cputs(   "\r\n"
            " A. About this program\r\n"
@@ -544,37 +550,40 @@ menu:
 
   /* Choices available only with a camera connected */
   if (camera_connected) {
-    /* The only possible choice for QT200 */
-    if (choice == 'g') {
-      get_one_picture(cam_info.num_pics);
-    }
-    /* Choices for QT1x0 */
-    if (serial_model != QT_MODEL_200) {
-      switch(choice) {
-        case 'p':
+    switch(choice) {
+      case 'g':
+        get_one_picture(cam_info.num_pics);
+        break;
+      case 'p':
+        if (cam_features & CAM_CAN_GET_THUMBNAIL)
           show_thumbnails(cam_info.num_pics);
-          break;
-        case 'd':
+        break;
+      case 'd':
+        if (cam_features & CAM_CAN_DELETE_PICTURES)
           delete_pictures();
-          break;
-        case 's':
+        break;
+      case 's':
+        if (cam_features & CAM_CAN_TAKE_PICTURE)
           take_picture();
-          break;
-        case 'n':
+        break;
+      case 'n':
+        if (cam_features & CAM_CAN_SET_CAMERA_NAME)
           set_camera_name(cam_info.name);
-          break;
-        case 't':
+        break;
+      case 't':
+        if (cam_features & CAM_CAN_SET_CAMERA_TIME)
           set_camera_time();
-          break;
-        case 'q':
+        break;
+      case 'q':
+        if (cam_features & CAM_CAN_SET_QUALITY)
           qt_set_quality((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
-          break;
-        case 'f':
+        break;
+      case 'f':
+        if (cam_features & CAM_CAN_SET_FLASH)
           qt_set_flash((cam_info.flash_mode + 1) % 3);
-          break;
-        default:
-          break;
-      }
+        break;
+      default:
+        break;
     }
   } else if (choice == 'c') {
     exec_pass = 1;

@@ -16,6 +16,28 @@
 #define FLASH_OFF 1
 #define FLASH_ON 2
 
+#define CAM_WAKEUP          0
+#define CAM_SET_SPEED       1
+#define CAM_SET_CAMERA_NAME 2
+#define CAM_SET_CAMERA_TIME 3
+#define CAM_GET_INFORMATION 4
+#define CAM_SET_QUALITY     5
+#define CAM_SET_FLASH       6
+#define CAM_TAKE_PICTURE    7
+#define CAM_GET_PICTURE     8
+#define CAM_GET_THUMBNAIL   9
+#define CAM_DELETE_PICTURES 10
+
+#define CAM_CAN_SET_CAMERA_NAME 0x01
+#define CAM_CAN_SET_CAMERA_TIME 0x02
+#define CAM_CAN_SET_QUALITY     0x04
+#define CAM_CAN_SET_FLASH       0x08
+#define CAM_CAN_TAKE_PICTURE    0x10
+#define CAM_CAN_GET_THUMBNAIL   0x20
+#define CAM_CAN_DELETE_PICTURES 0x40
+
+extern uint8 cam_features;
+
 extern uint8 camera_connected;
 typedef struct _camera_date {
   uint16 year;

@@ -13,8 +13,6 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
-#include "qt1x0-serial.h"
-#include "qt200-serial.h"
 #include "qt-conv.h"
 
 #define DEBUG_TIMING 0
@@ -31,13 +29,84 @@ extern unsigned char buffer[BUFFER_SIZE];
 
 #pragma code-name(push, "RT_ONCE")
 
+#define CAM_WAKEUP          0
+#define CAM_SET_SPEED       1
+#define CAM_SET_CAMERA_NAME 2
+#define CAM_SET_CAMERA_TIME 3
+#define CAM_GET_INFORMATION 4
+#define CAM_SET_QUALITY     5
+#define CAM_SET_FLASH       6
+#define CAM_TAKE_PICTURE    7
+#define CAM_GET_PICTURE     8
+#define CAM_GET_THUMBNAIL   9
+#define CAM_DELETE_PICTURES 10
+
+#define CAM_CAN_SET_CAMERA_NAME 0x01
+#define CAM_CAN_SET_CAMERA_TIME 0x02
+#define CAM_CAN_SET_QUALITY     0x04
+#define CAM_CAN_SET_FLASH       0x08
+#define CAM_CAN_TAKE_PICTURE    0x10
+#define CAM_CAN_GET_THUMBNAIL   0x20
+#define CAM_CAN_DELETE_PICTURES 0x40
+
+#pragma warn(return-type, push, off)
+#pragma warn(unused-param, push, off)
+
+uint8 cam_features = 0x00;
+static uint8 cam_wakeup(uint16 speed) {
+  __asm__("jmp (%w)", 0xC01 + (CAM_WAKEUP*2));
+}
+
+static uint8 cam_set_speed(uint16 speed) {
+  __asm__("jmp (%w)", 0xC01 + (CAM_SET_SPEED*2));
+}
+
+static uint8 cam_set_camera_name(const char *name){
+  __asm__("jmp (%w)", 0xC01 + (CAM_SET_CAMERA_NAME*2));
+}
+static uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second){
+  __asm__("jmp (%w)", 0xC01 + (CAM_SET_CAMERA_TIME*2));
+}
+uint8 qt_get_information(camera_info *info){
+  __asm__("jmp (%w)", 0xC01 + (CAM_GET_INFORMATION*2));
+}
+static uint8 cam_set_quality(uint8 quality){
+  __asm__("jmp (%w)", 0xC01 + (CAM_SET_QUALITY*2));
+}
+static uint8 cam_set_flash(uint8 mode){
+  __asm__("jmp (%w)", 0xC01 + (CAM_SET_FLASH*2));
+}
+
+/* Camera pictures functions */
+static uint8 cam_take_picture(void){
+  __asm__("jmp (%w)", 0xC01 + (CAM_TAKE_PICTURE*2));
+}
+uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail){
+  __asm__("jmp (%w)", 0xC01 + (CAM_GET_PICTURE*2));
+}
+static uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info){
+  
+    __asm__("jmp (%w)", 0xC01 + (CAM_GET_THUMBNAIL*2));
+
+}
+static uint8 cam_delete_pictures(void){
+  __asm__("jmp (%w)", 0xC01 + (CAM_DELETE_PICTURES*2));
+}
+#pragma warn(return-type, pop)
+#pragma warn(unused-param, pop)
+
 uint8 load_camera_driver(const char *drv_name) {
   int fd = open(drv_name, O_RDONLY);
   if (fd == -1) {
-    __asm__("brk");
+    return -1;
   }
-  read(fd, 0xC00, 0x2000-0xC00);
+  read(fd, (char *)0xC00, (size_t)0x2000-0xC00);
   close(fd);
+  
+  __asm__("lda $C00");
+  __asm__("sta %v", cam_features);
+
+  return 0;
 }
 
 /* Connect to a QuickTake and detect its model */
@@ -62,19 +131,11 @@ uint8 qt_serial_connect(uint16 speed) {
 
 
   /* Try and detect a QuickTake 1x0 */
-  load_camera_driver("QT1X0.DRV");
-  serial_model = qt1x0_wakeup(speed);
-
-  /* Set parity to EVEN (all QuickTakes need it at that point) */
-#ifdef __CC65__
-  simple_serial_set_parity(SER_PAR_EVEN);
-#else
-  simple_serial_set_parity(PARENB);
-#endif
-
+  if (load_camera_driver("QT1X0.DRV") == 0) {
+    serial_model = cam_wakeup(speed);
+  }
   if (serial_model == QT_MODEL_UNKNOWN) {
-    load_camera_driver("QT200.DRV");
-    if (qt200_wakeup() == 0) {
+    if (load_camera_driver("QT200.DRV") == 0 && cam_wakeup(speed) == 0) {
       serial_model = QT_MODEL_200;
     }
   }
@@ -89,10 +150,7 @@ uint8 qt_serial_connect(uint16 speed) {
   cputs("Initializing...\r\n");
 
   /* Upgrade to target speed */
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_set_speed(speed);
-  else
-    return qt200_set_speed(speed);
+  return cam_set_speed(speed);
 }
 
 /* Protocol-dependant camera functions */
@@ -101,67 +159,53 @@ uint8 qt_serial_connect(uint16 speed) {
 #pragma code-name(push, "LC")
 
 uint8 qt_take_picture(void) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_take_picture();
+  if (cam_features & CAM_CAN_TAKE_PICTURE)
+    return cam_take_picture();
   else
     return -1;
 }
 
 uint8 qt_set_camera_name(const char *name) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_set_camera_name(name);
+  if (cam_features & CAM_CAN_SET_CAMERA_NAME)
+    return cam_set_camera_name(name);
   else
     return -1;
 }
 
 uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_set_camera_time(day, month, year, hour, minute, second);
+  if (cam_features & CAM_CAN_SET_CAMERA_TIME)
+    return cam_set_camera_time(day, month, year, hour, minute, second);
   else
     return -1;
 }
 
 uint8 qt_set_quality(uint8 quality) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_set_quality(quality);
+  if (cam_features & CAM_CAN_SET_QUALITY)
+    return cam_set_quality(quality);
   else
     return -1;
 }
 
 uint8 qt_set_flash(uint8 mode) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_set_flash(mode);
+  if (cam_features & CAM_CAN_SET_FLASH)
+    return cam_set_flash(mode);
   else
     return -1;
 }
 
-uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_get_picture(n_pic, fd, avail);
-  else
-    return qt200_get_picture(n_pic, fd, avail);
-}
-
 uint8 qt_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_get_thumbnail(n_pic, fd, info);
+  if (cam_features & CAM_CAN_GET_THUMBNAIL)
+    return cam_get_thumbnail(n_pic, fd, info);
   else
     return -1;
 }
 
 
 uint8 qt_delete_pictures(void) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_delete_pictures();
+  if (cam_features & CAM_CAN_DELETE_PICTURES)
+    return cam_delete_pictures();
   else
     return -1;
-}
-
-uint8 qt_get_information(camera_info *info) {
-  if (serial_model != QT_MODEL_200)
-    return qt1x0_get_information(info);
-  else
-    return qt200_get_information(info);
 }
 
 const char *qt_get_quality_str(uint8 mode) {

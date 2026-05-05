@@ -11,10 +11,37 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt-conv.h"
+#include "qt200-serial.h"
 
 #pragma code-name(push, "QT200")
 #pragma rodata-name(push, "QT200")
 #pragma data-name(push, "QT200")
+
+/* Camera features */
+unsigned char qt200_features = 0b10000000;
+//                               ||||||||_ SET_CAMERA_NAME
+//                               |||||||__ SET_CAMERA_TIME
+//                               ||||||___ SET_QUALITY,
+//                               |||||____ SET_FLASH,
+//                               ||||_____ TAKE_PICTURE,
+//                               |||______ GET_THUMBNAIL,
+//                               ||_______ DELETE_PICTURES,
+//                               |________ RESERVED,
+
+/* Camera callbacks */
+void *qt200_callbacks[] = {
+  /* WAKEUP */          qt200_wakeup,
+  /* SET_SPEED */       qt200_set_speed,
+  /* SET_CAMERA_NAME */ NULL,
+  /* SET_CAMERA_TIME */ NULL,
+  /* GET_INFORMATION */ qt200_get_information,
+  /* SET_QUALITY */     NULL,
+  /* SET_FLASH */       NULL,
+  /* TAKE_PICTURE */    NULL,
+  /* GET_PICTURE */     qt200_get_picture,
+  /* GET_THUMBNAIL */   NULL,
+  /* DELETE_PICTURES */ NULL,
+};
 
 extern uint8 scrw, scrh;
 
@@ -47,6 +74,8 @@ static void end_session(void);
  * Returns 0 if successful, -1 otherwise
  */
 uint8 qt200_wakeup(void) {
+  simple_serial_set_parity(SER_PAR_EVEN);
+
   end_session();
   cputs("Pinging QuickTake 200... ");
 
