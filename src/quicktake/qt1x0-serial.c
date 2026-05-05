@@ -246,7 +246,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
   }
   send_ack();
 
-  // platform_msleep(200);
+  platform_msleep(200);
   simple_serial_set_speed(spd_code);
 
   /* We don't care about the bytes we receive here */
