@@ -12,6 +12,10 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 
+#pragma code-name(push, "QT200")
+#pragma rodata-name(push, "QT200")
+#pragma data-name(push, "QT200")
+
 extern uint8 scrw, scrh;
 
 #define STX 0x02 /* Start of data */
@@ -39,7 +43,6 @@ static uint8 response_continues;
 static uint8 qt200_send_ping(void);
 static void end_session(void);
 
-#pragma code-name(push, "RT_ONCE")
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
@@ -55,8 +58,6 @@ uint8 qt200_wakeup(void) {
     return -1;
   }
 }
-
-#pragma code-name(pop)
 
 /* End of session */
 static void end_session(void) {
@@ -317,8 +318,6 @@ uint8 qt200_get_information(camera_info *info) {
   return 0;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
@@ -415,5 +414,3 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   return err;
 }
-
-#pragma code-name(pop)

@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,15 @@ extern unsigned char buffer[BUFFER_SIZE];
 
 #pragma code-name(push, "RT_ONCE")
 
+uint8 load_camera_driver(const char *drv_name) {
+  int fd = open(drv_name, O_RDONLY);
+  if (fd == -1) {
+    __asm__("brk");
+  }
+  read(fd, 0xC00, 0x2000-0xC00);
+  close(fd);
+}
+
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
   /* Set initial settings */
@@ -49,7 +59,10 @@ uint8 qt_serial_connect(uint16 speed) {
   }
   simple_serial_set_irq(1);
   simple_serial_flush();
+
+
   /* Try and detect a QuickTake 1x0 */
+  load_camera_driver("QT1X0.DRV");
   serial_model = qt1x0_wakeup(speed);
 
   /* Set parity to EVEN (all QuickTakes need it at that point) */
@@ -60,6 +73,7 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
 
   if (serial_model == QT_MODEL_UNKNOWN) {
+    load_camera_driver("QT200.DRV");
     if (qt200_wakeup() == 0) {
       serial_model = QT_MODEL_200;
     }

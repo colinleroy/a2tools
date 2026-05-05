@@ -156,8 +156,8 @@ slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-C ../../config/apple2enh-hgr-alignbss.cfg \
-	--start-addr 0xC00  #One file buffer
+	-C ../../config/apple2enh-slowtake.cfg \
+	--start-addr 0x1900  #One file buffer
 
 # 4 full tracks cache!
 qtktconv_CLCFLAGS = \
@@ -252,6 +252,9 @@ add_disk:
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT BIN 0x2000 < about; \
+	for r in *.DRV; do \
+		java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)$$(basename $$r) BIN 0xC00 < $$r; \
+	done; \
 	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;

@@ -17,7 +17,12 @@
 #include "qt-conv.h"
 #include "a2_features.h"
 
+#pragma code-name(push, "QT1X0")
+#pragma rodata-name(push, "QT1X0")
+#pragma data-name(push, "QT1X0")
+
 extern uint8 scrw, scrh;
+
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
@@ -34,7 +39,6 @@ static void send_ack() {
   simple_serial_putc(0x06);
 }
 
-#pragma code-name(push, "LOWCODE")
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, uint8 wait) {
   char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -133,8 +137,6 @@ static uint8 send_hello(uint16 speed) {
   return 0;
 }
 
-#pragma code-name(pop)
-#pragma code-name(push, "RT_ONCE")
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise
  */
@@ -225,9 +227,6 @@ uint8 qt1x0_set_speed(uint16 speed) {
   return get_ack(5);
 }
 
-/* End of RT_ONCE segment */
-#pragma code-name(pop)
-
 #define PNUM_IDX       0x06
 #define PSIZE_IDX      0x07
 #define THUMBNAIL_SIZE 0x0960UL
@@ -267,8 +266,6 @@ static uint8 send_photo_header_command(uint8 pnum) {
 
   return send_command(str, sizeof str, 1, 1, 5);
 }
-
-#pragma code-name(push, "LC")
 
 /* Gets photo data */
 static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
@@ -467,9 +464,6 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   return receive_data(pic_size_int, fd);
 }
 
-#pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
-
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
 uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   uint8 status_line;
@@ -592,4 +586,3 @@ uint8 qt1x0_get_information(camera_info *info) {
   info->name = trim((char *)buffer + NAME_IDX);
   return 0;
 }
-#pragma code-name(pop)

@@ -24,6 +24,8 @@
 #include "runtime_once_clean.h"
 #include "a2_features.h"
 
+#pragma code-name(push, "LC")
+
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
@@ -83,8 +85,6 @@ static uint8 print_menu(void) {
            " 0. Exit\r\n\r\n");
   return cgetc();
 }
-
-#pragma code-name(push, "LOWCODE")
 
 static void save_picture(uint8 n_pic) {
   char filename[64];
@@ -172,8 +172,6 @@ err_io:
   }
 }
 
-#pragma code-name(pop)
-
 static void get_one_picture(uint8 num_pics) {
 #ifdef __CC65__
   char buf[5];
@@ -249,6 +247,9 @@ static void set_camera_time(void) {
 
   qt_set_camera_time(vals[0], vals[1], vals[2], vals[3], vals[4], 0);
 }
+
+#pragma code-name(pop)
+#pragma code-name(push, "SQUEEZE")
 
 static void delete_pictures(void) {
   clrscr();
@@ -388,7 +389,6 @@ static void show_about(void) {
 }
 
 #pragma code-name(push, "RT_ONCE")
-
 static uint8 setup(int argc, char *argv[]) {
   uint16 is_reedit = 0;
   char *reedit_name;
@@ -478,7 +478,6 @@ if (is_iigs) {
   }
   return 1;
 }
-
 #pragma code-name(pop)
 
 void unlink_temp_files(void) {
@@ -490,8 +489,6 @@ void unlink_temp_files(void) {
   /* Don't unlink AUXHGR, as we want *conv to start writing GREY
    * *after* that file. */
 }
-
-#pragma code-name(push, "LOWCODE")
 
 int main(int argc, char *argv[])
 {
@@ -596,4 +593,3 @@ out:
 #ifdef __CC65__
   #pragma static-locals(pop)
 #endif
-#pragma code-name(pop)
