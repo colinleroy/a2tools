@@ -37,10 +37,17 @@ line_ptr =  _zp10p
         .segment "CODE"
 
 .proc serial_crlf
+        jsr     wait_imagewriter_ready
+        bne     no
         lda     #$0D
         jsr     _serial_putc_direct
+
+        jsr     wait_imagewriter_ready
+        bne     no
         lda     #$0A
-        jmp     _serial_putc_direct
+        jsr     _serial_putc_direct
+        lda     #$00
+no:     rts
 .endproc
 
 ; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
@@ -128,18 +135,15 @@ abort:  rts
         ldx     #>.sizeof(disable_auto_line_feed)
         jsr     _simple_serial_write_slow
 
-        jsr     wait_imagewriter_ready
-        bne     abort
         ; Blank lines for margin
         jsr     serial_crlf
-
-        jsr     wait_imagewriter_ready
         bne     abort
-        jsr     serial_crlf
 
-        jsr     wait_imagewriter_ready
-        bne     abort
         jsr     serial_crlf
+        bne     abort
+
+        jsr     serial_crlf
+        bne     abort
 
         ; Clear 80COL so we can read AUX if needed.
         lda     RD80COL
@@ -253,9 +257,8 @@ white_pixel:
         bcs     :+
         jmp     next_hgr_byte
 
-:       jsr     wait_imagewriter_ready
+:       jsr     serial_crlf   ; Prepare for next line
         bne     out
-        jsr     serial_crlf   ; Prepare for next line
 
         jsr     print_progress_bar
 
@@ -328,7 +331,7 @@ out:
 .endproc
 
 .proc wait_imagewriter_ready
-        lda    #$20
+        lda    #$FF
         sta    wait_xon
 
         jsr    _simple_serial_getc_immediate
@@ -341,7 +344,7 @@ ready:
 wait_ready:
         jsr    _simple_serial_getc_with_timeout
         cmp    #$11           ; Did we get an XON?
-        beq    ready
+        beq    restart
         dec    wait_xon
         bne    wait_ready
 not_ready:
