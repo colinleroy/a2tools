@@ -1690,16 +1690,6 @@
 	)
 	(wire
 		(pts
-			(xy 106.68 67.31) (xy 109.22 67.31)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "19f6f7ea-e9dc-4984-ab2f-62cd19a41ce3")
-	)
-	(wire
-		(pts
 			(xy 125.73 76.2) (xy 129.54 76.2)
 		)
 		(stroke
@@ -1770,6 +1760,16 @@
 	)
 	(wire
 		(pts
+			(xy 115.57 62.23) (xy 115.57 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5e22ef6d-72e7-4fda-b98f-aa80369c4155")
+	)
+	(wire
+		(pts
 			(xy 129.54 72.39) (xy 149.86 72.39)
 		)
 		(stroke
@@ -1797,6 +1797,16 @@
 			(type default)
 		)
 		(uuid "71ae87a2-e58a-4f3c-8a9e-df360c5c8be8")
+	)
+	(wire
+		(pts
+			(xy 106.68 67.31) (xy 115.57 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "801d01b7-1181-4845-aee6-bf39ddf19675")
 	)
 	(wire
 		(pts
@@ -1964,22 +1974,22 @@
 	)
 	(global_label "DSR"
 		(shape input)
-		(at 113.03 72.39 90)
+		(at 120.65 72.39 270)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "4c31d341-40b8-417d-a441-046980c8b4eb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 113.03 65.6553 90)
+			(at 120.65 79.1247 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -2346,7 +2356,7 @@
 			(uuid "b8cd9a38-6c10-48ab-9062-4020761ef9cf")
 		)
 		(instances
-			(project ""
+			(project "db25-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "J1")
 					(unit 1)

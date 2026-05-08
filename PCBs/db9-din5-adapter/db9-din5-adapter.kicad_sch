@@ -1034,6 +1034,16 @@
 	)
 	(wire
 		(pts
+			(xy 107.95 74.93) (xy 110.49 74.93)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0bc1828a-4930-4da3-a73d-46d4a89802a9")
+	)
+	(wire
+		(pts
 			(xy 142.24 72.39) (xy 149.86 72.39)
 		)
 		(stroke
@@ -1061,6 +1071,16 @@
 			(type default)
 		)
 		(uuid "331d095f-2a98-40c1-b135-2cf284aa54b4")
+	)
+	(wire
+		(pts
+			(xy 110.49 69.85) (xy 107.95 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4300f3dd-5450-4b7d-9992-a562342ccfc7")
 	)
 	(wire
 		(pts
@@ -1121,6 +1141,16 @@
 			(type default)
 		)
 		(uuid "8d84d16f-9453-4fbd-a98a-8d61ac611005")
+	)
+	(wire
+		(pts
+			(xy 110.49 74.93) (xy 110.49 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9067d02d-42fa-4379-8083-f5a30225a817")
 	)
 	(wire
 		(pts
@@ -1474,7 +1504,7 @@
 			(uuid "1cc0863e-f32b-4642-96f9-3e9ee0f4d786")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "J3")
 					(unit 1)
@@ -1568,7 +1598,7 @@
 			(uuid "984b872a-db01-4f88-b323-98899eb84502")
 		)
 		(instances
-			(project ""
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "J1")
 					(unit 1)
@@ -1634,7 +1664,7 @@
 			(uuid "f20ba357-a922-463f-b3a5-371cf81871ca")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "#PWR04")
 					(unit 1)
@@ -1701,7 +1731,7 @@
 			(uuid "af4a20af-291c-4c08-beb6-7f2ae36b57fa")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "#PWR01")
 					(unit 1)
@@ -1838,7 +1868,7 @@
 			(uuid "0e8f0d69-17dc-4100-be44-dc851c429ad3")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "K2")
 					(unit 1)
@@ -1972,7 +2002,7 @@
 			(uuid "36351d74-5bd7-43e8-86a8-8096c4ba231a")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "#PWR03")
 					(unit 1)
@@ -2046,7 +2076,7 @@
 			(uuid "1ad0c83f-624f-4bcf-818e-d439378224da")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "J2")
 					(unit 1)
@@ -2113,7 +2143,7 @@
 			(uuid "868b3c93-3d44-461e-ad1b-606efa303dff")
 		)
 		(instances
-			(project "db25-din5-adapter"
+			(project "db9-din5-adapter"
 				(path "/7108ec36-da4c-4f22-b5ad-0a42d2aa000b"
 					(reference "#PWR02")
 					(unit 1)

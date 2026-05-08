@@ -1863,16 +1863,16 @@
 		(layer "Edge.Cuts")
 		(uuid "f1dffeb8-f154-4e0f-98ef-2f3e1570217c")
 	)
-	(gr_text "↔ Straight\n\n\n↕ Cross-over"
-		(at 146.304 96.774 0)
+	(gr_text "TX\n&RX"
+		(at 151.003 86.106 0)
 		(layer "F.SilkS")
-		(uuid "22113c43-0c45-4bba-8b27-56c80165f20c")
+		(uuid "688cf6c8-3099-4fc6-9015-af22ba96b552")
 		(effects
 			(font
-				(size 1.5 1.5)
-				(thickness 0.1875)
+				(size 1 1)
+				(thickness 0.125)
 			)
-			(justify left bottom)
+			(justify right bottom)
 		)
 	)
 	(gr_text "DTR\n&DSR"
@@ -1887,22 +1887,22 @@
 			(justify right bottom)
 		)
 	)
-	(gr_text "TX\n&RX"
-		(at 151.003 86.106 0)
+	(gr_text "↔ Straight\n\n\n↕ Cross-over"
+		(at 146.304 96.774 0)
 		(layer "F.SilkS")
-		(uuid "688cf6c8-3099-4fc6-9015-af22ba96b552")
+		(uuid "22113c43-0c45-4bba-8b27-56c80165f20c")
 		(effects
 			(font
-				(size 1 1)
-				(thickness 0.125)
+				(size 1.5 1.5)
+				(thickness 0.1875)
 			)
-			(justify right bottom)
+			(justify left bottom)
 		)
 	)
-	(gr_text "TX"
-		(at 144.78 98.298 0)
+	(gr_text "DTR"
+		(at 143.256 100.838 0)
 		(layer "B.SilkS")
-		(uuid "02b36a38-61c2-4530-b7c4-c15d3e98d605")
+		(uuid "1adb85bc-7656-4876-bfac-59fd91d3fb66")
 		(effects
 			(font
 				(size 1 1)
@@ -1925,10 +1925,10 @@
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "DTR"
-		(at 143.256 100.838 0)
+	(gr_text "TX"
+		(at 144.78 98.298 0)
 		(layer "B.SilkS")
-		(uuid "1adb85bc-7656-4876-bfac-59fd91d3fb66")
+		(uuid "02b36a38-61c2-4530-b7c4-c15d3e98d605")
 		(effects
 			(font
 				(size 1 1)
