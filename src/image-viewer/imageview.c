@@ -54,7 +54,7 @@ open_again:
       goto check_configure;
     }
   }
-  simple_serial_set_irq(1);
+  simple_serial_set_irq(0);
   return 0;
 
 check_configure:

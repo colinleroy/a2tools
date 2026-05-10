@@ -33,6 +33,7 @@ imgview_CC65SOURCES := \
 	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/file_select.s \
 	../lib/asm/iw_print.s \
+	../lib/platform_sleep.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \

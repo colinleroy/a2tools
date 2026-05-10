@@ -3,10 +3,10 @@
         .import     _hgr_baseaddr_h, _hgr_baseaddr_l
 
         .import     _serial_putc_direct
-        .import     _simple_serial_getc_immediate
-        .import     _simple_serial_getc_with_timeout
+        .import     _serial_read_byte_direct
         .import     simple_serial_compute_ptr_end
         .import     _progress_bar, _scrw
+        .import     _platform_msleep
 
         .import     _kbhit, _cgetc
 
@@ -154,6 +154,10 @@ abort:  rts
         lda     #$00
 next_four_lines:
         sta     cur_line
+
+        lda     #100
+        ldx     #0
+        jsr     _platform_msleep
 
         ; Set binary mode
         lda     #<setup_binary_print_cmd
@@ -334,7 +338,8 @@ out:
         lda    #$FF
         sta    wait_xon
 
-        jsr    _simple_serial_getc_immediate
+        jsr    _serial_read_byte_direct
+        bcs    ready
         cmp    #$13           ; Did we get an XOFF?
         beq    wait_ready
 ready:
@@ -342,19 +347,15 @@ ready:
         rts
 
 wait_ready:
-        jsr    _simple_serial_getc_with_timeout
+        jsr    _serial_read_byte_direct
+        bcs    wait_ready
         cmp    #$11           ; Did we get an XON?
-        beq    restart
+        beq    ready
         dec    wait_xon
         bne    wait_ready
 not_ready:
         lda    #$FF
         rts
-
-restart:
-        ; wait a bit more...
-        jsr    _simple_serial_getc_with_timeout
-        jmp    ready
 .endproc
 
         .bss
