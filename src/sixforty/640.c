@@ -10,8 +10,9 @@
 #pragma data-name(push, "API640") 
 
 /* Forward declarations */
-static unsigned char do_login_640(void);
+static unsigned char do_login_640(char *saved_creds);
 static post_t *get_post_640(signed char index_offset);
+static char *get_creds(void);
 
 /* HEADER for the segment ====================================== */
 unsigned int features = 0b1111111111111111;
@@ -19,6 +20,7 @@ unsigned int features = 0b1111111111111111;
 void *sixforty_callbacks[] = {
   /* LOGIN */           do_login_640,
   /* GET_POST */        get_post_640,
+  /* GET_CREDS */       get_creds,
 };
 
 /* Internal code =============================================== */
@@ -31,10 +33,12 @@ char oauth_token[64];
 
 static const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
-  static char h_num = 0;
+  char h_num = 0;
 
-  if (IS_NULL(hdrs[1]) && oauth_token[0]) {
+  if (IS_NULL(hdrs[0])) {
     hdrs[0] = malloc0(128);
+  }
+  if (oauth_token[0]) {
     strcpy(hdrs[0], "Authorization: Token ");
     strcat(hdrs[0], oauth_token);
     h_num = 1;
@@ -45,12 +49,43 @@ static const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   return surl_start_request(hdrs, h_num, gen_buf, method);
 }
 
-static unsigned char do_login_640(void) {
+static unsigned char do_login_640(char *saved_creds) {
   unsigned int post_len;
+  unsigned char r;
+  char *d;
+
   oauth_token[0] = '\0';
+
+  if (saved_creds) {
+    strcpy(login, saved_creds);
+    if (d = strchr(login, '\n')) {
+      *d = '\0';
+      d++;
+      /* Temp copy for change comparison */
+      strcpy(small_buf, login);
+
+      /* And copy the token */
+      strcpy(oauth_token, d);
+      if (d = strchr(oauth_token, '\n')) {
+        *d = '\0';
+      }
+    }
+    free(saved_creds);
+  }
+
   cputs("Login (empty for read-only): ");
   dget_text_single(login, sizeof(login) - 1, NULL);
   if (login[0]) {
+    if (!strcmp(small_buf, login) && oauth_token[0]) {
+      /* Same login. check token validity. */
+      get_surl_for_endpoint(SURL_METHOD_GET, "/api/");
+      if (surl_response_ok()) {
+        return 0;
+      } else {
+        oauth_token[0] = '\0';
+        small_buf[0] = '\0';
+      }
+    }
     cputs("Password: ");
     dgets_echo_on = 0;
     dget_text_single(small_buf, sizeof(small_buf) - 1, NULL);
@@ -67,9 +102,26 @@ static unsigned char do_login_640(void) {
 
     surl_read_response_header();
 
-    return surl_response_ok() ? 0:-1;
+    if (surl_response_ok()) {
+      r = surl_get_json(gen_buf, ".token",
+                    translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
+      if (r > 0) {
+        strcpy(oauth_token, gen_buf);
+        return 0;
+      }
+    }
+    return -1;
   }
   return 0;
+}
+
+static char *get_creds(void) {
+  if (login[0] && oauth_token[0]) {
+    char *creds = malloc(strlen(login) + strlen(oauth_token) + 2);
+    sprintf(creds, "%s\n%s", login, oauth_token);
+    return creds;
+  }
+  return NULL;
 }
 
 #define PAGE_SIZE 20

@@ -32,17 +32,16 @@
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
-#ifdef __APPLE2__
 #include "hgr.h"
-#endif
+#include "a2_features.h"
+#include "backup_hgrpage.h"
+#include "citoa.h"
+#include "malloc0.h"
 #include "path_helper.h"
 #include "platform.h"
 #include "splash.h"
-#include "citoa.h"
-#include "backup_hgrpage.h"
-#include "a2_features.h"
+
 #include "api.h"
-#include "surl.h"
 
 unsigned char scrw = 255, scrh = 255;
 unsigned char monochrome = 1;
@@ -106,6 +105,43 @@ static void show_help(void) {
   cgetc();
 }
 
+static char *load_creds(void) {
+  char *creds = malloc0(256);
+  int fd;
+
+  if (!creds) {
+    return NULL;
+  }
+
+  reopen_start_device();
+  fd = open("SFLOGIN", O_RDONLY);
+  if (fd) {
+    read(fd, creds, 256);
+    close(fd);
+    return creds;
+  } else {
+    free(creds);
+    return NULL;
+  }
+}
+
+static void save_creds(void) {
+  char *creds = api_get_creds();
+  int fd;
+
+  if (!creds) {
+    return;
+  }
+
+  reopen_start_device();
+  fd = open("SFLOGIN", O_CREAT|O_WRONLY);
+  if (fd) {
+    write(fd, creds, strlen(creds));
+    close(fd);
+  }
+  free(creds);
+}
+
 int main(void) {
   post_t *post = NULL;
   unsigned char shift = 1, c;
@@ -133,10 +169,11 @@ int main(void) {
 
   cprintf("Welcome to SixForty. %zuB free\r\n", _heapmaxavail());
 
-  while (api_login() != 0) {
+  while (api_login(load_creds()) != 0) {
     clrscr();
     cputs("Login failed.\r\n");
   }
+  save_creds();
 
   while (1) {
     post_free(post);
