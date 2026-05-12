@@ -53,10 +53,19 @@ char gen_buf[BUF_SIZE+1];
 void cleanup(void) {
 }
 
+static unsigned char dhgr_init_done = 0;
+static char last_displayed[16] = "";
+
 void display_post(post_t *post) {
+  /* If re-displaying same post, spare the query. */
+  if (!strcmp(post->id, last_displayed)) {
+    goto print_description;
+  }
+
   surl_start_request(NULL, 0, post->image_url, SURL_METHOD_GET);
-  if (surl_response_ok()) {
-    bzero((char *)HGR_PAGE, HGR_LEN);
+
+  if (!surl_response_ok()) {
+    return;
   }
   
   simple_serial_putc(has_128k && can_dhgr ? SURL_CMD_DHGR : SURL_CMD_HGR);
@@ -65,36 +74,42 @@ void display_post(post_t *post) {
 
   if (simple_serial_getc() == SURL_ERROR_OK) {
     size_t len;
-    unsigned char is_dhgr, c;
+    unsigned char is_dhgr;
 
     surl_read_with_barrier((char *)&len, 2);
     len = ntohs(len);
     is_dhgr = surl_read_image_to_screen(len);
 
-    init_graphics(monochrome, is_dhgr);
-    set_scrollwindow(20, scrh);
+    if (!dhgr_init_done) {
+      init_graphics(monochrome, is_dhgr);
+      hgr_mixon(); /* Legend on by default */
+      dhgr_init_done = 1;
+      set_scrollwindow(20, scrh);
+    }
+    strcpy(last_displayed, post->id);
+
+print_description:
     clrscr();
     cputs(post->description);
-    cputs("\r\n By ");
+    gotoxy(0, 3);
+    cputs(" By ");
     cputs(post->author);
     cputs(" on ");
     cputs(post->date);
-    while (c = tolower(cgetc())) {
-      if (c == 'l') {
-        if (hgr_mix_is_on) {
-          hgr_mixoff();
-        } else {
-          hgr_mixon();
-        }
-      } else {
-        return;
-      }
-    }
   }
 }
 
+static void show_help(void) {
+  clrscr();
+  cputs("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
+        "Press a key to return...");
+  cgetc();
+}
+
 int main(void) {
-  post_t *post;
+  post_t *post = NULL;
+  unsigned char shift = 1, c;
+
   register_start_device();
 
   reserve_auxhgr_file();  /* Sets can_dhgr */
@@ -118,13 +133,47 @@ int main(void) {
 
   cprintf("Welcome to SixForty. %zuB free\r\n", _heapmaxavail());
 
-  if (!api_login()) {
-    cputs("Invalid response.\r\n");
+  while (api_login() != 0) {
+    clrscr();
+    cputs("Login failed.\r\n");
   }
 
   while (1) {
-    post = api_get_post(1);
-    display_post(post);
     post_free(post);
+    post = api_get_post(shift);
+    if (IS_NULL(post)) {
+      clrscr();
+      cputs("Could not load post :-/\r\n");
+    } else {
+display_again:
+      display_post(post);
+    }
+get_command:
+    c = tolower(cgetc());
+    switch (c) {
+      case CH_CURS_LEFT:      /* previous */
+        shift = -1;
+        break;
+      case CH_CURS_RIGHT:     /* next */
+        shift = 1;
+        break;
+      case 'h':
+        show_help();
+        goto display_again;
+      case 'm':
+        monochrome = !monochrome;
+        dhgr_init_done = 0;
+        last_displayed[0] = '\0'; /* Force reload to re-convert */
+        goto display_again;
+      case 'l':               /* legend */
+        if (hgr_mix_is_on) {
+          hgr_mixoff();
+        } else {
+          hgr_mixon();
+        }
+        /* Fallthrough to next command */
+      default:
+        goto get_command;
+    }
   }
 }

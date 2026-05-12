@@ -67,8 +67,9 @@ static unsigned char do_login_640(void) {
 
     surl_read_response_header();
 
-    return surl_response_ok();
+    return surl_response_ok() ? 0:-1;
   }
+  return 0;
 }
 
 #define PAGE_SIZE 20
@@ -86,7 +87,7 @@ static post_t *fetch_post(void) {
     r = surl_get_json(gen_buf, small_buf,
                       translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
 
-    n_lines = strnsplit_in_place(gen_buf, '\n', lines, PAGE_SIZE*NUM_POST_FIELDS);
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, NUM_POST_FIELDS);
     if (r > 0 && n_lines == 5) {
       post_t *p;
       p = malloc0(sizeof(post_t));
@@ -95,6 +96,9 @@ static post_t *fetch_post(void) {
       p->description = strdup(lines[4]);
       p->author      = strdup(lines[2]);
       p->date        = strdup(lines[3]);
+      /* Fixup date for readability */
+      p->date[10]    = ' ';
+      p->date[19]    = '\0';
       return p;
     }
   }
