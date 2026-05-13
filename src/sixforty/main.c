@@ -43,6 +43,8 @@
 
 #include "api.h"
 
+#pragma code-name(push, "LC")
+
 unsigned char scrw = 255, scrh = 255;
 unsigned char monochrome = 1;
 

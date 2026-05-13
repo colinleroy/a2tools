@@ -23,8 +23,6 @@ sixforty_SOURCES := \
 	main.c \
 	api.c \
 	post.c \
-	640.c \
-	api-callbacks.s \
 	../lib/scroll.s \
 	../lib/dputc.s \
 	../lib/dget_text_single.c \
