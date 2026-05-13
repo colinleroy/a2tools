@@ -1195,16 +1195,6 @@
 		)
 	)
 	(gr_line
-		(start 177.292 108.427)
-		(end 177.264619 105.187)
-		(stroke
-			(width 0.05)
-			(type default)
-		)
-		(layer "Edge.Cuts")
-		(uuid "0e1eb3c5-6cb6-4615-86b2-a6fcd091a23d")
-	)
-	(gr_line
 		(start 167.767 91.598)
 		(end 167.714356 93.420359)
 		(stroke
@@ -1215,26 +1205,26 @@
 		(uuid "2ae7141a-6fdf-4fbe-9b19-5e1ff6b01f21")
 	)
 	(gr_arc
-		(start 200.279 93.187)
-		(mid 199.069066 96.800207)
-		(end 195.927245 98.956167)
+		(start 167.767 91.598)
+		(mid 169.524359 87.355359)
+		(end 173.767 85.598)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
-		(uuid "422a6d01-56ce-4782-bec6-bb44ff525724")
+		(uuid "a5b622f5-c3bc-4cbd-ba84-ce6449aac4eb")
 	)
 	(gr_arc
-		(start 183.292 114.427)
-		(mid 179.049359 112.669641)
-		(end 177.292 108.427)
+		(start 172.847 99.420358)
+		(mid 169.17258 97.368271)
+		(end 167.714356 93.420359)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
-		(uuid "6c707aad-b818-4417-b3cf-9056e19ae77a")
+		(uuid "85ab881d-50c4-4847-bb67-a6be97cab05a")
 	)
 	(gr_arc
 		(start 172.847001 99.420358)
@@ -1247,16 +1237,56 @@
 		(layer "Edge.Cuts")
 		(uuid "7098ff44-997b-4802-bed9-2e2e8a1def3d")
 	)
-	(gr_arc
-		(start 194.279 85.598)
-		(mid 198.521641 87.355359)
-		(end 200.279 91.598)
+	(gr_line
+		(start 173.767 85.598)
+		(end 194.279 85.598)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
-		(uuid "73c1a412-88d4-42fc-bb18-f75dbadf0d01")
+		(uuid "da8966b8-ba62-468d-b217-88b2b470a0d0")
+	)
+	(gr_line
+		(start 177.292 108.427)
+		(end 177.264619 105.187)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "Edge.Cuts")
+		(uuid "0e1eb3c5-6cb6-4615-86b2-a6fcd091a23d")
+	)
+	(gr_arc
+		(start 183.292 114.427)
+		(mid 179.049359 112.669641)
+		(end 177.292 108.427)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "Edge.Cuts")
+		(uuid "6c707aad-b818-4417-b3cf-9056e19ae77a")
+	)
+	(gr_line
+		(start 184.373 114.427)
+		(end 183.292 114.427)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "Edge.Cuts")
+		(uuid "d0ef6edc-16be-4dfa-84c9-cb08f92e4e1f")
+	)
+	(gr_line
+		(start 190.373 104.953641)
+		(end 190.373 108.427)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(layer "Edge.Cuts")
+		(uuid "ebd0f790-2e73-4a6d-ac39-421c0c210c20")
 	)
 	(gr_arc
 		(start 190.373 108.427)
@@ -1281,46 +1311,15 @@
 		(uuid "7b062cdd-d69e-4d2e-895f-0ca762d4b764")
 	)
 	(gr_arc
-		(start 172.847 99.420358)
-		(mid 169.17258 97.368271)
-		(end 167.714356 93.420359)
+		(start 194.279 85.598)
+		(mid 198.521641 87.355359)
+		(end 200.279 91.598)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
-		(uuid "85ab881d-50c4-4847-bb67-a6be97cab05a")
-	)
-	(gr_arc
-		(start 167.767 91.598)
-		(mid 169.524359 87.355359)
-		(end 173.767 85.598)
-		(stroke
-			(width 0.05)
-			(type default)
-		)
-		(layer "Edge.Cuts")
-		(uuid "a5b622f5-c3bc-4cbd-ba84-ce6449aac4eb")
-	)
-	(gr_line
-		(start 184.373 114.427)
-		(end 183.292 114.427)
-		(stroke
-			(width 0.05)
-			(type default)
-		)
-		(layer "Edge.Cuts")
-		(uuid "d0ef6edc-16be-4dfa-84c9-cb08f92e4e1f")
-	)
-	(gr_line
-		(start 173.767 85.598)
-		(end 194.279 85.598)
-		(stroke
-			(width 0.05)
-			(type default)
-		)
-		(layer "Edge.Cuts")
-		(uuid "da8966b8-ba62-468d-b217-88b2b470a0d0")
+		(uuid "73c1a412-88d4-42fc-bb18-f75dbadf0d01")
 	)
 	(gr_line
 		(start 200.279 91.598)
@@ -1332,27 +1331,16 @@
 		(layer "Edge.Cuts")
 		(uuid "e274a478-f8dc-46d6-8ed4-259d2cfefad0")
 	)
-	(gr_line
-		(start 190.373 104.953641)
-		(end 190.373 108.427)
+	(gr_arc
+		(start 200.279 93.187)
+		(mid 199.069066 96.800207)
+		(end 195.927245 98.956167)
 		(stroke
 			(width 0.05)
 			(type default)
 		)
 		(layer "Edge.Cuts")
-		(uuid "ebd0f790-2e73-4a6d-ac39-421c0c210c20")
-	)
-	(gr_text "MiniDIN8\nmale"
-		(at 189.738 104.521 0)
-		(layer "F.SilkS")
-		(uuid "3285f9dd-ffea-43b0-afa8-6879f95b24a0")
-		(effects
-			(font
-				(size 1 1)
-				(thickness 0.1)
-			)
-			(justify right bottom)
-		)
+		(uuid "422a6d01-56ce-4782-bec6-bb44ff525724")
 	)
 	(gr_text "Apple II mini-DIN8/DIN5 adapter\nhttps://www.colino.net"
 		(at 184.15 89.789 0)
@@ -1366,10 +1354,22 @@
 			(justify bottom)
 		)
 	)
-	(gr_text "RX/TX"
-		(at 199.009 96.647 0)
+	(gr_text "MiniDIN8\nmale"
+		(at 189.738 104.521 0)
+		(layer "F.SilkS")
+		(uuid "3285f9dd-ffea-43b0-afa8-6879f95b24a0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify right bottom)
+		)
+	)
+	(gr_text "DTR/DSR"
+		(at 175.514 96.647 0)
 		(layer "B.SilkS")
-		(uuid "92bcdb94-2cc3-498c-b801-e63eb9823d89")
+		(uuid "f085466f-742c-4ccf-8086-8e36be8c936c")
 		(effects
 			(font
 				(size 1 1)
@@ -1390,10 +1390,10 @@
 			(justify left bottom mirror)
 		)
 	)
-	(gr_text "DTR/DSR"
-		(at 175.514 96.647 0)
+	(gr_text "RX/TX"
+		(at 199.009 96.647 0)
 		(layer "B.SilkS")
-		(uuid "f085466f-742c-4ccf-8086-8e36be8c936c")
+		(uuid "92bcdb94-2cc3-498c-b801-e63eb9823d89")
 		(effects
 			(font
 				(size 1 1)
