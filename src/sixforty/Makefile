@@ -25,8 +25,9 @@ sixforty_SOURCES := \
 	post.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
-	../lib/dget_text_single.c \
 	../lib/FVTABZ.s \
+	../lib/dget_text_multi.c \
+	../lib/progress_bar.c \
 	../lib/strsplit.c \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -39,6 +40,7 @@ sixforty_SOURCES := \
 	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/surl/asm/surl_read_image.s \
+	../lib/asm/file_select.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \

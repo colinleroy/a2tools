@@ -1,11 +1,16 @@
 #include <conio.h>
-#include "dget_text.h"
+#include <errno.h>
+#include <fcntl.h>
 #include "api.h"
+#include "dget_text.h"
 #include "malloc0.h"
+#include "progress_bar.h"
 #include "strsplit.h"
 #include "surl.h"
 
 #pragma code-name(push, "LC")
+
+extern char monochrome;
 
 char *lines[MAX_LINES_NUM];
 
@@ -141,6 +146,7 @@ static post_t *fetch_post(void) {
   return NULL;
 }
 
+#pragma code-name(pop)
 /* Get a post. Init with index_offset = 0, then
  * navigate with -1/+1 */
 post_t *api_get_post(signed char index_offset) {
@@ -173,4 +179,61 @@ char api_delete_post(post_t *post) {
   
   get_surl_for_endpoint(SURL_METHOD_DELETE, small_buf);
   return surl_response_ok() ? 0 : -1;
+}
+
+char api_post_hgr_image(char *filename, char *description, char x, char y, char w) {
+  int fd;
+  int r;
+  size_t file_size;
+  size_t d_len, to_send;
+
+  r = 0;
+
+#ifdef __APPLE2__
+  _filetype = PRODOS_T_BIN;
+#endif
+
+  fd = open(filename, O_RDONLY);
+  if (fd < 0) {
+    return EIO;
+  }
+
+  file_size = to_send = lseek(fd, 0, SEEK_END);
+  lseek(fd, 0, SEEK_SET);
+
+  if (w > 0)
+    progress_bar(x, y, w, 0, file_size);
+
+  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/posts/");
+
+  /* Send num fields */
+  surl_multipart_send_num_fields(2);
+  
+  /* Send file */
+  d_len = strlen(description);
+  surl_multipart_send_field_desc("description", d_len, "text/plain");
+  surl_multipart_send_field_data(description, d_len);
+
+  surl_multipart_send_field_desc("image", (uint32)to_send, 
+      monochrome ? "image/hgr" : "image/hgr-color");
+
+  while ((r = read(fd, gen_buf, BUF_SIZE)) > 0) {
+    surl_multipart_send_field_data(gen_buf, r);
+    to_send -= r;
+    if (w > 0) {
+      progress_bar(-1, -1, w, file_size - to_send, file_size);
+    }
+  }
+
+  close(fd);
+
+  surl_read_response_header();
+
+  if (surl_response_ok()) {
+    current_posts_page = 1;
+    current_post_index = 0;
+    return 0;
+  }
+
+  return ENOENT;
 }

@@ -30,6 +30,7 @@
 #include "dputc.h"
 #include "dputs.h"
 #include "clrzone.h"
+#include "file_select.h"
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "hgr.h"
@@ -144,6 +145,56 @@ static void save_creds(void) {
   free(creds);
 }
 
+static char prepare_post_upload(void) {
+  char x, y, r;
+  char *filename, *description;
+
+  init_text();
+  dhgr_init_done = 0;
+
+  set_scrollwindow(0, scrh);
+  clrscr();
+  gotoxy(0, 1);
+
+  cputs("File name: ");
+  if (!has_80cols) {
+    cputs("\r\n");
+  }
+
+  filename = file_select(0, "Please choose an image");
+  if (IS_NULL(filename)) {
+    return EIO;
+  }
+
+  cputs("\r\nDescription: ");
+  description = malloc0(512);
+  dget_text_multi(description, 512, NULL, 0);
+
+  cputs("\r\nUploading... ");
+  x = wherex();
+  y = wherey();
+  r = api_post_hgr_image(filename,
+                         description,
+                         x, y, scrw - x);
+  switch (r) {
+    case 0:
+      break;
+    case EIO:
+      info("Could not open file.");
+      break;
+    case ENOENT:
+      info("Could not upload file.");
+      break;
+    default:
+      info("Unknown error.");
+  }
+  free(description);
+  free(filename);
+  return r;
+}
+
+#pragma code-name(pop)
+
 int main(void) {
   post_t *post = NULL;
   unsigned char shift = 1, c;
@@ -199,7 +250,7 @@ get_command:
         break;
       case 'h':
         info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-             "D: Delete post");
+             "P: Post an image; D: Delete image");
         goto display_again;
       case 'm':
         monochrome = !monochrome;
@@ -209,6 +260,11 @@ get_command:
       case 'd':
         if (api_delete_post(post) != 0) {
           info("Could not delete post.");
+        }
+        break;
+      case 'p':
+        if (prepare_post_upload() == 0) {
+          shift = 0;          /* count on api to set us back at first post */
         }
         break;
       case 'l':               /* legend */
