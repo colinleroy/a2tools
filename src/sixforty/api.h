@@ -25,8 +25,9 @@ extern char gen_buf[BUF_SIZE+1];
 extern char *lines[MAX_LINES_NUM];
 
 
-unsigned char api_login(char *saved_creds);
+char api_login(char *saved_creds);
 post_t *api_get_post(signed char offset);
 char *api_get_creds(void);
 
+char api_delete_post(post_t *post);
 #endif

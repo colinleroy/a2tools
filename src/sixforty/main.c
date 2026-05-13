@@ -98,10 +98,10 @@ print_description:
   }
 }
 
-static void show_help(void) {
+static void info(char *str) {
   clrscr();
-  cputs("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-        "Press a key to return...");
+  cputs(str);
+  cputs("\r\nPress a key to return...");
   cgetc();
 }
 
@@ -186,6 +186,7 @@ display_again:
       display_post(post);
     }
 get_command:
+    shift = 0;
     c = tolower(cgetc());
     switch (c) {
       case CH_CURS_LEFT:      /* previous */
@@ -195,13 +196,19 @@ get_command:
         shift = 1;
         break;
       case 'h':
-        show_help();
+        info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
+             "D: Delete post");
         goto display_again;
       case 'm':
         monochrome = !monochrome;
         dhgr_init_done = 0;
         last_displayed[0] = '\0'; /* Force reload to re-convert */
         goto display_again;
+      case 'd':
+        if (api_delete_post(post) != 0) {
+          info("Could not delete post.");
+        }
+        break;
       case 'l':               /* legend */
         if (hgr_mix_is_on) {
           hgr_mixoff();

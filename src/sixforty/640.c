@@ -13,6 +13,7 @@
 static unsigned char do_login_640(char *saved_creds);
 static post_t *get_post_640(signed char index_offset);
 static char *get_creds(void);
+static char delete_post(post_t *post);
 
 /* HEADER for the segment ====================================== */
 unsigned int features = 0b1111111111111111;
@@ -21,6 +22,7 @@ void *sixforty_callbacks[] = {
   /* LOGIN */           do_login_640,
   /* GET_POST */        get_post_640,
   /* GET_CREDS */       get_creds,
+  /* DELETE_POST */     delete_post,
 };
 
 /* Internal code =============================================== */
@@ -177,4 +179,16 @@ static post_t *get_post_640(signed char index_offset) {
   }
 
   return fetch_post();
+}
+
+/* Delete a post. */
+static char delete_post(post_t *post) {
+  if (!post) {
+    return -1;
+  }
+
+  sprintf(small_buf, "/api/posts/%s/", post->id);
+  
+  get_surl_for_endpoint(SURL_METHOD_DELETE, small_buf);
+  return surl_response_ok() ? 0 : -1;
 }
