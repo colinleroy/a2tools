@@ -1361,10 +1361,11 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
             LOG("REQ: POST: could not set field type %s\n", field_type);
 
           snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
-          if (strchr(field_type, '/'))
-            *strchr(field_type, '/') = '.';
+          if (strchr(field_filename, '/'))
+            *strchr(field_filename, '/') = '.';
           if (curl_mime_filename(field, field_filename) != CURLE_OK)
             LOG("REQ: POST: could not set field filename %s\n", field_filename);
+          LOG("Set filename to: %s\n", field_filename);
           free(field_filename);
         }
         free(field_contents);
