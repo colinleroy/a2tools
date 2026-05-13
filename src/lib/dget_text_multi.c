@@ -139,6 +139,10 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
 #pragma GCC diagnostic pop
 #endif
 
+char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cmd_cb) {
+  return dget_text_multi(buf, size, cmd_cb, 0);
+}
+
 char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted) {
   char c;
   char cur_x, cur_y;

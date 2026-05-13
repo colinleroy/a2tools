@@ -465,8 +465,8 @@ gotox_sx:
         lda       #$FF
         sta       creating_dir
         jmp       @list_again
-.endif
 :
+.endif
         jmp       @up                   ; And go up
 
 @calc_bounds:
