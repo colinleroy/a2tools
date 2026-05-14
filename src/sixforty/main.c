@@ -56,6 +56,7 @@ void cleanup(void) {
 }
 
 static unsigned char dhgr_init_done = 0;
+static unsigned char is_dhgr;
 static char last_displayed[16] = "";
 
 void display_post(post_t *post) {
@@ -76,12 +77,12 @@ void display_post(post_t *post) {
 
   if (simple_serial_getc() == SURL_ERROR_OK) {
     size_t len;
-    unsigned char is_dhgr;
 
     surl_read_with_barrier((char *)&len, 2);
     len = ntohs(len);
     is_dhgr = surl_read_image_to_screen(len);
 
+print_description:
     if (!dhgr_init_done) {
       init_graphics(monochrome, is_dhgr);
       hgr_mixon(); /* Legend on by default */
@@ -90,21 +91,23 @@ void display_post(post_t *post) {
     }
     strcpy(last_displayed, post->id);
 
-print_description:
     clrscr();
-    cputs(post->description);
+    dputs(post->description);
     gotoxy(0, 3);
-    cputs(" By ");
-    cputs(post->author);
-    cputs(" on ");
-    cputs(post->date);
+    dputs(" By ");
+    dputs(post->author);
+    dputs(" on ");
+    dputs(post->date);
+    dputs (" (");
+    cutoa(post->comment_count);
+    dputs(" comments)");
   }
 }
 
 static void info(char *str) {
   clrscr();
-  cputs(str);
-  cputs("\r\nPress a key to return...");
+  dputs(str);
+  dputs("\r\nPress a key to return...");
   cgetc();
 }
 
@@ -145,20 +148,22 @@ static void save_creds(void) {
   free(creds);
 }
 
+static void do_text(void) {
+  set_scrollwindow(0, scrh);
+  clrscr();
+  init_text();
+  dhgr_init_done = 0;
+}
+
 static char prepare_post_upload(void) {
   char x, y, r;
   char *filename, *description;
 
-  init_text();
-  dhgr_init_done = 0;
+  do_text();
 
-  set_scrollwindow(0, scrh);
-  clrscr();
-  gotoxy(0, 1);
-
-  cputs("File name: ");
+  dputs("File name: ");
   if (!has_80cols) {
-    cputs("\r\n");
+    dputs("\r\n");
   }
 
   filename = file_select(0, "Please choose an image");
@@ -166,11 +171,11 @@ static char prepare_post_upload(void) {
     return EIO;
   }
 
-  cputs("\r\nDescription: ");
+  dputs("\r\nDescription: ");
   description = malloc0(512);
   dget_text_multi(description, 512, NULL, 0);
 
-  cputs("\r\nUploading... ");
+  dputs("\r\nUploading... ");
   x = wherex();
   y = wherey();
   r = api_post_hgr_image(filename,
@@ -193,7 +198,51 @@ static char prepare_post_upload(void) {
   return r;
 }
 
+static void prepare_comment_upload(post_t *post) {
+  char *comment = malloc0(256);
+
+  dputs("Your comment: ");
+  dget_text_multi(comment, 255, NULL, 0);
+  if (comment[0] != '\0') {
+    api_post_comment(post, comment);
+  }
+
+  free(comment);
+}
+
 #pragma code-name(pop)
+
+static void view_comments(post_t *post) {
+  int i;
+
+  do_text();
+  for (i = 0; i < post->comment_count; i++) {
+    comment_t *comment = api_get_comment(post, i);
+    if (wherey() > scrh - 2) {
+      dputs("Press a key to continue\r\n");
+      cgetc();
+    }
+    if (IS_NULL(comment)) {
+      dputs("Can not load comment :-/\r\n");
+    } else {
+      dputs("From ");
+      dputs(comment->author);
+      dputs(" on ");
+      dputs(comment->date);
+      dputs(":\r\n");
+      dputs(comment->text);
+      dputs("\r\n");
+      dputs("\r\n");
+      comment_free(comment);
+    }
+  }
+  dputs("\r\nPress a key to return...");
+  dputs(" or 'C' to comment.\r\n");
+  i = cgetc();
+  if (tolower(i) == 'c') {
+    prepare_comment_upload(post);
+  }
+}
 
 int main(void) {
   post_t *post = NULL;
@@ -224,7 +273,7 @@ int main(void) {
 
   while (api_login(load_creds()) != 0) {
     clrscr();
-    cputs("Login failed.\r\n");
+    dputs("Login failed.\r\n");
   }
   save_creds();
 
@@ -233,7 +282,7 @@ int main(void) {
     post = api_get_post(shift);
     if (IS_NULL(post)) {
       clrscr();
-      cputs("Could not load post :-/\r\n");
+      dputs("Could not load post :-/\r\n");
     } else {
 display_again:
       display_post(post);
@@ -250,22 +299,29 @@ get_command:
         break;
       case 'h':
         info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-             "P: Post an image; D: Delete image");
+             "P: Post an image; D: Delete image; V: View comments; C: Comment; Q: Quit");
         goto display_again;
       case 'm':
         monochrome = !monochrome;
         dhgr_init_done = 0;
         last_displayed[0] = '\0'; /* Force reload to re-convert */
         goto display_again;
+      case 'q':
+        exit(0);
       case 'd':
         if (api_delete_post(post) != 0) {
           info("Could not delete post.");
         }
         break;
       case 'p':
-        if (prepare_post_upload() == 0) {
-          shift = 0;          /* count on api to set us back at first post */
-        }
+        prepare_post_upload();
+        break;
+      case 'c':
+        clrscr();
+        prepare_comment_upload(post);
+        break;
+      case 'v':
+        view_comments(post);
         break;
       case 'l':               /* legend */
         if (hgr_mix_is_on) {

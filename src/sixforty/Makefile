@@ -22,9 +22,11 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 sixforty_SOURCES := \
 	main.c \
 	api.c \
+	comment.c \
 	post.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
+	../lib/dputs.s \
 	../lib/FVTABZ.s \
 	../lib/dget_text_multi.c \
 	../lib/progress_bar.c \

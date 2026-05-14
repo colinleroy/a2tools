@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "api.h"
+#include "dputs.h"
 #include "dget_text.h"
 #include "malloc0.h"
 #include "progress_bar.h"
@@ -62,7 +63,7 @@ char api_login(char *saved_creds) {
     free(saved_creds);
   }
 
-  cputs("Login (empty for read-only): ");
+  dputs("Login (empty for read-only): ");
   dget_text_single(login, sizeof(login) - 1, NULL);
   if (login[0]) {
     if (!strcmp(small_buf, login) && oauth_token[0]) {
@@ -75,7 +76,7 @@ char api_login(char *saved_creds) {
         small_buf[0] = '\0';
       }
     }
-    cputs("Password: ");
+    dputs("Password: ");
     dgets_echo_on = 0;
     dget_text_single(small_buf, sizeof(small_buf) - 1, NULL);
     dgets_echo_on = 1;
@@ -124,22 +125,25 @@ static post_t *fetch_post(void) {
   
   get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
   if (surl_response_ok()) {
-    sprintf(small_buf, ".results[%d]|(.id,.detail,.author.username,.modified,.description//\"\")", current_post_index);
+    sprintf(small_buf, ".results[%d]|"
+                       "(.id,.detail,.author.username,.modified,.comment_count,.description//\"\")",
+                       current_post_index);
     r = surl_get_json(gen_buf, small_buf,
                       translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
 
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, NUM_POST_FIELDS);
-    if (r > 0 && n_lines == 5) {
+    if (r > 0 && n_lines == NUM_POST_FIELDS) {
       post_t *p;
       p = malloc0(sizeof(post_t));
-      p->id          = strdup(lines[0]);
-      p->image_url   = strdup(lines[1]);
-      p->description = strdup(lines[4]);
-      p->author      = strdup(lines[2]);
-      p->date        = strdup(lines[3]);
+      p->id             = strdup(lines[0]);
+      p->image_url      = strdup(lines[1]);
+      p->author         = strdup(lines[2]);
+      p->date           = strdup(lines[3]);
+      p->comment_count  = atoi(lines[4]);
+      p->description    = strdup(lines[5]);
       /* Fixup date for readability */
-      p->date[10]    = ' ';
-      p->date[19]    = '\0';
+      p->date[10]       = ' ';
+      p->date[19]       = '\0';
       return p;
     }
   }
@@ -147,6 +151,78 @@ static post_t *fetch_post(void) {
 }
 
 #pragma code-name(pop)
+
+comment_t *api_get_comment(post_t *post, unsigned char index) {
+  char r;
+  unsigned char n_lines;
+
+  if (IS_NULL(post)) {
+    return NULL;
+  }
+
+  sprintf(small_buf, "/api/posts/%s/", post->id);
+  
+  get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
+  if (surl_response_ok()) {
+    sprintf(small_buf, ".comments[%d]|"
+                       "(.author.username,.modified,.text)",
+                       index);
+    r = surl_get_json(gen_buf, small_buf,
+                      translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
+
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, NUM_COMMENT_FIELDS);
+    if (r > 0 && n_lines == NUM_COMMENT_FIELDS) {
+      comment_t *c;
+      c = malloc0(sizeof(comment_t));
+      c->author         = strdup(lines[0]);
+      c->date           = strdup(lines[1]);
+      c->text           = strdup(lines[2]);
+      /* Fixup date for readability */
+      c->date[10]       = ' ';
+      c->date[19]       = '\0';
+      return c;
+    }
+  }
+  return NULL;
+}
+
+char api_post_comment(post_t *post, char *comment) {
+  size_t len, o, i;
+
+  if (IS_NULL(post)) {
+    return -1;
+  }
+
+  sprintf(small_buf, "/api/posts/%s/add_comment/", post->id);
+  
+  get_surl_for_endpoint(SURL_METHOD_POST, small_buf);
+
+  strcpy(gen_buf, "S|text\n");
+
+  /* Escape buffer */
+  len = strlen(comment);
+  o = strlen(gen_buf);
+  for (i = 0; i < len; i++) {
+    if (comment[i] != '\n') {
+      gen_buf[o++] = comment[i];
+    } else {
+      strcpy(gen_buf + o, "\\r\\n");
+      o += 4;
+    }
+  }
+
+  /* End of comment */
+  gen_buf[o] = '\n';
+  len = o;
+
+  surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
+  surl_send_data_chunk(gen_buf, len);
+
+  surl_read_response_header();
+
+  return surl_response_ok() ? 0 : -1;
+}
+
 /* Get a post. Init with index_offset = 0, then
  * navigate with -1/+1 */
 post_t *api_get_post(signed char index_offset) {
