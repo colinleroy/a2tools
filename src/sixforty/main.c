@@ -309,6 +309,11 @@ get_command:
       case 'q':
         exit(0);
       case 'd':
+        clrscr();
+        dputs("Delete this post? (y/N)");
+        if (tolower(cgetc()) != 'y') {
+          break;
+        }
         if (api_delete_post(post) != 0) {
           info("Could not delete post.");
         }
