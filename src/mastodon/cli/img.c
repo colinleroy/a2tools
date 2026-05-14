@@ -57,10 +57,6 @@ static unsigned char is_dhgr = 0;
 #pragma GCC diagnostic pop
 #endif
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 static void show_help(void) {
   clrzone(0, 17, NUMCOLS-1, 23);
   cputs("Toggle legend: L\r\n"
@@ -72,6 +68,10 @@ static void show_help(void) {
   cprintf("%zuB free\r\n", _heapmemavail());
 #endif
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 static char legend = 0;
 static void toggle_legend(char force) {
