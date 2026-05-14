@@ -189,6 +189,7 @@ read_metadata_again:
       fputs(search_buf, tmpfp);
       fclose(tmpfp);
     }
+    backup_restore_audiocode("r");
     surl_stream_audio(NUMCOLS, 20, 2, 23);
 
   } else {
