@@ -90,6 +90,7 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_GET:          return "GET";
     case SURL_METHOD_POST:         return "POST";
     case SURL_METHOD_PUT:          return "PUT";
+    case SURL_METHOD_PATCH:        return "PATCH";
     case SURL_METHOD_DELETE:       return "DELETE";
     case SURL_METHOD_POST_DATA:    return "POST_DATA";
     case SURL_METHOD_GETTIME:      return "GETTIME";
@@ -1284,6 +1285,9 @@ static int setup_simple_upload_request(char method, CURL *curl,
   } else {
     r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
     r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
+    if (method == SURL_METHOD_PATCH) {
+      r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+    }
   }
   if (r) {
     LOG("CURL: Could not set %s option(s)\n", surl_method_str(method));
@@ -1579,8 +1583,8 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
           return NULL;
         }
       }
-  } else if (method == SURL_METHOD_PUT) {
-    if (setup_simple_upload_request(SURL_METHOD_PUT, curl, &curl_headers, curlbuf) < 0) {
+  } else if (method == SURL_METHOD_PUT || method == SURL_METHOD_PATCH) {
+    if (setup_simple_upload_request(method, curl, &curl_headers, curlbuf) < 0) {
       curl_buffer_free(curlbuf);
       return NULL;
     }
