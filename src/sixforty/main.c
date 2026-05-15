@@ -31,6 +31,7 @@
 #include "dputs.h"
 #include "clrzone.h"
 #include "file_select.h"
+#include "platform.h"
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "hgr.h"
@@ -48,6 +49,10 @@
 
 unsigned char scrw = 255, scrh = 255;
 unsigned char monochrome = 1;
+
+unsigned long max_id = 0;
+unsigned char in_slideshow = 0;
+unsigned char in_random = 0;
 
 #define BUF_SIZE 511
 char gen_buf[BUF_SIZE+1];
@@ -93,14 +98,17 @@ print_description:
 
     clrscr();
     dputs(post->description);
-    gotoxy(0, 3);
-    dputs(" By ");
+    gotoxy(0, 2);
+    dputs("By ");
     dputs(post->author);
     dputs(" on ");
     dputs(post->date);
     dputs (" (");
     cutoa(post->comment_count);
-    dputs(" comments)");
+    dputs(" comments)\r\n");
+    dputs("Nav mode: ");
+    dputs(in_slideshow ? "Slideshow,":"Manual,");
+    dputs(in_random ? " Random":" Sequential");
   }
 }
 
@@ -244,6 +252,11 @@ static void view_comments(post_t *post) {
   }
 }
 
+static unsigned char wait_keypress(unsigned char seconds) {
+  platform_interruptible_msleep(1000*seconds);
+  return kbhit();
+}
+
 int main(void) {
   post_t *post = NULL;
   unsigned char shift = 1, c;
@@ -277,19 +290,42 @@ int main(void) {
   }
   save_creds();
 
+  _randomize();
+
   while (1) {
     post_free(post);
-    post = api_get_post(shift);
+    if (in_random) {
+      unsigned long new_id = (unsigned long)((((unsigned long)rand() * (max_id)))/RAND_MAX);
+      post = api_get_post_by_id(new_id);
+      if (post == NULL) {
+        continue; /* keep iterating */
+      }
+    } else {
+      post = api_get_next_post(shift);
+    }
     if (IS_NULL(post)) {
       clrscr();
       dputs("Could not load post :-/\r\n");
     } else {
+      /* Store max post id for slideshow */
+      if (max_id == 0) {
+        max_id = strtoul(post->id, NULL, 10);
+      }
 display_again:
       display_post(post);
     }
 get_command:
     shift = 0;
-    c = tolower(cgetc());
+    if (wait_keypress(10)) {
+      c = tolower(cgetc());
+      in_slideshow = 0;
+    } else {
+      if (in_slideshow) {
+        shift = 1;
+        continue; /* Back to while */
+      }
+      goto get_command;
+    }
     switch (c) {
       case CH_CURS_LEFT:      /* previous */
         shift = -1;
@@ -299,7 +335,8 @@ get_command:
         break;
       case 'h':
         info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-             "P: Post an image; D: Delete image; V: View comments; C: Comment; Q: Quit");
+             "P: Post an image; D: Delete image; V: View comments; C: Comment; \r\n"
+             "S: Slideshow; R: Toggle random mode; Q: Quit");
         goto display_again;
       case 'm':
         monochrome = !monochrome;
@@ -324,9 +361,16 @@ get_command:
       case 'c':
         clrscr();
         prepare_comment_upload(post);
-        break;
+        last_displayed[0] = '\0'; /* Force reload to update comments */
+        goto display_again;
       case 'v':
         view_comments(post);
+        goto display_again;
+      case 's':
+        in_slideshow = 1;
+        break;
+      case 'r':
+        in_random = !in_random;
         break;
       case 'l':               /* legend */
         if (hgr_mix_is_on) {

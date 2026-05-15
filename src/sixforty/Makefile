@@ -27,6 +27,7 @@ sixforty_SOURCES := \
 	../lib/scroll.s \
 	../lib/dputc.s \
 	../lib/dputs.s \
+	../lib/platform_sleep.s \
 	../lib/FVTABZ.s \
 	../lib/dget_text_multi.c \
 	../lib/progress_bar.c \

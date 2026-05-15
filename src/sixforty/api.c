@@ -118,22 +118,30 @@ char *api_get_creds(void) {
 static signed int current_posts_page = 0;
 static signed char current_post_index = PAGE_SIZE-1; /* Init so first Next gets post 0/page 1 */
 
-static post_t *fetch_post(void) {
+static char post_json[] = ".results[%d]|"
+                          "(.id,.detail,.author.username,.modified,.comment_count,.description//\"\")";
+
+post_t *api_get_post_by_id(unsigned long post_id) {
   char r;
   unsigned char n_lines;
-  sprintf(small_buf, "/api/posts/?page=%d", current_posts_page);
-  
-  get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
+  if (post_id == 0) {
+    sprintf(small_buf, "/api/posts/?page=%d", current_posts_page);
+    get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
+    sprintf(small_buf, post_json, current_post_index);
+  } else {
+    sprintf(small_buf, "/api/posts/%llu/", post_id);
+    get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
+    strcpy(small_buf, post_json+13 /* strlen("results[%d]|") */);
+  }
+
   if (surl_response_ok()) {
-    sprintf(small_buf, ".results[%d]|"
-                       "(.id,.detail,.author.username,.modified,.comment_count,.description//\"\")",
-                       current_post_index);
     r = surl_get_json(gen_buf, small_buf,
                       translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
 
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, NUM_POST_FIELDS);
     if (r > 0 && n_lines == NUM_POST_FIELDS) {
       post_t *p;
+      char *ret;
       p = malloc0(sizeof(post_t));
       p->id             = strdup(lines[0]);
       p->image_url      = strdup(lines[1]);
@@ -144,6 +152,10 @@ static post_t *fetch_post(void) {
       /* Fixup date for readability */
       p->date[10]       = ' ';
       p->date[19]       = '\0';
+      /* Cut description for layout */
+      if ((ret = strchr(p->description, '\n'))) {
+        *ret = '\0';
+      }
       return p;
     }
   }
@@ -225,7 +237,7 @@ char api_post_comment(post_t *post, char *comment) {
 
 /* Get a post. Init with index_offset = 0, then
  * navigate with -1/+1 */
-post_t *api_get_post(signed char index_offset) {
+post_t *api_get_next_post(signed char index_offset) {
   current_post_index += index_offset;
 
   if (current_post_index < 0) {
@@ -242,7 +254,7 @@ post_t *api_get_post(signed char index_offset) {
     current_post_index = 0;
   }
 
-  return fetch_post();
+  return api_get_post_by_id(0);
 }
 
 /* Delete a post. */

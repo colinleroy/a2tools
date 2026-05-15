@@ -33,7 +33,8 @@ extern char *lines[MAX_LINES_NUM];
 
 
 char api_login(char *saved_creds);
-post_t *api_get_post(signed char offset);
+post_t *api_get_next_post(signed char offset);
+post_t *api_get_post_by_id(unsigned long post_id);
 comment_t *api_get_comment(post_t *post, unsigned char index);
 
 char *api_get_creds(void);
