@@ -75,7 +75,7 @@ void display_post(post_t *post) {
   if (!surl_response_ok()) {
     return;
   }
-  
+
   simple_serial_putc(has_128k && can_dhgr ? SURL_CMD_DHGR : SURL_CMD_HGR);
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_FULL);
@@ -216,9 +216,32 @@ static void prepare_comment_upload(post_t *post) {
   }
 
   free(comment);
+  last_displayed[0] = '\0'; /* Force reload to update comments */
 }
 
 #pragma code-name(pop)
+
+static void prepare_post_edit(post_t *post) {
+  char *tmp;
+
+  /* Very naive permission check, offloading the work to the server.
+   * Sorry Brian :-|
+   */
+  if (api_patch_post(post, 'S', "description", post->description) != 0) {
+    info("You don't have permission to edit that post.");
+    return;
+  }
+  clrscr();
+  dputs("\r\nDescription: ");
+  tmp = realloc(post->description, 512);
+  if (IS_NULL(tmp)) {
+    info("Out of memory.");
+    return;
+  }
+  post->description = tmp;
+  dget_text_multi(post->description, 511, NULL, 0);
+  api_patch_post(post, 'S', "description", post->description);
+}
 
 static void view_comments(post_t *post) {
   int i;
@@ -335,7 +358,7 @@ get_command:
         break;
       case 'h':
         info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-             "P: Post an image; D: Delete image; V: View comments; C: Comment; \r\n"
+             "P: Post image; D: Delete image; E: Edit image; V: View comments; C: Comment;\r\n"
              "S: Slideshow; R: Toggle random mode; Q: Quit");
         goto display_again;
       case 'm':
@@ -358,10 +381,12 @@ get_command:
       case 'p':
         prepare_post_upload();
         break;
+      case 'e':
+        prepare_post_edit(post);
+        break;
       case 'c':
         clrscr();
         prepare_comment_upload(post);
-        last_displayed[0] = '\0'; /* Force reload to update comments */
         goto display_again;
       case 'v':
         view_comments(post);

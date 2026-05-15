@@ -164,6 +164,26 @@ post_t *api_get_post_by_id(unsigned long post_id) {
 
 #pragma code-name(pop)
 
+char api_patch_post(post_t *post, char type, char *field, char *value) {
+  size_t len;
+
+  if (IS_NULL(post)) {
+    return -1;
+  }
+  sprintf(small_buf, "/api/posts/%s/", post->id);
+  get_surl_for_endpoint(SURL_METHOD_PATCH, small_buf);
+
+  snprintf(gen_buf, BUF_SIZE, "%c|%s\n%s\n",
+           type, field, value);
+
+  len = strlen(gen_buf);
+  surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
+  surl_send_data_chunk(gen_buf, len);
+
+  surl_read_response_header();
+  return surl_response_ok() ? 0 : -1;
+}
+
 comment_t *api_get_comment(post_t *post, unsigned char index) {
   char r;
   unsigned char n_lines;
@@ -173,7 +193,7 @@ comment_t *api_get_comment(post_t *post, unsigned char index) {
   }
 
   sprintf(small_buf, "/api/posts/%s/", post->id);
-  
+
   get_surl_for_endpoint(SURL_METHOD_GET, small_buf);
   if (surl_response_ok()) {
     sprintf(small_buf, ".comments[%d]|"
@@ -206,7 +226,7 @@ char api_post_comment(post_t *post, char *comment) {
   }
 
   sprintf(small_buf, "/api/posts/%s/add_comment/", post->id);
-  
+
   get_surl_for_endpoint(SURL_METHOD_POST, small_buf);
 
   strcpy(gen_buf, "S|text\n");
@@ -264,7 +284,7 @@ char api_delete_post(post_t *post) {
   }
 
   sprintf(small_buf, "/api/posts/%s/", post->id);
-  
+
   get_surl_for_endpoint(SURL_METHOD_DELETE, small_buf);
   return surl_response_ok() ? 0 : -1;
 }
@@ -296,13 +316,13 @@ char api_post_hgr_image(char *filename, char *description, char x, char y, char 
 
   /* Send num fields */
   surl_multipart_send_num_fields(2);
-  
+
   /* Send file */
   d_len = strlen(description);
   surl_multipart_send_field_desc("description", d_len, "text/plain");
   surl_multipart_send_field_data(description, d_len);
 
-  surl_multipart_send_field_desc("image", (uint32)to_send, 
+  surl_multipart_send_field_desc("image", (uint32)to_send,
       monochrome ? "image/hgr" : "image/hgr-color");
 
   while ((r = read(fd, gen_buf, BUF_SIZE)) > 0) {

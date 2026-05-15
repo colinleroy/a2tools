@@ -41,6 +41,6 @@ char *api_get_creds(void);
 
 char api_delete_post(post_t *post);
 char api_post_hgr_image(char *filename, char *description, char x, char y, char w);
-
+char api_patch_post(post_t *post, char  type, char *field, char *value);
 char api_post_comment(post_t *post, char *comment);
 #endif
