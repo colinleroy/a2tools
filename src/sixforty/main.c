@@ -357,8 +357,8 @@ int main(void) {
   clrscr();
 #endif
 
-  cprintf("Welcome to SixForty. %zuB free\r\n", _heapmaxavail());
-
+  dputs("Welcome to SixForty. Press H in case of need.\r\n");
+  
   while (api_login(load_creds()) != 0) {
     clrscr();
     dputs("Login failed.\r\n");
