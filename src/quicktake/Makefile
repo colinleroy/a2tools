@@ -18,6 +18,8 @@ ifdef DEBUG_FLOPPY
 debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
 endif
 
+VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"' -f2)
+
 slowtake_SOURCES := \
 	qt-menu.c \
 	qt-serial.c \
@@ -249,7 +251,10 @@ all: quicktake.po
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
 
-add_disk:
+about: about.in
+	sed "s/__VERSION__/v$(VERSION)/" about.in > about
+
+add_disk: about
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT BIN 0x2000 < about; \
