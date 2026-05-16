@@ -15,6 +15,9 @@ extern char monochrome;
 
 char *lines[MAX_LINES_NUM];
 
+unsigned int num_cameras = 0;
+char *cameras[128] = {NULL};
+
 char small_buf[64];
 char login[64];
 char oauth_token[64];
@@ -119,7 +122,8 @@ static signed int current_posts_page = 0;
 static signed char current_post_index = PAGE_SIZE-1; /* Init so first Next gets post 0/page 1 */
 
 static char post_json[] = ".results[%d]|"
-                          "(.id,.detail,.author.username,.modified,.comment_count,.description//\"\")";
+                          "(.id,.detail,.author.username,.modified,"
+                           ".comment_count,.camera.id//0,.description//\"\")";
 
 post_t *api_get_post_by_id(unsigned long post_id) {
   char r;
@@ -148,7 +152,8 @@ post_t *api_get_post_by_id(unsigned long post_id) {
       p->author         = strdup(lines[2]);
       p->date           = strdup(lines[3]);
       p->comment_count  = atoi(lines[4]);
-      p->description    = strdup(lines[5]);
+      p->camera_id      = atoi(lines[5]);
+      p->description    = strdup(lines[6]);
       /* Fixup date for readability */
       p->date[10]       = ' ';
       p->date[19]       = '\0';
@@ -358,4 +363,39 @@ char api_post_image(char *filename, char *description, char x, char y, char w) {
   }
 
   return ENOENT;
+}
+
+void api_load_cameras(void) {
+  char r;
+  unsigned char n_lines;
+
+  if (num_cameras) {
+    return;
+  }
+
+  get_surl_for_endpoint(SURL_METHOD_GET, "/api/cameras");
+
+  if (surl_response_ok()) {
+    r = surl_get_json(gen_buf, ".[]|(.id,(.manufacturer+\" \"+.name))",
+                      translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
+
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, MAX_NUM_CAMERAS*2);
+    if (r > 0 && n_lines > 0 && (n_lines % 2) == 0) {
+      int i = 0;
+
+      num_cameras = n_lines / 2;
+      if (num_cameras > MAX_NUM_CAMERAS) {
+        num_cameras = MAX_NUM_CAMERAS;
+      }
+
+      while (i < n_lines) {
+        unsigned int id = atoi(lines[i++]);
+
+        if (id >= MAX_NUM_CAMERAS) {
+          break;
+        }
+        cameras[id] = strdup(lines[i++]);
+      }
+    }
+  }
 }

@@ -45,8 +45,6 @@
 
 #include "api.h"
 
-#pragma code-name(push, "LC")
-
 unsigned char scrw = 255, scrh = 255;
 unsigned char monochrome = 1;
 
@@ -54,7 +52,6 @@ unsigned long max_id = 0;
 unsigned char in_slideshow = 0;
 unsigned char in_random = 0;
 
-#define BUF_SIZE 511
 char gen_buf[BUF_SIZE+1];
 
 void cleanup(void) {
@@ -82,6 +79,7 @@ void display_post(post_t *post) {
 
   if (simple_serial_getc() == SURL_ERROR_OK) {
     size_t len;
+    char *cam;
 
     surl_read_with_barrier((char *)&len, 2);
     len = ntohs(len);
@@ -105,12 +103,20 @@ print_description:
     dputs(post->date);
     dputs (" (");
     cutoa(post->comment_count);
-    dputs(" comments)\r\n");
+    dputs(" comments)");
+    cam = cameras[post->camera_id];
+    if (IS_NOT_NULL(cam)) {
+      dputs(", ");
+      dputs(cam);
+    }
+    dputs("\r\n");
     dputs("Nav mode: ");
     dputs(in_slideshow ? "Slideshow,":"Manual,");
     dputs(in_random ? " Random":" Sequential");
   }
 }
+
+#pragma code-name(push, "LC")
 
 static void info(char *str) {
   clrscr();
@@ -219,8 +225,6 @@ static void prepare_comment_upload(post_t *post) {
   last_displayed[0] = '\0'; /* Force reload to update comments */
 }
 
-#pragma code-name(pop)
-
 static void prepare_post_edit(post_t *post) {
   char *tmp;
 
@@ -242,6 +246,13 @@ static void prepare_post_edit(post_t *post) {
   dget_text_multi(post->description, 511, NULL, 0);
   api_patch_post(post, 'S', "description", post->description);
 }
+
+static unsigned char wait_keypress(unsigned char seconds) {
+  platform_interruptible_msleep(1000*seconds);
+  return kbhit();
+}
+
+#pragma code-name(pop)
 
 static void view_comments(post_t *post) {
   int i;
@@ -273,11 +284,6 @@ static void view_comments(post_t *post) {
   if (tolower(i) == 'c') {
     prepare_comment_upload(post);
   }
-}
-
-static unsigned char wait_keypress(unsigned char seconds) {
-  platform_interruptible_msleep(1000*seconds);
-  return kbhit();
 }
 
 int main(void) {
@@ -312,6 +318,8 @@ int main(void) {
     dputs("Login failed.\r\n");
   }
   save_creds();
+
+  api_load_cameras();
 
   _randomize();
 
