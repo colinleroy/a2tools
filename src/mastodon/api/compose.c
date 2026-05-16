@@ -59,11 +59,13 @@ void compose_set_num_chars(void) {
   }
 }
 
+char jpeg_magic[] = { 0xFF, 0xD8, 0xFF};
+char mime_type[]  = "image/hgr-color";
+
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
   int fd;
   int r;
-  int to_send;
-  int file_size;
+  uint32 to_send, file_size;
   char *media_id;
 
   *err = NULL;
@@ -79,6 +81,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
     return NULL;
   }
 
+  read(fd, send_buf, 0x79);
   file_size = to_send = lseek(fd, 0, SEEK_END);
   /* Will need to reopen, as io buf is shared with surl endpoint buf */
   close(fd);
@@ -91,9 +94,14 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   /* Send num fields */
   surl_multipart_send_num_fields(1);
   
+  if (!memcmp(send_buf, jpeg_magic, 3)) {
+    strcpy(mime_type, "image/jpg");
+  } else {
+    strcpy(mime_type, (send_buf[0x78] % 2) == 0 ? "image/hgr" : "image/hgr-color");
+  }
+
   /* Send file */
-  surl_multipart_send_field_desc("file", (uint32)to_send, 
-      monochrome ? "image/hgr" : "image/hgr-color");
+  surl_multipart_send_field_desc("file", to_send, mime_type);
 
   fd = open(filename, O_RDONLY); /* Assume it worked. */
   while ((r = read(fd, send_buf, SEND_BUF_SIZE)) > 0) {

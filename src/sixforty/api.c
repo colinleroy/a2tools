@@ -289,11 +289,14 @@ char api_delete_post(post_t *post) {
   return surl_response_ok() ? 0 : -1;
 }
 
-char api_post_hgr_image(char *filename, char *description, char x, char y, char w) {
+char jpeg_magic[] = { 0xFF, 0xD8, 0xFF};
+char qtk_magic[]  = {'q', 'k', 't'};
+char mime_type[]  = "application/octet-stream";
+
+char api_post_image(char *filename, char *description, char x, char y, char w) {
   int fd;
   int r;
-  size_t file_size;
-  size_t d_len, to_send;
+  uint32 file_size, d_len, to_send;
 
   r = 0;
 
@@ -306,6 +309,7 @@ char api_post_hgr_image(char *filename, char *description, char x, char y, char 
     return EIO;
   }
 
+  read(fd, gen_buf, 0x79);
   file_size = to_send = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
 
@@ -322,8 +326,15 @@ char api_post_hgr_image(char *filename, char *description, char x, char y, char 
   surl_multipart_send_field_desc("description", d_len, "text/plain");
   surl_multipart_send_field_data(description, d_len);
 
-  surl_multipart_send_field_desc("image", (uint32)to_send,
-      monochrome ? "image/hgr" : "image/hgr-color");
+  if (!memcmp(gen_buf, jpeg_magic, 3)) {
+    strcpy(mime_type, "image/jpg");
+  } else if (!memcmp(gen_buf, qtk_magic, 3)) {
+    strcpy(mime_type, "image/qtk");
+  } else {
+    strcpy(mime_type, (gen_buf[0x78] % 2) == 0 ? "image/hgr" : "image/hgr-color");
+  }
+
+  surl_multipart_send_field_desc("image", (uint32)to_send, mime_type);
 
   while ((r = read(fd, gen_buf, BUF_SIZE)) > 0) {
     surl_multipart_send_field_data(gen_buf, r);

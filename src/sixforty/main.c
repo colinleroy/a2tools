@@ -186,9 +186,9 @@ static char prepare_post_upload(void) {
   dputs("\r\nUploading... ");
   x = wherex();
   y = wherey();
-  r = api_post_hgr_image(filename,
-                         description,
-                         x, y, scrw - x);
+  r = api_post_image(filename,
+                     description,
+                     x, y, scrw - x);
   switch (r) {
     case 0:
       break;

@@ -1,2 +1,9 @@
 #!/bin/bash
-make clean sixfortyperso.po && mame apple2c0 -window -flop1 sixfortyperso.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+if [ "$1" != "" ]; then
+  TYPE=$1
+        FLOP2="-flop2 ../../disks/qt$1.dsk"
+else
+        FLOP2="-flop2 ../../disks/qt100.dsk"
+fi
+
+make clean sixfortyperso.po && mame apple2c0 -window -flop1 sixfortyperso.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
