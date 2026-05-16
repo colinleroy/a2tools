@@ -29,6 +29,9 @@ void comment_free(comment_t *comment);
 #define BUF_SIZE 4096
 extern char gen_buf[BUF_SIZE+1];
 
+#define SMALL_BUF_SIZE 64
+extern char small_buf[SMALL_BUF_SIZE];
+
 #define MAX_LINES_NUM 255
 extern char *lines[MAX_LINES_NUM];
 
@@ -44,7 +47,7 @@ comment_t *api_get_comment(post_t *post, unsigned char index);
 char *api_get_creds(void);
 
 char api_delete_post(post_t *post);
-char api_post_image(char *filename, char *description, char x, char y, char w);
+char api_post_image(char *filename, char *description, char cam_id, char x, char y, char w);
 char api_patch_post(post_t *post, char  type, char *field, char *value);
 char api_post_comment(post_t *post, char *comment);
 

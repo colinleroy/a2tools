@@ -169,8 +169,49 @@ static void do_text(void) {
   dhgr_init_done = 0;
 }
 
+static void list_cameras(unsigned char max_lines) {
+  int i, lines_printed;
+  unsigned char even = 0;
+
+  for (i = lines_printed = 0; i < num_cameras; i++) {
+    char *cam = cameras[i];
+    if (IS_NOT_NULL(cam)) {
+      cprintf("%d: %s", i, cam);
+      if ((even = !even)) {
+        gotox(40);
+      } else {
+        dputs("\r\n");
+        lines_printed++;
+      }
+      if (lines_printed == max_lines) {
+        dputs("Press a key to continue...");
+        cgetc();
+        dputs("\r\n");
+        lines_printed = 0;
+      }
+    }
+  }
+}
+
+static unsigned char get_camera_from_list(unsigned char max_lines) {
+ask_cam:
+  dputs("\r\nCamera (0 for list, number to specify, Enter to skip):\r\n");
+  small_buf[0] = '\0';
+  dget_text_multi(small_buf, 3, NULL, 0);
+
+  switch (small_buf[0]) {
+    case '\0':
+      return 0;
+    case '0':
+      list_cameras(max_lines);
+      goto ask_cam;
+    default:
+      return atoi(small_buf);
+  }
+}
+
 static char prepare_post_upload(void) {
-  char x, y, r;
+  char x, y, r, cam_id;
   char *filename, *description;
 
   do_text();
@@ -189,11 +230,13 @@ static char prepare_post_upload(void) {
   description = malloc0(512);
   dget_text_multi(description, 512, NULL, 0);
 
+  cam_id = get_camera_from_list(22);
+
   dputs("\r\nUploading... ");
   x = wherex();
   y = wherey();
   r = api_post_image(filename,
-                     description,
+                     description, cam_id,
                      x, y, scrw - x);
   switch (r) {
     case 0:
@@ -225,8 +268,16 @@ static void prepare_comment_upload(post_t *post) {
   last_displayed[0] = '\0'; /* Force reload to update comments */
 }
 
+static unsigned char wait_keypress(unsigned char seconds) {
+  platform_interruptible_msleep(1000*seconds);
+  return kbhit();
+}
+
+#pragma code-name(pop)
+
 static void prepare_post_edit(post_t *post) {
   char *tmp;
+  char cam_id;
 
   /* Very naive permission check, offloading the work to the server.
    * Sorry Brian :-|
@@ -245,14 +296,14 @@ static void prepare_post_edit(post_t *post) {
   post->description = tmp;
   dget_text_multi(post->description, 511, NULL, 0);
   api_patch_post(post, 'S', "description", post->description);
-}
 
-static unsigned char wait_keypress(unsigned char seconds) {
-  platform_interruptible_msleep(1000*seconds);
-  return kbhit();
+  cam_id = get_camera_from_list(3);
+  if (cam_id) {
+    char cam_id_str[4];
+    snprintf(cam_id_str, 3, "%d", cam_id);
+    api_patch_post(post, 'B', "camera_id", cam_id_str);
+  }
 }
-
-#pragma code-name(pop)
 
 static void view_comments(post_t *post) {
   int i;

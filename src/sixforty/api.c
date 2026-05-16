@@ -18,7 +18,7 @@ char *lines[MAX_LINES_NUM];
 unsigned int num_cameras = 0;
 char *cameras[128] = {NULL};
 
-char small_buf[64];
+char small_buf[SMALL_BUF_SIZE];
 char login[64];
 char oauth_token[64];
 
@@ -301,7 +301,7 @@ char jpeg_magic[] = { 0xFF, 0xD8, 0xFF};
 char qtk_magic[]  = "qkt";
 char mime_type[]  = "application/octet-stream";
 
-char api_post_image(char *filename, char *description, char x, char y, char w) {
+char api_post_image(char *filename, char *description, char cam_id, char x, char y, char w) {
   int fd;
   int r;
   uint32 file_size, d_len, to_send;
@@ -327,12 +327,19 @@ char api_post_image(char *filename, char *description, char x, char y, char w) {
     progress_bar(x, y, w, 0, file_size);
 
   /* Send num fields */
-  surl_multipart_send_num_fields(2);
+  surl_multipart_send_num_fields(cam_id ? 3 : 2);
 
   /* Send file */
   d_len = strlen(description);
   surl_multipart_send_field_desc("description", d_len, "text/plain");
   surl_multipart_send_field_data(description, d_len);
+
+  if (cam_id) {
+    snprintf(small_buf, SMALL_BUF_SIZE, "%d", cam_id);
+    d_len = strlen(small_buf);
+    surl_multipart_send_field_desc("camera_id", d_len, "text/plain");
+    surl_multipart_send_field_data(small_buf, d_len);
+  }
 
   if (!memcmp(gen_buf, jpeg_magic, 3)) {
     strcpy(mime_type, "image/jpg");
@@ -393,6 +400,9 @@ void api_load_cameras(void) {
 
         if (id >= MAX_NUM_CAMERAS) {
           break;
+        }
+        if (strlen(lines[i]) > 30) {
+          lines[i][30] = '\0';
         }
         cameras[id] = strdup(lines[i++]);
       }
