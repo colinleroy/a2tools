@@ -216,12 +216,7 @@ static char prepare_post_upload(void) {
 
   do_text();
 
-  dputs("File name: ");
-  if (!has_80cols) {
-    dputs("\r\n");
-  }
-
-  filename = file_select(0, "Please choose an image");
+  filename = file_select(0, "Please choose an image (HGR, DHGR, QTK, JPG)");
   if (IS_NULL(filename)) {
     return EIO;
   }
