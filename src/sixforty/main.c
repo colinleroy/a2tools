@@ -95,8 +95,10 @@ print_description:
     strcpy(last_displayed, post->id);
 
     clrscr();
-    dputs(post->description);
-    gotoxy(0, 2);
+    if (has_80cols) {
+      dputs(post->description);
+      gotoxy(0, 2);
+    }
     dputs("By ");
     dputs(post->author);
     dputs(" on ");
@@ -106,7 +108,11 @@ print_description:
     dputs(" comments)");
     cam = cameras[post->camera_id];
     if (IS_NOT_NULL(cam)) {
-      dputs(", ");
+      if (!has_80cols) {
+        dputs("\r\n");
+      } else {
+        dputs(", ");
+      }
       dputs(cam);
     }
     dputs("\r\n");
@@ -177,7 +183,7 @@ static void list_cameras(unsigned char max_lines) {
     char *cam = cameras[i];
     if (IS_NOT_NULL(cam)) {
       cprintf("%d: %s", i, cam);
-      if ((even = !even)) {
+      if ((even = !even) && has_80cols) {
         gotox(40);
       } else {
         dputs("\r\n");
@@ -216,7 +222,7 @@ static char prepare_post_upload(void) {
 
   do_text();
 
-  filename = file_select(0, "Please choose an image (HGR, DHGR, QTK, JPG)");
+  filename = file_select(0, "Select an HGR, DHGR, QTK or JPG image");
   if (IS_NULL(filename)) {
     return EIO;
   }
@@ -260,7 +266,6 @@ static void prepare_comment_upload(post_t *post) {
   }
 
   free(comment);
-  last_displayed[0] = '\0'; /* Force reload to update comments */
 }
 
 static unsigned char wait_keypress(unsigned char seconds) {
@@ -357,7 +362,7 @@ int main(void) {
   clrscr();
 #endif
 
-  dputs("Welcome to SixForty. Press H in case of need.\r\n");
+  dputs("Welcome to SixForty. Press H for help.\r\n");
   
   while (api_login(load_creds()) != 0) {
     clrscr();
@@ -411,9 +416,23 @@ get_command:
         shift = 1;
         break;
       case 'h':
-        info("Left: previous post; Next: next post; L: toggle legend; M: toggle color\r\n"
-             "P: Post image; D: Delete image; E: Edit image; V: View comments; C: Comment;\r\n"
-             "S: Slideshow; R: Toggle random mode; Q: Quit");
+        do_text();
+        info("Left:  Previous post\r\n"
+             "Right: Next post\r\n"
+             "\r\n"
+             "L:     Toggle legend\r\n"
+             "M:     Toggle color\r\n"
+             "\r\n"
+             "P:     Post image\r\n"
+             "D:     Delete image\r\n"
+             "E:     Edit image\r\n"
+             "V:     View comments\r\n"
+             "C:     Comment\r\n"
+             "\r\n"
+             "S:     Slideshow\r\n"
+             "R:     Toggle random mode\r\n"
+             "\r\n"
+             "Q:     Quit");
         goto display_again;
       case 'm':
         monochrome = !monochrome;
@@ -441,10 +460,10 @@ get_command:
       case 'c':
         clrscr();
         prepare_comment_upload(post);
-        goto display_again;
+        break;
       case 'v':
         view_comments(post);
-        goto display_again;
+        break;
       case 's':
         in_slideshow = 1;
         break;
