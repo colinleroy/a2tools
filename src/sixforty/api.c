@@ -163,6 +163,7 @@ post_t *api_get_post_by_id(unsigned long post_id) {
 }
 
 #pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 char api_patch_post(post_t *post, char type, char *field, char *value) {
   size_t len;
@@ -289,8 +290,10 @@ char api_delete_post(post_t *post) {
   return surl_response_ok() ? 0 : -1;
 }
 
+#pragma code-name(pop)
+
 char jpeg_magic[] = { 0xFF, 0xD8, 0xFF};
-char qtk_magic[]  = {'q', 'k', 't'};
+char qtk_magic[]  = "qkt";
 char mime_type[]  = "application/octet-stream";
 
 char api_post_image(char *filename, char *description, char x, char y, char w) {
@@ -309,14 +312,14 @@ char api_post_image(char *filename, char *description, char x, char y, char w) {
     return EIO;
   }
 
+  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/posts/");
+
   read(fd, gen_buf, 0x79);
   file_size = to_send = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
 
   if (w > 0)
     progress_bar(x, y, w, 0, file_size);
-
-  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/posts/");
 
   /* Send num fields */
   surl_multipart_send_num_fields(2);
