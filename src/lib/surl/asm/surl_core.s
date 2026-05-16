@@ -253,11 +253,11 @@ free_content_type:
         beq       @check_send_size_fields_or_protocol_error
         cpx       #SURL_METHOD_POST
         beq       @check_send_size_fields_or_protocol_error
+        cpx       #SURL_METHOD_PATCH
+        beq       @check_send_size_fields_or_protocol_error
         cpx       #SURL_METHOD_PUT
         bne       @check_ping
 @check_send_size_fields_or_protocol_error:
-        cmp       #SURL_ANSWER_SEND_SIZE
-        beq       @ret_100
         cmp       #SURL_ANSWER_SEND_SIZE
         beq       @ret_100
         bne       @ret_protocol_error

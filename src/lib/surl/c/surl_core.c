@@ -128,6 +128,7 @@ const surl_response * __fastcall__ surl_start_request(char **headers, unsigned c
       case SURL_METHOD_POST_DATA:
       case SURL_METHOD_POST:
       case SURL_METHOD_PUT:
+      case SURL_METHOD_PATCH:
         if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
           goto ret_100;
         }
