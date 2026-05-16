@@ -7,6 +7,7 @@ SUBDIRS = a2trace \
 	image-viewer \
 	mastodon \
 	quicktake \
+	sixforty \
 	stp \
 	telnet \
 	weather \
