@@ -44,7 +44,7 @@ static const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
 
 char api_login(char *saved_creds) {
   unsigned int post_len;
-  unsigned char r;
+  int r;
   char *d;
 
   oauth_token[0] = '\0';
@@ -126,7 +126,7 @@ static char post_json[] = ".results[%d]|"
                            ".comment_count,.camera.id//0,.description//\"\")";
 
 post_t *api_get_post_by_id(unsigned long post_id) {
-  char r;
+  int r;
   unsigned char n_lines;
   if (post_id == 0) {
     sprintf(small_buf, "/api/posts/?page=%d", current_posts_page);
@@ -191,7 +191,7 @@ char api_patch_post(post_t *post, char type, char *field, char *value) {
 }
 
 comment_t *api_get_comment(post_t *post, unsigned char index) {
-  char r;
+  int r;
   unsigned char n_lines;
 
   if (IS_NULL(post)) {
@@ -373,7 +373,7 @@ char api_post_image(char *filename, char *description, char cam_id, char x, char
 }
 
 void api_load_cameras(void) {
-  char r;
+  int r;
   unsigned char n_lines;
 
   if (num_cameras) {
