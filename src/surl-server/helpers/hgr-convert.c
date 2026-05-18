@@ -709,7 +709,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   if (!monochrome) {
     if (!is_dhgr) {
-      for (y=0; y < height; y++){
+      for (y=0; y < 192; y++){
         char *ord_hgr = hgr_buf + baseaddr[y];
         x = 0;
         do {
@@ -749,7 +749,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
       int pixel_bits[4+560+4];
       int color_buf[560];
       /* Color DHGR */
-      for (y=0; y < height; y++){
+      for (y=0; y < 192; y++){
         char *line_data = hgr_buf + baseaddr[y];
         int *bitptr = pixel_bits + 4;
 

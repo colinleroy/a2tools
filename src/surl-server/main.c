@@ -1318,6 +1318,7 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
       char *field_contents;
       uint32 h_len;
       size_t f_len;
+
       simple_serial_gets(field_name, 255);
       if (strchr(field_name, '\n'))
         *strchr(field_name, '\n') = '\0';
@@ -1329,11 +1330,12 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
       simple_serial_read((char *)&h_len, 4);
       f_len = ntohl(h_len);
 
-      field_contents = malloc(f_len);
+      field_contents = malloc(f_len + 1);
       if (receive_chunked_data(field_contents, f_len) < 0) {
         free(field_contents);
         goto err_out;
       }
+      field_contents[f_len] = '\0';
 
       if (!strncasecmp(field_type, "image/hgr", strlen("image/hgr"))) {
         size_t png_len;
@@ -1353,7 +1355,8 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
           LOG("REQ: POST: could not set field contents\n");
 
         if (VERBOSE) {
-          LOG("%s (%s): %s (%zu bytes)\n", field_name, field_type,
+          LOG("%s (%s): %s (%zu bytes)\n", field_name,
+                  field_type,
                   !strncasecmp(field_type, "text/", 5) ? field_contents:"[binary]",
                   f_len);
         }
