@@ -38,6 +38,7 @@ imgview_CC65SOURCES := \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/extrazp.s \
+	../lib/vsdrive.s \
 	../lib/a2_features.s \
 
 imgview_GCCSOURCES := \
