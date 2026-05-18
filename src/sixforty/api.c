@@ -317,14 +317,24 @@ char api_post_image(char *filename, char *description, char cam_id, char x, char
     return EIO;
   }
 
-  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/posts/");
-
+  /* Get file length and mime type before starting request
+   * to avoid conflicts with VSDrive */
   read(fd, gen_buf, 0x79);
   file_size = to_send = lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
+  close(fd);
+
+  if (!memcmp(gen_buf, jpeg_magic, 3)) {
+    strcpy(mime_type, "image/jpg");
+  } else if (!memcmp(gen_buf, qtk_magic, 3)) {
+    strcpy(mime_type, "image/qtk");
+  } else {
+    strcpy(mime_type, (gen_buf[0x78] % 2) == 0 ? "image/hgr" : "image/hgr-color");
+  }
 
   if (w > 0)
     progress_bar(x, y, w, 0, file_size);
+
+  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/posts/");
 
   /* Send num fields */
   surl_multipart_send_num_fields(cam_id ? 3 : 2);
@@ -341,16 +351,10 @@ char api_post_image(char *filename, char *description, char cam_id, char x, char
     surl_multipart_send_field_data(small_buf, d_len);
   }
 
-  if (!memcmp(gen_buf, jpeg_magic, 3)) {
-    strcpy(mime_type, "image/jpg");
-  } else if (!memcmp(gen_buf, qtk_magic, 3)) {
-    strcpy(mime_type, "image/qtk");
-  } else {
-    strcpy(mime_type, (gen_buf[0x78] % 2) == 0 ? "image/hgr" : "image/hgr-color");
-  }
-
   surl_multipart_send_field_desc("image", (uint32)to_send, mime_type);
 
+  /* Re-open file now, we can VSDrive during chunk send */
+  fd = open(filename, O_RDONLY);
   while ((r = read(fd, gen_buf, BUF_SIZE)) > 0) {
     surl_multipart_send_field_data(gen_buf, r);
     to_send -= r;

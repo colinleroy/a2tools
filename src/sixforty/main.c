@@ -34,6 +34,7 @@
 #include "platform.h"
 #include "scroll.h"
 #include "scrollwindow.h"
+#include "vsdrive.h"
 #include "hgr.h"
 #include "a2_features.h"
 #include "backup_hgrpage.h"
@@ -54,12 +55,16 @@ unsigned char in_random = 0;
 
 char gen_buf[BUF_SIZE+1];
 
-void cleanup(void) {
-}
-
 static unsigned char dhgr_init_done = 0;
 static unsigned char is_dhgr;
 static char last_displayed[16] = "";
+
+static void do_text(void) {
+  set_scrollwindow(0, scrh);
+  clrscr();
+  init_text();
+  dhgr_init_done = 0;
+}
 
 void display_post(post_t *post) {
   /* If re-displaying same post, spare the query. */
@@ -133,6 +138,7 @@ static void info(char *str) {
 
 static char *load_creds(void) {
   char *creds = malloc0(256);
+  char *p;
   int fd;
 
   if (!creds) {
@@ -140,9 +146,13 @@ static char *load_creds(void) {
   }
 
   reopen_start_device();
-  fd = open("SFLOGIN", O_RDONLY);
+  fd = open("SFSETTINGS", O_RDONLY);
   if (fd) {
     read(fd, creds, 256);
+    p = strrchr(creds, '\n');
+    if (IS_NOT_NULL(p)) {
+      monochrome = *(++p);
+    }
     close(fd);
     return creds;
   } else {
@@ -155,24 +165,19 @@ static void save_creds(void) {
   char *creds = api_get_creds();
   int fd;
 
-  if (!creds) {
-    return;
-  }
-
   reopen_start_device();
-  fd = open("SFLOGIN", O_CREAT|O_WRONLY);
+  fd = open("SFSETTINGS", O_CREAT|O_WRONLY);
   if (fd) {
-    write(fd, creds, strlen(creds));
+    if (IS_NOT_NULL(creds)) {
+      write(fd, creds, strlen(creds));
+    } else {
+      write(fd, "\n", 1);
+    }
+    write(fd, "\n", 1);
+    write(fd, &monochrome, 1);
     close(fd);
   }
   free(creds);
-}
-
-static void do_text(void) {
-  set_scrollwindow(0, scrh);
-  clrscr();
-  init_text();
-  dhgr_init_done = 0;
 }
 
 static void list_cameras(unsigned char max_lines) {
@@ -275,6 +280,10 @@ static unsigned char wait_keypress(unsigned char seconds) {
 
 #pragma code-name(pop)
 
+void cleanup(void) {
+  save_creds();
+}
+
 static void prepare_post_edit(post_t *post) {
   char *tmp;
   char cam_id;
@@ -355,6 +364,8 @@ int main(void) {
   surl_ping();
   surl_user_agent = "SixForty "VERSION"/Apple II";
 
+  vsdrive_install();
+
 #ifdef __APPLE2__
   init_graphics(monochrome, 0);
   hgr_mixon();
@@ -368,7 +379,6 @@ int main(void) {
     clrscr();
     dputs("Login failed.\r\n");
   }
-  save_creds();
 
   api_load_cameras();
 

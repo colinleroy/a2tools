@@ -56,6 +56,7 @@ sixforty_SOURCES := \
 	../lib/asm/hgr_setup_mono40.s \
 	../lib/asm/hgr_mono40.s \
 	../lib/surl/asm/surl_ping.s \
+	../lib/vsdrive.s \
 	../lib/extrazp.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
@@ -86,7 +87,7 @@ hdv:
 
 sixfortyperso.po: sixforty.po
 	cp $< $@; \
-	java -jar ../../bin/ac.jar -p $@ SFLOGIN TXT < SFLOGIN; \
+	java -jar ../../bin/ac.jar -p $@ SFSETTINGS TXT < SFSETTINGS; \
 
 
 clean:
