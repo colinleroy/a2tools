@@ -72,8 +72,8 @@ static uint8 print_menu(void) {
   } else {
     cputs(" C. Connect camera\r\n");
   }
-  cputs(  " R. Re-edit a raw picture from floppy\r\n"
-           " V. View a converted picture from floppy\r\n");
+  cputs(  " R. Re-edit a raw picture from disk\r\n"
+           " V. View a converted picture from disk\r\n");
   if (camera_connected) {
     if (cam_features & CAM_CAN_SET_CAMERA_NAME)
       cputs(" N. Set camera name\r\n");
@@ -133,7 +133,7 @@ again:
     cputs("File exists. Overwrite? (y/N)\r\n");
     c = tolower(cgetc());
     if (c != 'y') {
-      return;
+      goto again;
     }
     unlink(filename);
   }
