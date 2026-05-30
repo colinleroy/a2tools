@@ -136,6 +136,21 @@ static int get_bool(char *tmp) {
 
 static void simple_serial_write_defaults(void) {
   FILE *fp = NULL;
+  char *default_tty = "/dev/ttyUSB0";
+  char *default_aux_tty = "/dev/ttyUSB1";
+  struct stat sb;
+
+  /* Pi autodetection */
+  if (stat("/dev/ttyAMA2", &sb) == 0 && stat("/dev/ttyAMA3", &sb) == 0) {
+    printf("Detected Pi 4 UARTs\n");
+    default_tty = "/dev/ttyAMA2";
+    default_aux_tty = "/dev/ttyAMA3";
+  } else if (stat("/dev/ttyAMA1", &sb) == 0 && stat("/dev/ttyAMA2", &sb) == 0) {
+    printf("Detected Pi 5 UARTs\n");
+    default_tty = "/dev/ttyAMA1";
+    default_aux_tty = "/dev/ttyAMA2";
+  }
+
   fp = fopen(get_cfg_path(), "w");
   if (fp == NULL) {
     printf("Cannot open %s for writing: %s\n", get_cfg_path(),
@@ -143,20 +158,26 @@ static void simple_serial_write_defaults(void) {
     printf("Please create this configuration in the following format:\n\n");
     fp = stdout;
   }
-  fprintf(fp, "tty: /dev/ttyUSB0\n"
+
+  fprintf(fp, "tty: %s\n"
               "baudrate: %s\n"
               "hw_handshake: %s\n"
-              "aux_tty: /dev/ttyUSB1\n"
+              "aux_tty: %s\n"
               "aux_baudrate: %s\n"
               "\n"
-              "#Alternatively, you can export environment vars:\n"
-              "#A2_TTY (unset by default)\n"
-              "#A2_TTY_SPEED (default %s)\n"
-              "#A2_TTY_HW_HANDSHAKE (default %s)\n"
-              "#A2_AUX_TTY (unset by default)\n"
-              "#A2_AUX_TTY_SPEED (default %s)\n",
+              "# Alternatively, you can export environment vars:\n"
+              "# A2_TTY (unset by default)\n"
+              "# A2_TTY_SPEED (default %s)\n"
+              "# A2_TTY_HW_HANDSHAKE (default %s)\n"
+              "# A2_AUX_TTY (unset by default)\n"
+              "# A2_AUX_TTY_SPEED (default %s)\n"
+              "#\n"
+              "# UARTs for the Serial Hat/CISD on Pi4: /dev/ttyAMA2 and /dev/ttyAMA3\n"
+              "# UARTs for the Serial Hat/CISD on Pi5: /dev/ttyAMA1 and /dev/ttyAMA2\n",
+              default_tty,
               tty_speed_to_str(opt_tty_speed),
               opt_tty_hw_handshake ? "true":"false",
+              default_aux_tty,
               tty_speed_to_str(opt_aux_tty_speed),
               tty_speed_to_str(opt_tty_speed),
               opt_tty_hw_handshake ? "true":"false",
@@ -165,9 +186,6 @@ static void simple_serial_write_defaults(void) {
     exit(1);
   }
   fclose(fp);
-  printf("A default serial configuration file has been generated to %s.\n"
-         "Please review it and try again.\n", get_cfg_path());
-  exit(1);
 }
 
 int simple_serial_read_opts(void) {
@@ -182,7 +200,10 @@ int simple_serial_read_opts(void) {
   fp = fopen(get_cfg_path(), "r");
   if (fp == NULL && !getenv("A2_TTY")) {
     simple_serial_write_defaults();
-    /* We'll be exit()ed there */
+    fp = fopen(get_cfg_path(), "r");
+    if (fp == NULL) {
+      exit(1);
+    }
   }
   while (fp != NULL && fgets(buf, 255, fp)) {
     if(!strncmp(buf, "tty:", 4)) {
@@ -239,6 +260,7 @@ int simple_serial_read_opts(void) {
   if (getenv("A2_TTY_HW_HANDSHAKE")) {
     opt_tty_hw_handshake = get_bool(getenv("A2_TTY_HW_HANDSHAKE"));
   }
+  printf("tty: %s\naux_tty: %s\n", opt_tty_path, opt_aux_tty_path);
   return 0;
 }
 

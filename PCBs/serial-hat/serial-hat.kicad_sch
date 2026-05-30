@@ -1632,6 +1632,179 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:R_US"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "R"
+				(at 2.54 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R_US"
+				(at -2.54 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 1.016 -0.254 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Resistor, US symbol"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "R res resistor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "R_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "R_US_0_1"
+				(polyline
+					(pts
+						(xy 0 2.286) (xy 0 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.286) (xy 1.016 1.905) (xy 0 1.524) (xy -1.016 1.143) (xy 0 0.762)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 0.762) (xy 1.016 0.381) (xy 0 0) (xy -1.016 -0.381) (xy 0 -0.762)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 -0.762) (xy 1.016 -1.143) (xy 0 -1.524) (xy -1.016 -1.905) (xy 0 -2.286)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 -2.286) (xy 0 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_US_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Interface_UART:MAX3232"
 			(pin_names
 				(offset 1.016)
@@ -2707,7 +2880,7 @@
 	)
 	(global_label "TX0_in"
 		(shape input)
-		(at 135.89 128.27 0)
+		(at 143.51 128.27 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2717,7 +2890,7 @@
 		)
 		(uuid "6b3e3013-232f-4447-b230-4504e4dc95ea")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 144.9832 128.27 0)
+			(at 152.6032 128.27 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2927,7 +3100,7 @@
 	)
 	(global_label "TX1_in"
 		(shape input)
-		(at 135.89 133.35 0)
+		(at 143.51 133.35 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2937,13 +3110,89 @@
 		)
 		(uuid "f553ada4-4f12-4e95-9637-343bfb4604a0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 144.9832 133.35 0)
+			(at 152.6032 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 				(justify left)
 				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
+		(at 139.7 128.27 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "06425eca-7a15-442f-907e-9c5dc70b90d8")
+		(property "Reference" "R1"
+			(at 137.922 126.238 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "3.3k"
+			(at 142.748 126.238 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 139.954 127.254 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 139.7 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor, US symbol"
+			(at 139.7 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C21190"
+			(at 139.7 128.27 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "be1615ff-253c-4a78-8424-548838460f49")
+		)
+		(pin "1"
+			(uuid "1cd78887-1c17-4d3e-b644-6515a7fb979b")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "R1")
+					(unit 1)
+				)
 			)
 		)
 	)
@@ -3152,6 +3401,82 @@
 			(project "serial-hat"
 				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
 					(reference "C5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_US")
+		(at 139.7 133.35 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "2e950d38-9cf2-4cc9-a606-6d299abb25da")
+		(property "Reference" "R2"
+			(at 137.922 131.318 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "3.3k"
+			(at 142.748 131.318 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 139.954 132.334 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 139.7 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor, US symbol"
+			(at 139.7 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C21190"
+			(at 139.7 133.35 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "84600d08-c1a3-436a-95c7-0aadb49ce840")
+		)
+		(pin "1"
+			(uuid "60cbb379-05f5-4ae8-abef-b9d885a18674")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "R2")
 					(unit 1)
 				)
 			)

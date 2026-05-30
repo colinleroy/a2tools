@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "project_footprints")(type "KiCad")(uri "/home/colin/Documents/git-oss/kicad-library/template/raspberrrypi_hat/project_footprints.pretty")(options "")(descr ""))
+)
