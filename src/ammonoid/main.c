@@ -44,6 +44,9 @@ static uint8 print_last[2] = {1, 1};
 static char *filetype[256] = { NULL };
 static char *short_filetype[256] = { NULL };
 
+static unsigned long dev_size[2], dev_free[2];
+static char dev_size_valid[2];
+
 #define COPY_BUF_SIZE 1024
 static char copy_buf[COPY_BUF_SIZE];
 
@@ -76,6 +79,20 @@ unsigned char LOAD = ('C'|0x80);
 #endif
 
 static void info_message(const char *msg, unsigned char valid);
+
+
+static void update_device_size(unsigned char pane) {
+  struct statvfs sv;
+
+  if (pane_directory[pane][0] == '\0') {
+    dev_size_valid[pane] = 0;
+    return;
+  }
+  statvfs(pane_directory[pane], &sv);
+  dev_size[pane] = (sv.f_blocks*sv.f_bsize) >> 10;
+  dev_free[pane] = (sv.f_bfree*sv.f_bsize) >> 10;
+  dev_size_valid[pane] = 1;
+}
 
 #pragma code-name (push, "LC")
 
@@ -232,12 +249,14 @@ static void display_pane(unsigned char pane) {
   /* Clear whole pane */
   if (must_clear[pane]) {
     clrzone(0, pane_top, pane_width, pane_btm-1);
+    dev_size_valid[pane] = 0;
   }
   gotoxy(0, 0);
 
   /* Print pane title */
   if (pane_directory[pane][0] == '\0') {
     display_title("Devices");
+    dev_size_valid[pane] = 0;
   } else {
     display_title(pane_directory[pane]);
   }
@@ -280,9 +299,13 @@ static void display_pane(unsigned char pane) {
     }
     cputs("\r\n");
   }
-  if (must_clear[pane]) {
-    help_message();
+
+  if (!dev_size_valid[pane]) {
+    update_device_size(pane);
   }
+
+  help_message();
+
   print_first[pane] =
     print_last[pane] =
     must_clear[pane] = 0;
@@ -475,13 +498,8 @@ static void help_message(void) {
             _heapmemavail());
 
     if (pane_directory[active_pane][0] != '\0') {
-      struct statvfs sv;
-      if (statvfs(pane_directory[active_pane], &sv) == 0) {
-        unsigned long total = sv.f_blocks;
-        unsigned long bfree = sv.f_bfree;
-        cprintf("\r\nBlocks free: %lu Blocks used: %lu Total blocks: %lu",
-                bfree, total - bfree, total);
-      }
+      cprintf("\r\nVolume: %lukB, %lukB free",
+              dev_size[active_pane], dev_free[active_pane]);
     }
 }
 
