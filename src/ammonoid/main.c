@@ -290,9 +290,15 @@ static void display_pane(unsigned char pane) {
 
 /* Display line on active pane, clear cursor/selection on inactive */
 static void display_active_pane(void) {
+  static unsigned char last_help_pane = 0xff;
   unsigned char inactive_left = pane_left[!active_pane];
 
   display_pane(active_pane);
+
+  if (last_help_pane != active_pane) {
+    last_help_pane = active_pane;
+    help_message();
+  }
 
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(0, total_width);
@@ -465,9 +471,18 @@ void set_logwindow(void) {
 static void help_message(void) {
     set_logwindow();
     cprintf("Ammonoid - An Apple II file manager.\r\n"
-            "Press H for help - %zuB RAM free",
+            "Press H for help - %zu bytes RAM free",
             _heapmemavail());
 
+    if (pane_directory[active_pane][0] != '\0') {
+      struct statvfs sv;
+      if (statvfs(pane_directory[active_pane], &sv) == 0) {
+        unsigned long total = sv.f_blocks;
+        unsigned long bfree = sv.f_bfree;
+        cprintf("\r\nBlocks free: %lu Blocks used: %lu Total blocks: %lu",
+                bfree, total - bfree, total);
+      }
+    }
 }
 
 static void info_message(const char *msg, unsigned char valid) {
