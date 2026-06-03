@@ -1,6 +1,7 @@
-a2tools (25.0.2.2) bionic; urgency=medium
+a2tools (25.0.3.1) bionic; urgency=medium
 
   * Don't install tty.conf by default - let surl-server do it
+    Autodetect /dev/ttyAMA*
 
  -- Colin Leroy-Mira <colin@colino.net>  Fri, 29 May 2026 21:28:19 +0200
 
