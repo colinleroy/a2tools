@@ -1,0 +1,131 @@
+(footprint "STDP vertical switch T8019L ON-ON"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "REF**"
+		(at 0.254 24.257 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "1823e87a-ecdb-4c0a-839e-b249f0e2477a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "STDP vertical switch T8019L ON-ON"
+		(at 0 1 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "19ade0ec-809d-4a40-913c-a74b6bc3f5be")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "ef4ff51f-65ee-4412-82bc-87df0dfa6f30")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "501309d9-a538-4edc-ac0b-da99b61040fd")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(fp_rect
+		(start -3.936 -2.086)
+		(end 4.064 22.914)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "fa391b8a-93c8-4881-b019-4a76d0887bd0")
+	)
+	(fp_rect
+		(start -1.651 -9.525)
+		(end 1.649 -2.159)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "916300f0-aac6-4f78-a0a1-382465aa08bc")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "1615efd8-4043-45d3-a173-3a50e5232b6a")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole circle
+		(at 0 12.7)
+		(size 1.85 1.85)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "82dfc778-3ee5-40f4-8316-a0f6261aeeb4")
+	)
+	(pad "2" thru_hole circle
+		(at 0 16.51)
+		(size 1.85 1.85)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "1cc2bf68-e5a3-4b4e-9dbc-171d5422ec92")
+	)
+	(pad "3" thru_hole circle
+		(at 0 20.32)
+		(size 1.85 1.85)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "a9093e13-f72f-4d0d-95bb-b822f70e19c9")
+	)
+	(pad "4" thru_hole circle
+		(at -2.54 0)
+		(size 1.85 1.85)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "baaf6687-45f7-4c9e-9877-e6073e689e4d")
+	)
+	(pad "5" thru_hole circle
+		(at 2.54 0)
+		(size 1.85 1.85)
+		(drill 1.4)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "008eca77-8cab-445d-8186-05c44a71159c")
+	)
+	(embedded_fonts no)
+)
