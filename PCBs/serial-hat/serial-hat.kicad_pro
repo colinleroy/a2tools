@@ -52,7 +52,60 @@
         }
       },
       "diff_pair_dimensions": [],
-      "drc_exclusions": [],
+      "drc_exclusions": [
+        [
+          "lib_footprint_mismatch|155160000|56090000|8bb3f488-3f0d-4b93-9968-364afe60d616|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "lib_footprint_mismatch|181037600|65899300|21d9471f-8e16-452b-a24f-86fa14ac892a|00000000-0000-0000-0000-000000000000",
+          ""
+        ],
+        [
+          "starved_thermal|136140000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|5b2672ce-da51-4463-8f2f-69c005fbe899|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|136140000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|5b2672ce-da51-4463-8f2f-69c005fbe899|F.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|141220000|57380000|b0607d06-e84a-45d2-b0db-33b4963a94af|36a07318-fbb0-4365-803c-560d8f129ed1|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|141220000|57380000|b0607d06-e84a-45d2-b0db-33b4963a94af|36a07318-fbb0-4365-803c-560d8f129ed1|F.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|142698108|96012000|b0607d06-e84a-45d2-b0db-33b4963a94af|76527ea8-762a-4483-ac41-4370cba8fd4b|F.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|146300000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|c693172f-999c-4523-84bd-d83b0c685e64|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|153920000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|08d486b5-0085-4bef-85b6-1b2601bd9451|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|161540000|57380000|b0607d06-e84a-45d2-b0db-33b4963a94af|f0918dae-38f3-41e3-9d50-a8d564e56310|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|161540000|57380000|b0607d06-e84a-45d2-b0db-33b4963a94af|f0918dae-38f3-41e3-9d50-a8d564e56310|F.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|166620000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|24dc63ac-3e6b-403c-a5be-57ee670e8e82|B.Cu",
+          ""
+        ],
+        [
+          "starved_thermal|171700000|54840000|b0607d06-e84a-45d2-b0db-33b4963a94af|08cf6995-026b-4a5a-b2ec-b82b0bf1a9de|B.Cu",
+          ""
+        ]
+      ],
       "meta": {
         "filename": "board_design_settings.json",
         "version": 2
@@ -134,7 +187,7 @@
         "min_track_width": 0.0,
         "min_via_annular_width": 0.1,
         "min_via_diameter": 0.5,
-        "solder_mask_to_copper_clearance": 0.0,
+        "solder_mask_to_copper_clearance": 0.005,
         "use_height_for_length_calcs": true
       },
       "teardrop_options": [

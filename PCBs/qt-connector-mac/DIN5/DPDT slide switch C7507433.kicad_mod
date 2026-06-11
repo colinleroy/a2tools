@@ -1,13 +1,13 @@
-(footprint "STDP vertical switch T8019L ON-ON"
+(footprint "DPDT slide switch C7507433"
 	(version 20241229)
 	(generator "pcbnew")
 	(generator_version "9.0")
 	(layer "F.Cu")
 	(property "Reference" "REF**"
-		(at 0.254 24.257 0)
+		(at 1.85 -3 0)
 		(unlocked yes)
 		(layer "F.SilkS")
-		(uuid "1823e87a-ecdb-4c0a-839e-b249f0e2477a")
+		(uuid "892654d7-8203-4d7d-8d0c-84cb0713c76c")
 		(effects
 			(font
 				(size 1 1)
@@ -15,11 +15,11 @@
 			)
 		)
 	)
-	(property "Value" "STDP vertical switch T8019L ON-ON"
-		(at 0 1 0)
+	(property "Value" "DPDT slide switch C7507433"
+		(at 0.2 7.6 0)
 		(unlocked yes)
 		(layer "F.Fab")
-		(uuid "19ade0ec-809d-4a40-913c-a74b6bc3f5be")
+		(uuid "fe475701-a039-44af-b39a-0af315c475f8")
 		(effects
 			(font
 				(size 1 1)
@@ -32,7 +32,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "ef4ff51f-65ee-4412-82bc-87df0dfa6f30")
+		(uuid "b6e6d434-56f3-4484-bfc3-f8310091a582")
 		(effects
 			(font
 				(size 1 1)
@@ -45,7 +45,7 @@
 		(unlocked yes)
 		(layer "F.Fab")
 		(hide yes)
-		(uuid "501309d9-a538-4edc-ac0b-da99b61040fd")
+		(uuid "ba8bdd2a-8ede-4bd1-8010-0844f9d1a341")
 		(effects
 			(font
 				(size 1 1)
@@ -54,32 +54,32 @@
 		)
 	)
 	(fp_rect
-		(start -3.936 -2.086)
-		(end 4.064 22.914)
+		(start -3.65 0.35)
+		(end -0.9 1.9)
+		(stroke
+			(width 0.1)
+			(type default)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "d390369c-72cb-40b2-bf46-918fe3391340")
+	)
+	(fp_rect
+		(start -0.85 -2.05)
+		(end 4.15 6.95)
 		(stroke
 			(width 0.1)
 			(type solid)
 		)
 		(fill no)
 		(layer "F.SilkS")
-		(uuid "fa391b8a-93c8-4881-b019-4a76d0887bd0")
-	)
-	(fp_rect
-		(start -1.651 -9.525)
-		(end 1.649 -2.159)
-		(stroke
-			(width 0.1)
-			(type solid)
-		)
-		(fill no)
-		(layer "F.Fab")
-		(uuid "916300f0-aac6-4f78-a0a1-382465aa08bc")
+		(uuid "2e13549b-18e4-4f74-b15a-4bc6b12ba90b")
 	)
 	(fp_text user "${REFERENCE}"
-		(at 0 2.5 0)
+		(at 1.7 9.7 0)
 		(unlocked yes)
 		(layer "F.Fab")
-		(uuid "1615efd8-4043-45d3-a173-3a50e5232b6a")
+		(uuid "c50e5f3b-8e10-47a5-bd3e-ae9de890e1e8")
 		(effects
 			(font
 				(size 1 1)
@@ -88,44 +88,52 @@
 		)
 	)
 	(pad "1" thru_hole circle
-		(at 0 12.7)
-		(size 1.85 1.85)
-		(drill 1.4)
+		(at 0 0)
+		(size 1.2 1.2)
+		(drill 0.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "82dfc778-3ee5-40f4-8316-a0f6261aeeb4")
+		(uuid "c623d4b9-66a4-45b1-8d53-a2967972196c")
 	)
 	(pad "2" thru_hole circle
-		(at 0 16.51)
-		(size 1.85 1.85)
-		(drill 1.4)
+		(at 0 2.5)
+		(size 1.2 1.2)
+		(drill 0.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "1cc2bf68-e5a3-4b4e-9dbc-171d5422ec92")
+		(uuid "8114ee7a-0bd0-4259-ae9d-11c395e30df3")
 	)
 	(pad "3" thru_hole circle
-		(at 0 20.32)
-		(size 1.85 1.85)
-		(drill 1.4)
+		(at 0 5)
+		(size 1.2 1.2)
+		(drill 0.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "a9093e13-f72f-4d0d-95bb-b822f70e19c9")
+		(uuid "a9781102-bd56-4547-aa49-24bdc2c03293")
 	)
 	(pad "4" thru_hole circle
-		(at -2.54 0)
-		(size 1.85 1.85)
-		(drill 1.4)
+		(at 3.2 5)
+		(size 1.2 1.2)
+		(drill 0.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "baaf6687-45f7-4c9e-9877-e6073e689e4d")
+		(uuid "5f045dd3-c69c-42a5-b79d-eb70b4302697")
 	)
 	(pad "5" thru_hole circle
-		(at 2.54 0)
-		(size 1.85 1.85)
-		(drill 1.4)
+		(at 3.2 2.5)
+		(size 1.2 1.2)
+		(drill 0.8)
 		(layers "*.Cu" "*.Mask")
 		(remove_unused_layers no)
-		(uuid "008eca77-8cab-445d-8186-05c44a71159c")
+		(uuid "0e392955-cfc0-4baa-8bdf-bdfc141692f9")
+	)
+	(pad "6" thru_hole circle
+		(at 3.2 0)
+		(size 1.2 1.2)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "2df55481-fcdb-4926-b4f1-d866c29a6190")
 	)
 	(embedded_fonts no)
 )
