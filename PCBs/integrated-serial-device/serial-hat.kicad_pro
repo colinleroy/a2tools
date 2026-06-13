@@ -551,7 +551,7 @@
       "plot": "",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "serial-hat.stl",
+      "step": "../../../../../../../tmp/serial-hat.stl",
       "svg": "",
       "vrml": ""
     },
