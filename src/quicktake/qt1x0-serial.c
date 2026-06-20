@@ -147,7 +147,7 @@ static uint8 send_hello(uint16 speed) {
 
   simple_serial_write(str_hello, sizeof(str_hello));
   if ((c = simple_serial_getc_with_timeout()) == EOF) {
-    cputs("Timeout.\r\n");
+    cputs("Timeout. ");
     return -1;
   }
   if (c != 0x00) {
