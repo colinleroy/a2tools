@@ -3814,28 +3814,12 @@
 		(uuid "168a80ad-298a-4a2c-8853-2fca23a07dec")
 	)
 	(no_connect
-		(at 261.62 160.02)
-		(uuid "256796a3-ce81-41fb-be11-ab2b26b9d443")
-	)
-	(no_connect
-		(at 247.65 153.67)
-		(uuid "25ff67ce-f543-4d9a-84bc-ff21b623c43c")
-	)
-	(no_connect
 		(at 100.33 86.36)
 		(uuid "26f56641-fbf8-4602-bc1d-5bfae9cb9fc9")
 	)
 	(no_connect
-		(at 247.65 157.48)
-		(uuid "2896e647-3ac3-4470-9919-cf088149b4d3")
-	)
-	(no_connect
 		(at 100.33 50.8)
 		(uuid "2a003569-2279-49fa-8aff-95559687e5f7")
-	)
-	(no_connect
-		(at 261.62 151.13)
-		(uuid "2cc35257-3213-4855-8d8d-77ced01efea5")
 	)
 	(no_connect
 		(at 247.65 129.54)
@@ -3850,14 +3834,6 @@
 		(uuid "36114d56-ec6a-4871-96a2-9811c0be9281")
 	)
 	(no_connect
-		(at 247.65 148.59)
-		(uuid "4121e134-76a9-457a-8bdb-c0da8b1afa46")
-	)
-	(no_connect
-		(at 261.62 162.56)
-		(uuid "42e18ad6-09d8-419e-9e8d-fc16758bef79")
-	)
-	(no_connect
 		(at 33.02 77.47)
 		(uuid "466aed33-fd07-411e-9368-e3c3ea160c90")
 	)
@@ -3870,16 +3846,8 @@
 		(uuid "4d4d5cf2-bfb6-46da-aa5b-59e8e746b242")
 	)
 	(no_connect
-		(at 247.65 160.02)
-		(uuid "4e9c7923-ebac-4b60-993d-0c4369c466c8")
-	)
-	(no_connect
 		(at 247.65 26.67)
 		(uuid "5725bf07-091c-4927-88ac-e0a2d6702383")
-	)
-	(no_connect
-		(at 247.65 162.56)
-		(uuid "5a473cdc-34a0-418e-b8ca-a96cfac328e5")
 	)
 	(no_connect
 		(at 247.65 58.42)
@@ -3912,14 +3880,6 @@
 	(no_connect
 		(at 247.65 106.68)
 		(uuid "86c8d04b-3eef-4119-af4d-9f44df6ccfb7")
-	)
-	(no_connect
-		(at 247.65 151.13)
-		(uuid "8d8a14ba-9af6-4df1-96ed-39f25ee25e5d")
-	)
-	(no_connect
-		(at 261.62 157.48)
-		(uuid "920fc4fd-ad1e-4ebd-bd0b-05b1f09e77db")
 	)
 	(no_connect
 		(at 87.63 78.74)
@@ -3982,10 +3942,6 @@
 		(uuid "c46cbf33-cfc9-49b1-b4ef-c616c7b02872")
 	)
 	(no_connect
-		(at 261.62 148.59)
-		(uuid "c81436d4-9725-449a-8ecd-498de5417202")
-	)
-	(no_connect
 		(at 100.33 66.04)
 		(uuid "c953e691-8677-4688-bd2e-98b6cbe6a301")
 	)
@@ -4008,10 +3964,6 @@
 	(no_connect
 		(at 100.33 58.42)
 		(uuid "eeafb303-e187-4635-8774-c41ef6987850")
-	)
-	(no_connect
-		(at 261.62 153.67)
-		(uuid "efba4ee6-1817-4a0f-a122-e3b96da68ffa")
 	)
 	(no_connect
 		(at 100.33 81.28)
@@ -6549,6 +6501,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C6575016"
+			(at 92.71 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "283e4ef2-18cb-4dee-b021-09d8300f2269")
 		)
@@ -7714,7 +7675,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "SW_Slide_DPDT"
+		(property "Value" "SW_Slide_DPDT SHOU HAN MSK-22D18G4 051"
 			(at 160.0199 129.54 90)
 			(effects
 				(font
@@ -7743,6 +7704,15 @@
 		)
 		(property "Description" "Slide Switch, dual pole double throw"
 			(at 158.75 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C7507433"
+			(at 158.75 135.89 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8571,7 +8541,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "https://www.alibaba.com/product-detail/Interlocking-Key-Push-Button-Switches-6_1601722717319.html"
 			(at 251.46 66.04 0)
 			(effects
 				(font
@@ -9023,7 +8993,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "https://www.alibaba.com/product-detail/Interlocking-Key-Push-Button-Switches-6_1601722717319.html"
 			(at 251.46 19.05 0)
 			(effects
 				(font
@@ -9917,7 +9887,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "https://www.alibaba.com/product-detail/Interlocking-Key-Push-Button-Switches-6_1601722717319.html"
 			(at 251.46 99.06 0)
 			(effects
 				(font
@@ -10219,7 +10189,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "https://www.alibaba.com/product-detail/Interlocking-Key-Push-Button-Switches-6_1601722717319.html"
 			(at 251.46 121.92 0)
 			(effects
 				(font
@@ -10320,7 +10290,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "https://www.alibaba.com/product-detail/Interlocking-Key-Push-Button-Switches-6_1601722717319.html"
 			(at 251.46 41.91 0)
 			(effects
 				(font
@@ -10580,73 +10550,6 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 255.27 166.37 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "f9b6e81f-531d-41bc-ba21-f1e251afe923")
-		(property "Reference" "#PWR027"
-			(at 261.62 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 259.08 166.3699 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 255.27 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 255.27 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 255.27 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "cf5c707e-a6c9-47fa-9701-22c85e76c17c")
-		)
-		(instances
-			(project "serial-hat"
-				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
-					(reference "#PWR027")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
 		(at 90.17 101.6 270)
 		(unit 1)
 		(exclude_from_sim no)
@@ -10774,107 +10677,6 @@
 			(project "serial-hat"
 				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
 					(reference "#PWR05")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "DIN:4PDT_switch")
-		(at 251.46 146.05 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(fields_autoplaced yes)
-		(uuid "ffa96f8e-1412-4539-9cf2-f04aba5c6d55")
-		(property "Reference" "SW4"
-			(at 254.635 142.24 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "Printer out 3"
-			(at 254.635 144.78 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "DIN5:4PDT piano switch"
-			(at 251.46 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 251.46 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 251.46 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "D1"
-			(uuid "29edbbc3-966f-40e5-bacf-a9625023ac6c")
-		)
-		(pin "C2"
-			(uuid "ee10f548-d368-471f-8ee6-3a5a6d039b25")
-		)
-		(pin "B1"
-			(uuid "4ee89ada-b697-411c-837d-cfc4ab711c9e")
-		)
-		(pin "CC"
-			(uuid "100be112-8caa-4ffa-825e-e3626992840f")
-		)
-		(pin "AC"
-			(uuid "0549be5e-1560-44ec-82ca-72dfd6d8065a")
-		)
-		(pin "A1"
-			(uuid "6e8e6f3f-2dce-45b5-a94b-811bc7942af4")
-		)
-		(pin "BC"
-			(uuid "60770dbe-3ad5-482f-a693-bc3ca7e9eff6")
-		)
-		(pin "B2"
-			(uuid "0313043e-1be1-4632-841f-254b572cc74a")
-		)
-		(pin "C1"
-			(uuid "2a9f5787-51b7-4a60-8e2c-a519cf83bc18")
-		)
-		(pin "D2"
-			(uuid "64ffcfee-c312-4c1a-abc2-d5a67a13ae13")
-		)
-		(pin "A2"
-			(uuid "efefb3aa-6039-464b-9ac4-5e17551603e3")
-		)
-		(pin "DC"
-			(uuid "6223c5ba-bcb7-424a-9eaa-b74d4a3adfff")
-		)
-		(pin "GND"
-			(uuid "f3ae95f3-b597-43f8-8b81-a4c0b27f313e")
-		)
-		(instances
-			(project "serial-hat"
-				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
-					(reference "SW4")
 					(unit 1)
 				)
 			)
