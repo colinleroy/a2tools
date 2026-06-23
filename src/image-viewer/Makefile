@@ -40,6 +40,7 @@ imgview_CC65SOURCES := \
 	../lib/extrazp.s \
 	../lib/vsdrive.s \
 	../lib/a2_features.s \
+	../lib/iw_print_ui.c \
 
 imgview_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
