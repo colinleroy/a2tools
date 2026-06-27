@@ -509,7 +509,7 @@
         "wire_width": 6
       },
       {
-        "clearance": 0.4,
+        "clearance": 0.3,
         "diff_pair_gap": 0.25,
         "diff_pair_width": 0.2,
         "microvia_diameter": 0.3,
@@ -540,6 +540,10 @@
       {
         "netclass": "Power",
         "pattern": "5V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "FAN_5V"
       }
     ]
   },
