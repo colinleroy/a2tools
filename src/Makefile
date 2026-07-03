@@ -26,6 +26,7 @@ HD_SUBDIRS = \
 	image-viewer \
 	mastodon \
 	quicktake \
+	sixforty \
 	stp \
 	telnet \
 	weather \
