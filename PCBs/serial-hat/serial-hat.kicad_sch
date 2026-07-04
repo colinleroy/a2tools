@@ -2802,6 +2802,200 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Switch:SW_DIP_x01"
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "SW7"
+				(at 0 -7.62 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "SW_SPST"
+				(at 0 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "DIN5:SPST_power_switch"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "1x DIP Switch, Single Pole Single Throw (SPST) switch, small symbol"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "dip switch"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "SW?DIP?x1*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "SW_DIP_x01_0_0"
+				(circle
+					(center -2.032 0)
+					(radius 0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.524 0.127) (xy 2.3622 1.1684)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.032 0)
+					(radius 0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "SW_DIP_x01_0_1"
+				(rectangle
+					(start -3.81 2.54)
+					(end 3.81 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "SW_DIP_x01_1_1"
+				(pin passive line
+					(at -7.62 0 0)
+					(length 5.08)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -1.27 -5.08 90)
+					(length 2.54)
+					(name "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 7.62 0 180)
+					(length 5.08)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:GND"
 			(power)
 			(pin_names
@@ -2924,6 +3118,10 @@
 		(uuid "36114d56-ec6a-4871-96a2-9811c0be9281")
 	)
 	(no_connect
+		(at 38.1 93.98)
+		(uuid "75ca75a1-ce4a-417e-a14c-3c3e84f0c63e")
+	)
+	(no_connect
 		(at 38.1 114.3)
 		(uuid "7740bd1b-351b-4aa5-a8b8-8382a5c9e896")
 	)
@@ -2938,6 +3136,10 @@
 	(no_connect
 		(at 50.8 137.16)
 		(uuid "9c990578-5911-4ef5-a6bf-654129ea96d8")
+	)
+	(no_connect
+		(at 50.8 121.92)
+		(uuid "abc3675f-144f-4bdc-85cb-86cad4092724")
 	)
 	(no_connect
 		(at 38.1 134.62)
@@ -2990,6 +3192,10 @@
 	(no_connect
 		(at 38.1 116.84)
 		(uuid "faa5b6cf-93aa-458d-83dc-6dcc1554322a")
+	)
+	(no_connect
+		(at 38.1 129.54)
+		(uuid "fb39081d-dd8b-4ae0-b990-3d99db4fa92b")
 	)
 	(wire
 		(pts
@@ -3269,6 +3475,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "PWR_BTN"
+		(shape input)
+		(at 38.1 96.52 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4c3274a9-7b3b-435d-a283-0d2afe854dd7")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 26.5877 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -3647,6 +3875,28 @@
 			)
 		)
 	)
+	(global_label "PWR_BTN"
+		(shape input)
+		(at 156.21 66.04 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f4e28520-6595-4304-949b-c9ddc481926e")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 167.7223 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "TX1_in"
 		(shape input)
 		(at 135.89 133.35 0)
@@ -3666,6 +3916,73 @@
 				)
 				(justify left)
 				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 140.97 66.04 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "015c15ce-b365-437b-9194-e59c5bf69d88")
+		(property "Reference" "#PWR028"
+			(at 134.62 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 137.16 66.0401 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 140.97 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 140.97 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 140.97 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "132216d3-7380-4c2d-9d5b-c9a81ffc46a5")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "#PWR028")
+					(unit 1)
+				)
 			)
 		)
 	)
@@ -3734,6 +4051,88 @@
 			(project "serial-hat"
 				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
 					(reference "J1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Switch:SW_DIP_x01")
+		(at 148.59 66.04 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "181c3e85-513b-48d0-a067-a2b827c83b1d")
+		(property "Reference" "SW7"
+			(at 148.59 70.104 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "SW_SPST"
+			(at 148.59 71.882 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Colins-Kicad:SPST momentary switch C6575016"
+			(at 148.59 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "1x DIP Switch, Single Pole Single Throw (SPST) switch, small symbol"
+			(at 148.59 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C6575016"
+			(at 148.59 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "283e4ef2-18cb-4dee-b021-09d8300f2269")
+		)
+		(pin "1"
+			(uuid "2f377b76-04d3-4eed-b8a4-30915b849b51")
+		)
+		(pin "4"
+			(uuid "eda93ff5-7bc5-48b6-9547-2404bfbf0bc0")
+		)
+		(pin "3"
+			(uuid "c1d2fa6f-ebda-4386-9c55-97fcefb70fbf")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "SW7")
 					(unit 1)
 				)
 			)
@@ -3877,6 +4276,72 @@
 			(project "serial-hat"
 				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
 					(reference "C5")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 146.05 60.96 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "30b1b23e-7eb2-4b8b-b76e-cc828239ee92")
+		(property "Reference" "#PWR030"
+			(at 146.05 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 146.05 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 146.05 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 146.05 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 146.05 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "a4f069e9-31ea-471c-886a-c53beb51c310")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
@@ -4666,6 +5131,72 @@
 			(project "serial-hat"
 				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
 					(reference "#PWR06")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 149.86 60.96 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "86fe8f03-98f3-4755-9046-843b4f2fda75")
+		(property "Reference" "#PWR031"
+			(at 149.86 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 149.86 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 149.86 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 149.86 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 149.86 60.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "6e86dd35-9b6c-4cbd-a129-40a512cac154")
+		)
+		(instances
+			(project "serial-hat"
+				(path "/f30a5902-bf77-48c6-ab50-b8e2235ec207"
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
