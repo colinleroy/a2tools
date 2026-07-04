@@ -93,8 +93,8 @@ woztubes.po: splash.h woztubes.bin
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse woztubes.po $(IMG):$(FLOP_NAME)
 
 woztubesperso.po: woztubes.po
 	cp $< $@; \

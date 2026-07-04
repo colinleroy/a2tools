@@ -180,8 +180,8 @@ mastodon.po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse mastodon.po $(IMG):$(FLOP_NAME)
 
 mastoperso.po: mastodon.po
 	cp $< $@; \

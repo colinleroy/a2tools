@@ -42,8 +42,11 @@ all clean dist upload:
 
 hdv:
 	rm -f $(HD_IMG)
-	cp ../bin/boot32.po $(HD_IMG)
-	java -jar ../bin/ac.jar -n $(HD_IMG) COLIN.S.THINGS
+	../bin/cp2/cp2 create-disk-image $(HD_IMG) 32M prodos 
+	../bin/cp2/cp2 rename $(HD_IMG) : COLIN.S.THINGS
+	for file in BASIC.SYSTEM BITSY.BOOT QUIT.SYSTEM PRODOS; do \
+		../bin/cp2/cp2 add --strip-paths $(HD_IMG) ../bin/$$file ; \
+	done
 	for dir in $(HD_SUBDIRS); do \
 		IMG=../$(HD_IMG) $(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done

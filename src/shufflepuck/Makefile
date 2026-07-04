@@ -426,9 +426,9 @@ shufflepuck.po: $(BINARY_NAME) $(assets_zx02)
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
 
-hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+hdv: shufflepuck.po
+	$(SRC_DIR)/../../bin/cp2/cp2 mkdir $(SRC_DIR)/$(IMG) $(FLOP_NAME)
+	$(SRC_DIR)/../../bin/cp2/cp2 copy --recurse shufflepuck.po $(SRC_DIR)/$(IMG):$(FLOP_NAME)
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \

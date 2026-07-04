@@ -87,8 +87,8 @@ imageviewer.po: imgview.bin
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse imageviewer.po $(IMG):$(FLOP_NAME)
 
 imgview.bin: $(imgview_SOURCES) $(imgview_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"imgview.dbg" $(CFLAGS) $(imgview_CLCFLAGS) -vm -m imgview.map -o $@ $^

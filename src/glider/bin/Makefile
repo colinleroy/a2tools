@@ -258,9 +258,9 @@ glider-$(GAME_LANG).po: $(BINARY_NAME) $(assets_zx02) $(SRC_DIR)/assets/SCORES.b
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
 
-hdv: 
-	java -jar $(SRC_DIR)/../../bin/ac.jar -d $(SRC_DIR)/$(IMG) GLIDER
-	PREFIX=GLIDER/ IMG=$(SRC_DIR)/$(IMG) make add_disk
+hdv: glider-$(GAME_LANG).po
+	$(SRC_DIR)/../../bin/cp2/cp2 mkdir $(SRC_DIR)/$(IMG) $(FLOP_NAME)
+	$(SRC_DIR)/../../bin/cp2/cp2 copy --recurse glider-$(GAME_LANG).po $(SRC_DIR)/$(IMG):$(FLOP_NAME)
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/glider/$(GAME_LANG)/ || \

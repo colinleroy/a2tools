@@ -82,8 +82,8 @@ sixforty.po: splash.h sixforty.bin
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse sixforty.po $(IMG):$(FLOP_NAME)
 
 sixfortyperso.po: sixforty.po
 	cp $< $@; \

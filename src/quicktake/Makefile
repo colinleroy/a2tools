@@ -271,8 +271,8 @@ quicktake.po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loade
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse quicktake.po $(IMG):$(FLOP_NAME)
 
 splash.hgr: splash.png
 	../surl-server/hgr-convert $<

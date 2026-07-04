@@ -13,4 +13,5 @@ upload: dist
 	ssh colino.net "curl -X PURGE https://www.colino.net/wordpress/wp-content/quicktake-user-guide.pdf" && \
 	ssh colino.net "curl -X PURGE https://www.colino.net/wordpress/wp-content/quicktake-connector-box.pdf" && \
 	ssh colino.net "curl -X PURGE https://www.colino.net/wordpress/wp-content/wozamp-user-guide.pdf" && \
+	ssh colino.net "curl -X PURGE https://www.colino.net/wordpress/wp-content/cisd-user-guide.pdf" && \
 	ssh colino.net "curl -X PURGE https://www.colino.net/wordpress/wp-content/shufflepuck-game-manual.pdf"

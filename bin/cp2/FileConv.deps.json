@@ -1,0 +1,56 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "FileConv/1.0.0": {
+        "dependencies": {
+          "CommonUtil": "1.0.0",
+          "DiskArc": "1.0.0"
+        },
+        "runtime": {
+          "FileConv.dll": {}
+        }
+      },
+      "CommonUtil/1.0.0": {
+        "runtime": {
+          "CommonUtil.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "DiskArc/1.0.0": {
+        "dependencies": {
+          "CommonUtil": "1.0.0"
+        },
+        "runtime": {
+          "DiskArc.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "FileConv/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "CommonUtil/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "DiskArc/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

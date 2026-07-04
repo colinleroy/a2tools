@@ -61,8 +61,8 @@ weather.po: weather.bin
 	IMG=$@ PREFIX= make add_disk
 
 hdv: 
-	java -jar ../../bin/ac.jar -d $(IMG) $(FLOP_NAME)
-	PREFIX=$(FLOP_NAME)/ make add_disk
+	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
+	../../bin/cp2/cp2 copy --recurse weather.po $(IMG):$(FLOP_NAME)
 
 clean:
 	rm -f *.bin *.o *.map *.dbg *.lbl *.po
