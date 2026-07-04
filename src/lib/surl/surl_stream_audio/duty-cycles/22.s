@@ -9,14 +9,13 @@ s22:    lda     ser_status      ; 14    Check serial
         and     has_byte        ; 17
         beq     :+              ; 19/20
 
-        lda     #SPC            ; 21    Unset VU meter
-v22b:   sta     txt_level       ; 25
+d22:    ldx     ser_data        ; 23    Load serial
+        WASTE_3                 ; 26
+        ____SPKR_DUTY____4      ; 30    Toggle speaker
 
-        ____SPKR_DUTY____5 22   ; 30    Toggle speaker
-
-d22:    ldx     ser_data        ; 34    Load serial
-        STORE_TARGET_3          ; 37
-        WASTE_2                 ; 39
+        lda     #SPC            ; 32    Unset VU meter
+v22b:   sta     txt_level       ; 36
+        STORE_TARGET_3          ; 39
         JMP_NEXT_6              ; 45
 :
         WASTE_6                 ;    26

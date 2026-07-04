@@ -6,7 +6,7 @@ silence:
         jsr    _set_iigs_speed
 ssil:   lda     ser_status
         and     has_byte
-        beq     silence
+        beq     ssil
 dsil:   ldx     ser_data
         STORE_TARGET_3
 start_duty:
