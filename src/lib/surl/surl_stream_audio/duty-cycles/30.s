@@ -1,4 +1,5 @@
 duty_cycle30:
+        DEBUG_JMP   #'U'
         ____SPKR_DUTY____4      ; 4     Toggle speaker
 
 s30:    lda     ser_status      ; 8     Check serial

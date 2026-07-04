@@ -1,4 +1,5 @@
 duty_cycle1:
+        DEBUG_JMP   #'1'
         ____SPKR_DUTY____4      ; 4     Toggle speaker
         ____SPKR_DUTY____5 1    ; 9    Toggle speaker
         lda     #INV_SPC        ; 11    Set VU meter

@@ -1,4 +1,5 @@
 duty_cycle0:                    ; Max negative level, 8 cycles
+        DEBUG_JMP   #'0'
         ____SPKR_DUTY____4      ; 4     Toggle speaker
         ____SPKR_DUTY____4      ; 8     Toggle speaker
         lda     #INV_SPC        ; 10    Set VU meter

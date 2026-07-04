@@ -1,4 +1,5 @@
 update_title:
+        DEBUG_JMP   #'W'
         php                     ; No interrupts while writing AUX
         sei                     ; so disable for the whole title update
 

@@ -41,6 +41,16 @@
         jmp     (next,x)        ; 45    Done
 .endmacro
 
+.ifdef DO_DEBUG_JMPS
+.macro DEBUG_JMP NUM
+        lda     NUM+$80
+        sta     $07D0
+.endmacro
+.else
+.macro DEBUG_JMP NUM
+.endmacro
+.endif
+
         .code
 
 ; ------------------------------------------------------------------------

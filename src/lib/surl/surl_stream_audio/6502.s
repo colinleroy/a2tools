@@ -42,6 +42,16 @@
         jmp     zp_jmp
 .endmacro
 
+.ifdef DO_DEBUG_JMPS
+.macro DEBUG_JMP NUM
+        lda     NUM+$80
+        sta     $07D0
+.endmacro
+.else
+.macro DEBUG_JMP NUM
+.endmacro
+.endif
+
         .code
 
 ; ------------------------------------------------------------------------
@@ -65,11 +75,11 @@ SAMPLE_MULT   = 1
 .include "duty-cycles/1.s"
 .include "setup_pointers.s"
 .include "vu_patches_a.s"
-.include "kbd_send.s"
 
 .align 256
 .assert * = _SAMPLES_BASE+$200, error
 .include "duty-cycles/2.s"
+.include "kbd_send.s"
 
 .align 256
 .assert * = _SAMPLES_BASE+$300, error
