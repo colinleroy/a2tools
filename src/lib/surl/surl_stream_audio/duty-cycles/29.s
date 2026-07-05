@@ -14,13 +14,13 @@ s29:    lda     ser_status      ; 16    Check serial
         WASTE_5                 ; 26
         KBD_LOAD_7              ; 33
         ____SPKR_DUTY____4      ; 37 Toggle speaker
-        WASTE_5                 ; 42
-        jmp     duty_cycle29    ; 45
+        WASTE_6                 ; 43
+        jmp     duty_cycle29    ; 46
 
 d29:    ldx     ser_data        ; 26    Load serial
 
 v29b:   sty     txt_level       ; 30
         STORE_TARGET_3          ; 33
         ____SPKR_DUTY____4      ; 37    Toggle speaker
-        WASTE_2                 ; 39
-        JMP_NEXT_6              ; 45
+        WASTE_3                 ; 40
+        JMP_NEXT_6              ; 46

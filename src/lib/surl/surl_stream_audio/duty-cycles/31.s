@@ -2,25 +2,33 @@ duty_cycle31:
         DEBUG_JMP   #'V'
         ____SPKR_DUTY____4      ; 4     Toggle speaker
 
-        lda     #INV_SPC        ; 6     Set VU meter
-v31a:   sta     txt_level       ; 10
+s31:    lda     ser_status      ; 8     Check serial
+        and     has_byte        ; 11
+        beq     :+              ; 13/14
+d31:    ldx     ser_data        ; 17    Load serial
 
-        ldy     #SPC            ; 12    Unset VU meter
+.ifdef STREAMER_65C02
+        lda     next,x          ; 21    Update target
+        sta     dest31+1        ; 25
+        inx                     ; 27
+        lda     next,x          ; 31
 
-s31:    lda     ser_status      ; 16    Check serial
-        and     has_byte        ; 19
-        beq     :+              ; 21/22
-d31:    ldx     ser_data        ; 25    Load serial
-
-v31b:   sty     txt_level       ; 29
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
+        sta     dest31+2        ; 35    Finish updating target
+.else
+        WASTE_11                ; 28
+        WASTE_3                 ; 31
+        stx dest31+2            ; 35
+.endif
         ____SPKR_DUTY____4      ; 39    Toggle speaker
+        WASTE_4                 ; 43
+dest31: jmp     $0000           ; 46
 
-        JMP_NEXT_6              ; 45
 :
-        WASTE_6                 ;    28
-        KBD_LOAD_7              ;    35
+        lda     #INV_SPC        ;    16 Set VU meter
+v31a:   sta     txt_level       ;    20
+        KBD_LOAD_7              ;    27
+        WASTE_6                 ;    33
+        lda     #SPC            ;    35
         ____SPKR_DUTY____4      ;    39 Toggle speaker
-        WASTE_3                 ;    42
-        jmp     duty_cycle31    ;    45
+v31b:   sta     txt_level       ;    43 Unset VU meter
+        jmp     duty_cycle31    ;    46

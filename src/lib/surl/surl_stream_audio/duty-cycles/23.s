@@ -14,12 +14,13 @@ d23:    ldx     ser_data        ; 23    Load serial
         WASTE_2                 ; 27
 
         ____SPKR_DUTY____4      ; 31    Toggle speaker
-        STORE_TARGET_4          ; 35
-v23b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
+        STORE_TARGET_3          ; 34
+v23b:   sta     txt_level       ; 38
+        WASTE_2                 ; 40
+        JMP_NEXT_6              ; 46
 :
         WASTE_7                 ;    27
         ____SPKR_DUTY____4      ;    31 Toggle speaker
-        WASTE_4                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle23    ;    45
+        WASTE_5                 ;    36
+        KBD_LOAD_7              ;    43
+        jmp     duty_cycle23    ;    46

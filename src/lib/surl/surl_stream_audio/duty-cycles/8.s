@@ -14,11 +14,11 @@ s8:     lda     ser_status      ; 20    Check serial
 
 d8:     ldx     ser_data        ; 29    Load serial
         STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
+        WASTE_4                 ; 36
 
-v8b:    sty     txt_level       ; 39
-        JMP_NEXT_6              ; 45
+v8b:    sty     txt_level       ; 40
+        JMP_NEXT_6              ; 46
 :
-        WASTE_9                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle8     ;    45
+        WASTE_10                ;    36
+        KBD_LOAD_7              ;    43
+        jmp     duty_cycle8     ;    46

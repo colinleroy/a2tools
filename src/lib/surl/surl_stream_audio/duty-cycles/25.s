@@ -11,9 +11,9 @@ s25:    lda     ser_status      ; 14    Check serial
 
         WASTE_10                ; 29
         ____SPKR_DUTY____4      ; 33 Toggle speaker
-        WASTE_2                 ; 35
-        KBD_LOAD_7              ; 42
-        jmp     duty_cycle25    ; 45
+        WASTE_3                 ; 36
+        KBD_LOAD_7              ; 43
+        jmp     duty_cycle25    ; 46
 
 d25:    ldx     ser_data        ; 24    Load serial
 
@@ -21,6 +21,6 @@ d25:    ldx     ser_data        ; 24    Load serial
         STORE_TARGET_3          ; 29
 
         ____SPKR_DUTY____4      ; 33    Toggle speaker
-        WASTE_2                 ; 35
-v25b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
+        WASTE_3                 ; 36
+v25b:   sta     txt_level       ; 40
+        JMP_NEXT_6              ; 46

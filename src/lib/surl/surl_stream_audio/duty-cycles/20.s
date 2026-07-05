@@ -8,9 +8,9 @@ s20:    lda     ser_status      ; 8    Check serial
 
         WASTE_11                ;    24
         ____SPKR_DUTY____4      ;    28 Toggle speaker
-        WASTE_7                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle20    ;    45
+        WASTE_8                 ;    36
+        KBD_LOAD_7              ;    43
+        jmp     duty_cycle20    ;    46
 
 d20:    ldx     ser_data        ; 18    Load serial
         lda     #INV_SPC        ; 20    Set VU meter
@@ -21,5 +21,5 @@ v20a:   sta     txt_level       ; 24
 
         lda     #SPC            ; 33    Unset VU meter
 v20b:   sta     txt_level       ; 37
-        WASTE_2                 ; 39
-        JMP_NEXT_6              ; 45
+        WASTE_3                 ; 40
+        JMP_NEXT_6              ; 46

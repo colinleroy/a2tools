@@ -15,11 +15,11 @@ d22:    ldx     ser_data        ; 23    Load serial
 
         lda     #SPC            ; 32    Unset VU meter
 v22b:   sta     txt_level       ; 36
-        STORE_TARGET_3          ; 39
-        JMP_NEXT_6              ; 45
+        STORE_TARGET_4          ; 40
+        JMP_NEXT_6              ; 46
 :
         WASTE_6                 ;    26
         ____SPKR_DUTY____4      ;    30 Toggle speaker
-        WASTE_5                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle22    ;    45
+        WASTE_6                 ;    36
+        KBD_LOAD_7              ;    43
+        jmp     duty_cycle22    ;    46

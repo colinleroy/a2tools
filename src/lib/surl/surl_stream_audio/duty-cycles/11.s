@@ -15,11 +15,11 @@ d11:    ldx     ser_data        ; 28    Load serial
 
         lda     #SPC            ; 30    Unset VU meter
         STORE_TARGET_3          ; 33
-        WASTE_2                 ; 35
+        WASTE_3                 ; 36
 
-v11b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
+v11b:   sta     txt_level       ; 40
+        JMP_NEXT_6              ; 46
 :
-        WASTE_10                ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle11    ;    45
+        WASTE_11                ;    36
+        KBD_LOAD_7              ;    43
+        jmp     duty_cycle11    ;    46
