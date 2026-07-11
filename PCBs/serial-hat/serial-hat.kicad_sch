@@ -5920,7 +5920,7 @@
 				(hide yes)
 			)
 		)
-		(property "Supplier Part" "C23689428"
+		(property "Supplier Part" "C2939346"
 			(at 187.96 123.19 0)
 			(effects
 				(font
@@ -5938,7 +5938,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C23689428"
+		(property "LCSC" "C2939346"
 			(at 187.96 123.19 0)
 			(effects
 				(font
@@ -6258,7 +6258,7 @@
 				(hide yes)
 			)
 		)
-		(property "Supplier Part" "C23689428"
+		(property "Supplier Part" "C2939346"
 			(at 187.96 91.44 0)
 			(effects
 				(font
@@ -6276,7 +6276,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C23689428"
+		(property "LCSC" "C2939346"
 			(at 187.96 91.44 0)
 			(effects
 				(font
