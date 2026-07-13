@@ -1342,8 +1342,9 @@ uselessDecAC:
         jmp     $FFFF   ; Patched with huffDecode2/3
 skipAC:
         beq     ZAG2_Done
-        and     #$0F
         sta     rsx+1
+        and     #$0F
+        beq     rsx
         SKIPBITSDIRECT
         .assert <right_shift_4 = 0, error ; need alignment for patching trick
 rsx:    lda     right_shift_4
