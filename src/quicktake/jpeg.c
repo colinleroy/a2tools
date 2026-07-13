@@ -220,10 +220,14 @@ uint8 gMCUOrg[6];
 //------------------------------------------------------------------------------
 void fillInBuf(void)
 {
+#ifdef __CC65__
   cputsxy(0, 7, "Reading       ");
+#endif
   // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
   read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
+#ifdef __CC65__
   cputsxy(0, 7, "Decoding      ");
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -291,6 +295,14 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
          break;
       l_pBits++;
    }
+   // for (i = 0; i < 16; i++) {
+   //   printf("%d: %d, %02X%02X, %02X\n", i,
+   //          pHuffTable->mGetMore[i],
+   //          pHuffTable->mMaxCode_l[i],
+   //          pHuffTable->mMaxCode_h[i],
+   //          pHuffTable->mValPtr[i]);
+   // }
+   // printf("\n");
 }
 
 //------------------------------------------------------------------------------
