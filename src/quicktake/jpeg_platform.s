@@ -529,8 +529,10 @@ done:
         INLINE_GETBIT
         lda     #0
         rol             ; Now A = 0 or 1 depending on bit
+        INLINE_GETBIT 1 ; 1 bit is never enough
+        rol
 
-        ldx     #7
+        ldx     #6
 nextLoopS:
         ldy     TABLE+hufftable_t::mGetMore+8,x
         bne     incrementS
@@ -539,7 +541,7 @@ nextLoopS:
         bcc     loopDoneS
 incrementS:
         INLINE_GETBIT 1
-        rol     a
+        rol
         dex
         bpl     nextLoopS
         jmp     decodeLong

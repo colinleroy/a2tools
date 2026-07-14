@@ -295,14 +295,17 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
          break;
       l_pBits++;
    }
-   // for (i = 0; i < 16; i++) {
-   //   printf("%d: %d, %02X%02X, %02X\n", i,
-   //          pHuffTable->mGetMore[i],
-   //          pHuffTable->mMaxCode_l[i],
-   //          pHuffTable->mMaxCode_h[i],
-   //          pHuffTable->mValPtr[i]);
-   // }
-   // printf("\n");
+
+#ifndef __CC65__
+  for (i = 0; i < 16; i++) {
+    printf("%d: %d, %02X%02X, %02X\n", i,
+            pHuffTable->mGetMore[i],
+            pHuffTable->mMaxCode_h[i],
+            pHuffTable->mMaxCode_l[i],
+            pHuffTable->mValPtr[i]);
+  }
+  printf("\n");
+#endif
 }
 
 //------------------------------------------------------------------------------
