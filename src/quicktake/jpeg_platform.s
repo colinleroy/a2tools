@@ -21,7 +21,6 @@
 
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp
-        .export     _getBitsNoFF, _getBitsFF
         .export     _idctRows, _idctCols, _decodeNextMCU
         .export     _pjpeg_decode_mcu, _setQuant, _setACDCTabs
         .export     _createWinogradQuant0, _createWinogradQuant1
@@ -208,8 +207,6 @@ retNormalX:
 done:
 .endscope
 .endmacro
-; #define getBitsNoFF(n) getBits(n, 0)
-; #define getBits2(n) getBits(n, 1)
 
 n_min_eight:   .byte 0
                .byte 0
@@ -284,15 +281,6 @@ last_few:
         .endif
 .endscope
 .endmacro
-
-_getBitsNoFF:
-        ldx     #NO_FF_CHECK
-        jmp     getBits
-_getBitsFF:
-        ldx     #FF_CHECK_ON
-getBits:
-        stx     ffcheck
-        GETBITSDIRECT
 
 .macro SKIPBITSDIRECT
 .scope
@@ -861,16 +849,15 @@ cx12h = ptr4+1
         sta     cx5h
 
         ; cx12
-        lda     _gCoeffBuf+32,y
-        sta     cx12l
         lda    _gCoeffBuf+33,y
         sta     cx12h
+        lda     _gCoeffBuf+32,y
+        sta     cx12l
 
         ; val0 = ((x30 + x12 + x5) >> PJPG_DCT_SCALE_BITS) +128;
         clc
-        txa                     ; Still cx30l
         ldx     #0
-        adc     cx12l
+        adc     cx30l
         bcc     :+
         inx
         clc
