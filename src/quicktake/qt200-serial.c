@@ -63,26 +63,34 @@ extern uint8 scrw, scrh;
 #define FUJI_CMD_PIC_COUNT     0x0B
 #define FUJI_CMD_PIC_SIZE      0x17
 
+#define STD_WAIT 20
+#define SHORT_WAIT 5
 
 static uint16 response_len;
 static uint8 response_continues;
 
-static uint8 qt200_send_ping(void);
+static uint8 qt200_send_ping(uint8 wait);
 static void end_session(void);
 
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
 uint8 qt200_wakeup(void) {
-  simple_serial_set_parity(SER_PAR_EVEN);
-
-  end_session();
+  uint8 tries = 2;
   cputs("Pinging QuickTake 200... ");
 
-  if (qt200_send_ping() == 0) {
+  simple_serial_set_parity(SER_PAR_EVEN);
+
+again:
+  end_session();
+
+  if (qt200_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     return 0;
   } else {
+    if (--tries) {
+      goto again;
+    }
     cputs("Timeout.");
     return -1;
   }
@@ -197,9 +205,8 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
 static uint16 my_speed = 9600;
 
 /* Ping the camera */
-static uint8 qt200_send_ping(void) {
+static uint8 qt200_send_ping(uint8 wait) {
   int c;
-  uint8 wait = 20;
   simple_serial_putc(ENQ);
 
   while (wait--) {
@@ -272,7 +279,7 @@ uint8 qt200_set_speed(uint16 speed) {
 
 
   /* ping again */
-  if (qt200_send_ping() != 0) {
+  if (qt200_send_ping(STD_WAIT) != 0) {
 #ifdef DEBUG_PROTO
     printf("Speed set to %d: Communication check failed.\n", speed);
     cgetc();
@@ -290,7 +297,7 @@ static uint8 qt200_start(void) {
 #ifdef DEBUG_PROTO
   printf("Session start, going to %d\n", my_speed);
 #endif
-  if (qt200_send_ping() == 0) {
+  if (qt200_send_ping(STD_WAIT) == 0) {
     return qt200_set_speed(my_speed);
   }
   return -1;
