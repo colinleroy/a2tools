@@ -220,14 +220,16 @@ static uint8 print_menu(void) {
 static void get_many_pictures(uint8 num_pics) {
   char buf[5];
   uint8 first_pic, last_pic, i, fi, prefix_len;
+  uint16 num_imgs;
+
   char filename[64];
   char *dirname;
 
   clrscr();
 
-  cputs("Get pictures from the camera\r\n\r\n"
+  cputs("Get pictures from the camera\r\n\r\n");
 
-        "First picture? ");
+  cputs("First picture? ");
 
   sprintf(buf, "%d", 1);
   dget_text_single(buf, 4, NULL);
@@ -258,11 +260,17 @@ static void get_many_pictures(uint8 num_pics) {
     return;
   }
 
-  cputs("\r\n"
-        "Choose where to save images. Image number will be appended to the\r\n"
+  clrscr();
+  cputs("Get pictures from the camera\r\n\r\n");
+  cputs("Choose where to save images. Image number will be appended to the\r\n"
         "prefix you choose, Existing files will be preserved.\r\n\r\n");
+
+  num_imgs = last_pic - first_pic + 1;
+  cprintf("Downloading %d images will require %d to %d kB of storage.\r\n\r\n",
+          num_imgs, num_imgs*29, num_imgs*120);
+
   dirname = file_select(1, "Select directory");
-  if (dirname == NULL) {
+  if (dirname == NULL || dirname[0] == '\0') {
     return;
   }
   gotox(0);
@@ -276,6 +284,9 @@ static void get_many_pictures(uint8 num_pics) {
     return;
 
   prefix_len = strlen(filename);
+
+  clrscr();
+  cputs("Get pictures from the camera\r\n\r\n");
 
   for (fi = i = first_pic; i <= last_pic; i++, fi++) {
 try_again:
