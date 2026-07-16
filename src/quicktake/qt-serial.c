@@ -96,7 +96,7 @@ uint8 qt_serial_connect(uint16 speed) {
   cputs("\r\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
-    cputs("No camera connected. ");
+    cputs("No camera detected. ");
     return -1;
   }
 

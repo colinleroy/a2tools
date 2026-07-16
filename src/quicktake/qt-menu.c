@@ -24,8 +24,6 @@
 #include "runtime_once_clean.h"
 #include "a2_features.h"
 
-#pragma code-name(push, "LC")
-
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
@@ -39,6 +37,9 @@ char magic[5] = "????";
 
 #define WELCOME_STR "Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\r\n"
 
+static int8 check_file_existence(char *filename, uint8 silent);
+static uint8 print_menu(void);
+
 static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
@@ -50,7 +51,7 @@ static void print_header(void) {
           cam_info.num_pics, cam_info.left_pics, qt_get_quality_str(cam_info.quality_mode),
           qt_get_flash_str(cam_info.flash_mode));
   } else {
-    cputs("No camera connected\r\n");
+    cputs("No camera detected\r\n");
   }
 #ifdef __CC65__
   cprintf("Free RAM: %zuB\r\n", _heapmemavail());
@@ -58,22 +59,144 @@ static void print_header(void) {
   chline(scrw);
 }
 
+static int8 save_picture(uint8 n_pic, char *set_filename) {
+  char filename[64];
+  struct statvfs sv;
+  char *dirname;
+  int fd, saved_errno;
+  off_t avail_bytes;
+
+  filename[0] = '\0';
+#ifdef __CC65__
+again:
+  clrscr();
+  cprintf("Saving picture %d", n_pic);
+
+  if (IS_NULL(set_filename)) {
+    cputs("...\r\n\r\n");
+    dirname = file_select(1, "Select directory");
+    if (dirname == NULL) {
+      errno = ENOENT;
+      return -1;
+    }
+    gotox(0);
+    cputs("Enter filename: ");
+    strcpy(filename, dirname);
+    strcat(filename, "/");
+    free(dirname);
+
+    dget_text_single(filename, 60, NULL);
+
+    if (filename[0] == '\0' || filename[strlen(filename) - 1] == '/') {
+      errno = ENOENT;
+      return -1;
+    }
+  } else {
+    strncpy(filename, set_filename, sizeof(filename)-1);
+    cprintf(" to %s...\r\n\r\n", filename);
+  }
+#else
+  if (serial_model == QT_MODEL_200)
+    sprintf(filename, "image%02d.jpg", n_pic);
+  else
+    sprintf(filename, "image%02d.qtk", n_pic);
+#endif
+
+  if (check_file_existence(filename, IS_NOT_NULL(set_filename))) {
+    errno = EEXIST;
+    goto handle_early_err;
+  }
+
+#ifdef __CC65__
+  if (statvfs(filename, &sv) != 0) {
+    goto err_io;
+  }
+#else
+  sv.f_bfree=1024;
+  sv.f_bsize=512;
+#endif
+
+  avail_bytes = sv.f_bfree * sv.f_bsize;
+  if (!strncmp(dirname, "/RAM", 4) && avail_bytes < (256UL * 1024UL)) {
+    cputs("\r\nNot enough space available.");
+    cgetc();
+    errno = ENOSPC;
+    goto handle_early_err;
+  }
+
+  fd = open(filename, O_WRONLY|O_CREAT);
+  if (fd <= 0) {
+    goto err_io;
+  }
+
+  if (qt_get_picture(n_pic, fd, avail_bytes) == 0) {
+    uint16 tmp = n_pic;
+    close(fd);
+    if (IS_NOT_NULL(set_filename)) {
+      return 0;
+    }
+    state_set(STATE_GET, tmp, NULL);
+    exec_pass = 1;
+    qt_convert_image(filename);
+  } else {
+    saved_errno = errno;
+    close(fd);
+    unlink(filename);
+    errno = saved_errno;
+err_io:
+    cputs("  Error saving picture: ");
+    cputs(strerror(errno));
+    cputs("\r\n");
+    cgetc();
+    return -1;
+  }
+  return 0;
+
+handle_early_err:
+  if (IS_NOT_NULL(set_filename)) {
+    return -1;
+  } else {
+    goto again;
+  }
+}
+
+#pragma code-name(push, "LC")
+
+static int8 check_file_existence(char *filename, uint8 silent) {
+  int fd = open(filename, O_RDONLY);
+  if (fd > 0) {
+    char c;
+    close(fd);
+    if (silent) {
+      return 1;
+    }
+    cputs("File exists. Overwrite? (y/N)\r\n");
+    c = tolower(cgetc());
+    if (c != 'y') {
+      return 1;
+    }
+    unlink(filename);
+  }
+  return 0;
+}
+
 static uint8 print_menu(void) {
   cputs("Menu\r\n\r\n");
   if (camera_connected) {
-    cputs(" G. Get one picture\r\n");
+    cputs(" G. Get and convert picture from camera\r\n");
+    cputs(" M. Get many pictures from camera\r\n");
     if (cam_features & CAM_CAN_GET_THUMBNAIL)
-      cputs(" P. Preview pictures\r\n");
+      cputs(" P. Preview pictures on camera\r\n");
     if (cam_features & CAM_CAN_DELETE_PICTURES)
-      cputs(" D. Delete all pictures\r\n");
+      cputs(" D. Delete all pictures from camera\r\n");
     if (cam_features & CAM_CAN_TAKE_PICTURE) {
       cputs(" S. Snap a picture\r\n");
     }
   } else {
-    cputs(" C. Connect camera\r\n");
+    cputs(" R. Retry connecting camera\r\n");
   }
-  cputs(  " R. Re-edit a raw picture from disk\r\n"
-           " V. View a converted picture from disk\r\n");
+  cputs(  " C. Convert a raw picture from disk\r\n"
+          " V. View a converted picture from disk\r\n");
   if (camera_connected) {
     if (cam_features & CAM_CAN_SET_CAMERA_NAME)
       cputs(" N. Set camera name\r\n");
@@ -92,89 +215,83 @@ static uint8 print_menu(void) {
   return cgetc();
 }
 
-static void save_picture(uint8 n_pic) {
+static void get_many_pictures(uint8 num_pics) {
+  char buf[5];
+  uint8 first_pic, last_pic, i, fi, prefix_len;
   char filename[64];
-  struct statvfs sv;
   char *dirname;
-  int fd, saved_errno;
-  off_t avail_bytes;
 
-  filename[0] = '\0';
-#ifdef __CC65__
-again:
   clrscr();
-  cprintf("Saving picture %d...\r\n\r\n", n_pic);
 
+  cputs("Get pictures from the camera\r\n\r\n"
+
+        "First picture? ");
+
+  sprintf(buf, "%d", 1);
+  dget_text_single(buf, 4, NULL);
+
+  if (buf[0] == '\0')
+    return;
+  first_pic = atoi(buf);
+
+  cputs("Last picture? ");
+
+  sprintf(buf, "%d", num_pics);
+  dget_text_single(buf, 4, NULL);
+
+  if (buf[0] == '\0')
+    return;
+  last_pic = atoi(buf);
+
+  if (first_pic < 1 || first_pic > num_pics) {
+    cprintf("No image %d in camera.\r\n"
+           "Please press a key...", first_pic);
+    cgetc();
+    return;
+  }
+  if (last_pic < 1 || last_pic > num_pics) {
+    cprintf("No image %d in camera.\r\n"
+           "Please press a key...", last_pic);
+    cgetc();
+    return;
+  }
+
+  cputs("\r\n"
+        "Choose where to save images. Image number will be appended to the\r\n"
+        "prefix you choose, Existing files will be preserved.\r\n\r\n");
   dirname = file_select(1, "Select directory");
   if (dirname == NULL) {
     return;
   }
   gotox(0);
-  cputs("Enter filename: ");
+  cputs("Enter filename prefix: ");
   strcpy(filename, dirname);
   strcat(filename, "/");
   free(dirname);
 
   dget_text_single(filename, 60, NULL);
-#else
-  if (serial_model == QT_MODEL_200)
-    sprintf(filename, "image%02d.jpg", n_pic);
-  else
-    sprintf(filename, "image%02d.qtk", n_pic);
-#endif
-
-  if (filename[0] == '\0' || filename[strlen(filename) - 1] == '/')
+  if (buf[0] == '\0')
     return;
 
-  fd = open(filename, O_RDONLY);
-  if (fd > 0) {
-    char c;
-    close(fd);
-    cputs("File exists. Overwrite? (y/N)\r\n");
-    c = tolower(cgetc());
-    if (c != 'y') {
-      goto again;
+  prefix_len = strlen(filename);
+
+  for (fi = i = first_pic; i <= last_pic; i++, fi++) {
+try_again:
+    sprintf(buf, "%d", fi);
+    filename[prefix_len] = '\0';
+    strcat(filename, buf);
+    strcat(filename, serial_model == QT_MODEL_200 ? ".JPG":".QTK");
+    if (save_picture(i, filename) != 0) {
+      if (errno == EEXIST) {
+        fi++;
+        goto try_again;
+      } else {
+        cprintf("\r\nCould not save picture %d. Non-recoverable error: ", i);
+        cputs(strerror(errno));
+        cgetc();
+        return;
+      }
     }
-    unlink(filename);
-  }
-
-#ifdef __CC65__
-  if (statvfs(filename, &sv) != 0) {
-    goto err_io;
-  }
-#else
-  sv.f_bfree=1024;
-  sv.f_bsize=512;
-#endif
-
-  avail_bytes = sv.f_bfree * sv.f_bsize;
-  if (!strncmp(dirname, "/RAM", 4) && avail_bytes < (256UL * 1024UL)) {
-    cputs("\r\nNot enough space available.");
-    cgetc();
-    goto again;
-  }
-
-  fd = open(filename, O_WRONLY|O_CREAT);
-  if (fd <= 0) {
-    goto err_io;
-  }
-
-  if (qt_get_picture(n_pic, fd, avail_bytes) == 0) {
-    uint16 tmp = n_pic;
-    close(fd);
-    state_set(STATE_GET, tmp, NULL);
-    exec_pass = 1;
-    qt_convert_image(filename);
-  } else {
-    saved_errno = errno;
-    close(fd);
-    unlink(filename);
-    errno = saved_errno;
-err_io:
-    cputs("  Error saving picture: ");
-    cputs(strerror(errno));
-    cputs("\r\n");
-    cgetc();
   }
 }
 
@@ -211,7 +328,7 @@ static void get_one_picture(uint8 num_pics) {
     cgetc();
     return;
   }
-  save_picture(n_pic);
+  save_picture(n_pic, NULL);
 }
 
 static void set_camera_name(const char *name) {
@@ -362,7 +479,7 @@ done:
   if (c == 'g') {
     init_text();
     set_scrollwindow(0, scrh);
-    save_picture(i);
+    save_picture(i, NULL);
   }
 }
 
@@ -533,7 +650,7 @@ menu:
 
   /* Choices available with or without a connected camera */
   switch(choice) {
-    case 'r':
+    case 'c':
       qt_convert_image(NULL);
       goto menu;
     case 'v':
@@ -553,6 +670,9 @@ menu:
     switch(choice) {
       case 'g':
         get_one_picture(cam_info.num_pics);
+        break;
+      case 'm':
+        get_many_pictures(cam_info.num_pics);
         break;
       case 'p':
         if (cam_features & CAM_CAN_GET_THUMBNAIL)
@@ -585,7 +705,7 @@ menu:
       default:
         break;
     }
-  } else if (choice == 'c') {
+  } else if (choice == 'r') {
     exec_pass = 1;
     exec("slowtake", NULL);
   }
