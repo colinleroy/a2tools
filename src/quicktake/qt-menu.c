@@ -81,8 +81,10 @@ again:
     }
     gotox(0);
     cputs("Enter filename: ");
-    strcpy(filename, dirname);
-    strcat(filename, "/");
+    sprintf(filename, "%s/IMAGE%d%s",
+            dirname, n_pic,
+            serial_model == QT_MODEL_200 ? ".JPG":".QTK");
+
     free(dirname);
 
     dget_text_single(filename, 60, NULL);
@@ -266,7 +268,7 @@ static void get_many_pictures(uint8 num_pics) {
   gotox(0);
   cputs("Enter filename prefix: ");
   strcpy(filename, dirname);
-  strcat(filename, "/");
+  strcat(filename, "/IMAGE");
   free(dirname);
 
   dget_text_single(filename, 60, NULL);
