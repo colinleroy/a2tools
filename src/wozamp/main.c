@@ -410,21 +410,19 @@ read_metadata_again:
       simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
   } else if (r == SURL_ANSWER_STREAM_METADATA) {
-    char *metadata;
     size_t len;
     surl_read_with_barrier((char *)&len, 2);
     len = ntohs(len);
-    metadata = malloc(len + 1);
-    surl_read_with_barrier(metadata, len);
-    metadata[len] = '\0';
+    surl_read_with_barrier(tmp_buf, len);
+    tmp_buf[len] = '\0';
 
-    if (!strncmp(metadata, "has_video\n", 10)) {
-      char *value = strchr(metadata, '\n')+1;
+    if (!strncmp(tmp_buf, "has_video\n", 10)) {
+      char *value = strchr(tmp_buf, '\n')+1;
       has_video = value[0] == '1';
     } else {
-      show_metadata(metadata);
+      show_metadata(tmp_buf);
     }
-    free(metadata);
+
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 

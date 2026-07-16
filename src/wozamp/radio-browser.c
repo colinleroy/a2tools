@@ -46,12 +46,13 @@
 
 char n_lines = 0;
 
-#define JSON_BUF_SIZE 4096
-char *json_buf = NULL;
+/* Potential 8kB buffer available */
+extern char *nat_data;
+extern unsigned char nat_data_static;
 
 #define RADIO_BROWSER_API       "http://all.api.radio-browser.info"
 #define SEARCH_ENDPOINT         "/json/stations/byname/"
-#define SEARCH_PARAMETERS       "?limit=10&order=votes&reverse=true&hidebroken=true"
+#define SEARCH_PARAMETERS       "?limit=8&order=votes&reverse=true&hidebroken=true"
 #define SEARCH_RESULT_SELECTOR  ".[]|select(.hls == 0)|(.name, .homepage, .country, .favicon, .url_resolved, .stationuuid)"
 #define CLICK_ENDPOINT          "/json/url/"
 #define RADIO_SEARCH_FILE       "RBRESULTS"
@@ -199,7 +200,7 @@ read_metadata_again:
   }
 }
 
-static void show_results(void) {
+static void show_results(char *json_buf) {
   int len;
   char c, n_res, total_res;
   char *tmp;
@@ -344,7 +345,9 @@ exit_results:
 
 static void search_stations(char *search_str) {
   char *w;
+  char *json_buf = NULL;
 
+  #define JSON_BUF_SIZE 3072
   json_buf = malloc0(JSON_BUF_SIZE);
 
   strcpy(json_buf, RADIO_BROWSER_API);
@@ -373,7 +376,7 @@ static void search_stations(char *search_str) {
   if (surl_get_json(json_buf, SEARCH_RESULT_SELECTOR,
                     translit_charset, SURL_HTMLSTRIP_NONE,
                     JSON_BUF_SIZE) > 0) {
-    show_results();
+    show_results(json_buf);
     goto out;
   } else {
     cputs("No results.");
