@@ -1297,6 +1297,7 @@ no_data:
         lda     rDMCU
         cmp     #15
         bne     ZAG_finished
+        iny
         cpy     #64
         beq     ZAG_finished
         jmp     doZAGLoop
