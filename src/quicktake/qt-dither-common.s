@@ -35,7 +35,7 @@
 img_y                 = _zp5
 
 clear_hgr_page:
-        bit     $C083         ; WR-enable LC, we're gonna patch
+        bit     $C083         ; WR-enable LC, we're gonna patch code
         bit     $C083
 
         ldx     #$20

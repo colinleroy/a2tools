@@ -147,31 +147,7 @@ forward_err:
         adc     err_nexty
 sierra_buf_off:
         sta     safe_err_buf-1,y
-        stx     err_nexty      ; store err/4 for x,y+1
-.endmacro
-
-; Prepare line's dithering
-.macro LINE_PREPARE_DITHER
-prepare_dither_bayer:
-        lda     _bayer_map_y
-        sta     _bayer_map_x
-        clc
-        adc     #8
-        sta     _end_bayer_map_x
-        jmp     prepare_dither_none
-
-prepare_dither_sierra:
-        ; Reset err buf to start
-        lda     #>(safe_err_buf)
-        sta     sierra_buf+2
-        lda     #>(safe_err_buf-1)
-        sta     sierra_buf_off+2
-        ; reset err_nextx
-        lda     #$00
-        sta     err_nextx
-        sta     err_nexty
-
-prepare_dither_none:          ; Nothing to do here.
+        stx     err_nexty      ; now we can store err/4 for x,y+1
 .endmacro
 
 .macro BAYER_INIT
@@ -202,22 +178,6 @@ store_bayer_y:
         stx     _cur_buf_page+1
         lda     #<(_buffer)
         sta     _cur_buf_page
-.endmacro
-
-.macro LOAD_DATA
-        lda     _is_thumb
-        beq     load_normal
-        lda     img_y
-        jsr     _load_thumbnail_data
-        jmp     :+
-
-load_normal:
-        jsr     _load_normal_data
-:
-        ldx     _cur_buf_page+1
-        stx     buf_ptr_load+2
-        lda     #<(_buffer)
-        sta     buf_ptr_load+1
 .endmacro
 
 _do_dither_horiz:
@@ -269,9 +229,34 @@ x_init:
 first_dither_handler:
         jmp     prepare_dither_sierra
 
-; Line loop start
-        LINE_PREPARE_DITHER
+;------- Inlined to avoid branching
+thumbnail_load:
+        lda     img_y
+        jsr     _load_thumbnail_data
+        jmp     data_loaded
+;-------
 
+; Line loop start
+prepare_dither_bayer:
+        lda     _bayer_map_y
+        sta     _bayer_map_x
+        clc
+        adc     #8
+        sta     _end_bayer_map_x
+        jmp     prepare_dither_none
+
+prepare_dither_sierra:
+        ; Reset err buf to start
+        lda     #>(safe_err_buf)
+        sta     sierra_buf+2
+        lda     #>(safe_err_buf-1)
+        sta     sierra_buf_off+2
+        ; reset err_nextx
+        lda     #$00
+        sta     err_nextx
+        sta     err_nexty
+
+prepare_dither_none:          ; Nothing to do here.
         ldx     #0
         stx     img_xh
 
@@ -284,7 +269,16 @@ line_buf_start_byte = *+1
         lda     hgr_start_mask
         sta     pixel_mask
 
-        LOAD_DATA
+load_data:
+        lda     _is_thumb
+        bne     thumbnail_load
+load_normal:
+        jsr     _load_normal_data
+data_loaded:
+        ldx     _cur_buf_page+1
+        stx     buf_ptr_load+2
+        lda     #<(_buffer)
+        sta     buf_ptr_load+1
 
 img_x_init = *+1
         ldy     #0                ; We'll keep Y = img_x in the whole row loop.
