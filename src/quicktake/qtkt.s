@@ -398,12 +398,9 @@ next_ln_val:
         lda     loops
         sta     loop
 
-        ldy     #0                      ; Start offset for even rows
-
-        lda     row
+        lda     row                     ; Start offset for even rows
         and     #1
-        beq     col_loop
-        iny
+        tay
 
 col_loop:
 cache_read = *+1
@@ -412,7 +409,7 @@ cache_read = *+1
         beq     inc_cache_high
 
 handle_byte:
-        tax
+        tax                             ; Keep full byte in X for indexing of gstep, and low nibble
 
         bmi     gstep_high_pos
 gstep_high_neg:
@@ -563,6 +560,7 @@ clamp_low_nibble:
         eor     #$FF                     ; => 00 if negative, FE if positive
         bpl     :+
         lda     #$FF                     ; => FF if positive
+        clc                              ; Need to clear carry here
 :       sta     ln_val
         jmp     store_ln_val
 
@@ -578,22 +576,25 @@ end_of_row:
         lda     ln_val
 I5:     sta     IDX+6,y
 
-        ldx     row_page_inc
-        INC_HIGH_PAGES
-
         ; Re-enable special handler for first_col
         SET_BRANCH #$90, high_nibble_special
-        UPDATE_BRANCH high_nibble_special, first_col_handler
 
         dec     row
         beq     band_done
+
+        ldx     row_page_inc
+        INC_HIGH_PAGES
 
 next_row_handler:
         bit     row_loop
 
         ; Deactivate first_row handler for low nibble
         SET_BRANCH #$B0, low_nibble_special
-        ; Deactivate first row pointers update
+
+        ; Set special handler to first col
+        UPDATE_BRANCH high_nibble_special, first_col_handler
+
+        ; Deactivate first row pointers update (overwrite with JMP col_loop)
         lda     #$4C
         sta     inc_first_row_handler
         sta     next_row_handler
