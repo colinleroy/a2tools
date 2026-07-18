@@ -160,48 +160,46 @@ static void histogram_equalize(void) {
       *(cur_opt_histogram++) = tmp;
     } while (++x);
 #else
-    __asm__("ldy #0");
+    __asm__("ldx #0");
     next_h:
+    __asm__("stx tmp1");
     __asm__("clc");
-    __asm__("lda %v,y", err_buf);
+    __asm__("lda %v,x", err_buf);
     __asm__("adc %v", curr_hist);
     __asm__("sta %v", curr_hist);
     /* curr_hist*255 done as curr_hist*256 - curr_hist */
-    __asm__("tax"); /* *256 */
+    __asm__("tay"); /* *256 mid-byte to Y */
 
-    __asm__("lda %v+256,y", err_buf);
+    __asm__("lda %v+256,x", err_buf);
     __asm__("adc %v+1", curr_hist);
     __asm__("sta %v+1", curr_hist);
-    __asm__("sta sreg"); /* * 256 */
+    __asm__("tax"); /* *256 high byte saved to X */
 
-    /* Finish curr_hist * 256 with low byte 0 */
-    __asm__("lda #0");
+    __asm__("lda #0"); /* *256 low-byte = 0 */
 
     /* -curr_hist => curr_hist * 255 */
     __asm__("sec");
-    __asm__("sbc %v", curr_hist);
-    __asm__("txa");
+    __asm__("sbc %v", curr_hist); /* don't store low-byte, it'll be discarded on div 256 */
+    __asm__("tya");
     __asm__("sbc %v+1", curr_hist);
-    __asm__("tax");
-    __asm__("lda sreg");
+    __asm__("tay");               /* mid-byte back to Y */
+    __asm__("txa");
     __asm__("sbc #0");
-    __asm__("sta sreg");
+    __asm__("tax");               /* high byte back to X */
 
     /* /(width*height) done as /width /height */
     /* / 256 */
-    __asm__("txa");
-    __asm__("ldx sreg");
+    __asm__("tya");               /* move mid-byte to A. AX now correct for last div */
 
     /* / 192 */
-    __asm__("sty tmp1");
     __asm__("jsr pushax");
     __asm__("lda #<%w", HGR_HEIGHT);
     __asm__("jsr tosudiva0");
-    __asm__("ldy tmp1");
+    __asm__("ldx tmp1");
 
-    __asm__("sta %v,y", opt_histogram);
+    __asm__("sta %v,x", opt_histogram);
 
-    __asm__("iny");
+    __asm__("inx");
     __asm__("bne %g", next_h);
 #endif
   } else {

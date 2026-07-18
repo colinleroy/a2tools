@@ -69,11 +69,10 @@ static int8 save_picture(uint8 n_pic, char *set_filename) {
   filename[0] = '\0';
 #ifdef __CC65__
 again:
-  clrscr();
-  cprintf("Saving picture %d", n_pic);
 
   if (IS_NULL(set_filename)) {
-    cputs("...\r\n\r\n");
+    clrscr();
+    cprintf("Saving and converting picture %d...\r\n\r\n", n_pic);
     dirname = file_select(1, "Select directory");
     if (dirname == NULL) {
       errno = ENOENT;
@@ -95,7 +94,7 @@ again:
     }
   } else {
     strncpy(filename, set_filename, sizeof(filename)-1);
-    cprintf(" to %s...\r\n\r\n", filename);
+    cprintf("Saving picture %d to %s...\r\n\r\n", n_pic, filename);
   }
 #else
   if (serial_model == QT_MODEL_200)
@@ -119,6 +118,9 @@ again:
 #endif
 
   avail_bytes = sv.f_bfree * sv.f_bsize;
+
+  /* Special case for /RAM: Don't allow saving there if it's not LARGE,
+   * as we'll use it for the 8bits grayscale buffer */
   if (!strncmp(dirname, "/RAM", 4) && avail_bytes < (256UL * 1024UL)) {
     cputs("\r\nNot enough space available.");
     cgetc();
@@ -217,21 +219,27 @@ static uint8 print_menu(void) {
   return cgetc();
 }
 
+static void many_pic_header(const char *str) {
+  clrscr();
+  cputs("Get pictures from the camera - ");
+  cputs(str);
+  cputs("\r\n\r\n");
+}
+
 static void get_many_pictures(uint8 num_pics) {
   char buf[5];
   uint8 first_pic, last_pic, i, fi, prefix_len;
-  uint16 num_imgs;
+  uint8 num_imgs;
 
   char filename[64];
   char *dirname;
 
-  clrscr();
-
-  cputs("Get pictures from the camera\r\n\r\n");
+  many_pic_header("Select pictures to download.");
 
   cputs("First picture? ");
 
-  sprintf(buf, "%d", 1);
+  buf[0] = '1';
+  buf[1] = '\0';
   dget_text_single(buf, 4, NULL);
 
   if (buf[0] == '\0')
@@ -260,10 +268,9 @@ static void get_many_pictures(uint8 num_pics) {
     return;
   }
 
-  clrscr();
-  cputs("Get pictures from the camera\r\n\r\n");
-  cputs("Choose where to save images. Image number will be appended to the\r\n"
-        "prefix you choose, Existing files will be preserved.\r\n\r\n");
+  many_pic_header("Choose where to save pictures.");
+  cputs("Image number will be appended to the prefix you choose.\r\n"
+        "Existing files will be preserved.\r\n\r\n");
 
   num_imgs = last_pic - first_pic + 1;
   cprintf("Downloading %d images will require %d to %d kB of storage.\r\n\r\n",
@@ -285,8 +292,6 @@ static void get_many_pictures(uint8 num_pics) {
 
   prefix_len = strlen(filename);
 
-  clrscr();
-  cputs("Get pictures from the camera\r\n\r\n");
 
   for (fi = i = first_pic; i <= last_pic; i++, fi++) {
 try_again:
@@ -294,6 +299,8 @@ try_again:
     filename[prefix_len] = '\0';
     strcat(filename, buf);
     strcat(filename, serial_model == QT_MODEL_200 ? ".JPG":".QTK");
+
+    many_pic_header("Downloading pictures...");
     if (save_picture(i, filename) != 0) {
       if (errno == EEXIST) {
         fi++;
@@ -614,6 +621,7 @@ if (is_iigs) {
   }
   return 1;
 }
+
 #pragma code-name(pop)
 
 void unlink_temp_files(void) {
