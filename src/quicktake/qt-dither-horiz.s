@@ -26,7 +26,7 @@
 img_x                 = _zp4
 ; img_y               = _zp5, defined in -common.s
 pixel_val             = _zp6
-pixel_mask            = _zp7
+pixel_count           = _zp7
 opt_val               = _zp8
 err_nextx             = _zp9
 err_nexty             = _zp10
@@ -59,21 +59,15 @@ safe_err_buf = _err_buf+1
 negative_b:
         adc     opt_val
         bcs     check_bayer_low
-        jmp     black_pix_bayer
+        jmp     bayer_dither_shift
 
 positive_b:
         adc     opt_val
-        bcs     white_pix_bayer
+        bcs     bayer_dither_shift
 check_bayer_low:
         cmp     #<DITHER_THRESHOLD
-        bcc     black_pix_bayer
-
-white_pix_bayer:
-        lda     pixel_val
-        ora     pixel_mask
-        sta     pixel_val
-
-black_pix_bayer:
+bayer_dither_shift:
+        rol     pixel_val
         ; Advance Bayer X
         inx
         cpx     _end_bayer_map_x
@@ -90,11 +84,9 @@ reset_bayer_x:
 .macro NO_DITHER_PIXEL BRANCH_TO
         lda     opt_val
         cmp     #<DITHER_THRESHOLD
-        bcc     :+
-        lda     pixel_val
-        ora     pixel_mask
-        sta     pixel_val
-:       jmp     BRANCH_TO
+no_dither_shift:
+        rol     pixel_val
+        jmp     BRANCH_TO
 .endmacro
 
 .assert DITHER_THRESHOLD = $80, error
@@ -109,45 +101,48 @@ sierra_buf:
         bpl     err_pos
 err_neg:
         adc     opt_val
-        bcc     compute_err    ; Still negative. The pixel is black
-        bmi     white_pix      ; Over threshold, white pixel
-        lsr     a              ; Under threshold, black pixel, error is positive
-        sta     err_nextx      ; Compute /2 and /4 without pulling sign
+        bcc     sierra_dither_shift ; Still negative. The pixel is black, carry unset
+        bmi     sierra_dither_shift ; Over threshold, white pixel, carry set
+sierra_dither_shift_short1:         ; Pixel is black
+        lsr     pixel_val
+        ; compute error without care for sign (we know it's positive)
+        lsr     a                   ; Under threshold, black pixel, error is positive
+        sta     err_nextx           ; Compute /2 and /4 without pulling sign
         lsr     a
         jmp     forward_err
 
 err_pos:
         adc     opt_val
-        bcs     white_pix      ; Overflowed so the pixel is white.
-        bmi     white_pix      ; No overflow but > $80, white pixel
-        lsr     a              ; Under threshold, black pixel, error is positive
-        sta     err_nextx      ; Compute /2 and /4 without pulling sign
+        bcs     sierra_dither_shift ; Overflowed so the pixel is white.
+        bmi     white_pix           ; No overflow but > $80, white pixel but carry isn't set
+sierra_dither_shift_short2:         ; Pixel is black
+        lsr     pixel_val
+        ; compute error without care for sign (we know it's positive)
+        lsr     a                   ; Under threshold, black pixel, error is positive
+        sta     err_nextx           ; Compute /2 and /4 without pulling sign
         lsr     a
         jmp     forward_err
 
 white_pix:
-        tax                    ; Backup our pixel + err(x+1,y)+err(x,y+1) calculation
-        lda     pixel_val
-        ora     pixel_mask
-        sta     pixel_val
-        txa                    ; Restore it
+        sec
+sierra_dither_shift:
+        ror     pixel_val
 
-compute_err:
-        cmp     #$80           ; Set carry according to sign
-        ror     a              ; And forward error to next pixels
-        sta     err_nextx      ; err/2 for (x+1,y)
+        cmp     #$80                ; Set carry according to error sign
+        ror     a                   ; And forward error to next pixels
+        sta     err_nextx           ; err/2 for (x+1,y)
         cmp     #$80
         ror     a
 
 forward_err:
-        tax                    ; remember err/4 for x,y+1
+        tax                         ; remember err/4 for x,y+1
 
         ; previous err + err/4 for x-1,y+1
-        clc                    ; May be set by ror
+        clc                         ; May be set by ror
         adc     err_nexty
 sierra_buf_off:
         sta     safe_err_buf-1,y
-        stx     err_nexty      ; now we can store err/4 for x,y+1
+        stx     err_nexty           ; now we can store err/4 for x,y+1
 .endmacro
 
 .macro BAYER_INIT
@@ -266,8 +261,8 @@ line_buf_start_byte = *+1
         sta     line_buf_ptr+1
 
         ; Reset start mask
-        lda     hgr_start_mask
-        sta     pixel_mask
+        lda     #7
+        sta     pixel_count
 
 load_data:
         lda     _is_thumb
@@ -313,16 +308,17 @@ next_pixel:
         ; Advance to next HGR pixel after incrementing image X.
         ; The opcodes and targets are patched according to the rotation of the image.
 img_x_to_hgr:
-        asl     pixel_mask            ; Update pixel mask  (lsr or asl)
-check_store_byte:
-        bpl     pixel_handler         ; Check if byte done (bpl or bne, patched)
+        dec     pixel_count           ; Update pixel count
+        bne     pixel_handler         ; Check if byte done
 
         ; Byte done, store it in the line buffer
-hgr_start_mask = *+1
-        lda     #$01                  ; Set init value for mask
-        sta     pixel_mask
+        lda     #7
+        sta     pixel_count
 
         lda     pixel_val
+extra_pixel_shift:
+        nop                           ; potentially patched with LSR A according to rotation
+
 line_buf_ptr:
         sta     _line_buf             ; Store our value
         lda     #$0
@@ -446,6 +442,10 @@ dither_after_brighten:
 
 C_ASL_ZP = $06
 C_LSR_ZP = $46
+C_ROL_ZP = $26
+C_ROR_ZP = $66
+C_LSR_A  = $4A
+C_NOP    = $EA
 C_BPL    = $10
 C_BMI    = $30
 C_BNE    = $D0
@@ -484,16 +484,19 @@ _setup_angle_0:
         sta     line_buf_start_byte
         sty     read_buffer_bump
 
-        lda     #$01
-        sta     hgr_start_mask
+        ; Patch pixel shifts
+        lda     #C_ROR_ZP
+        sta     bayer_dither_shift
+        sta     sierra_dither_shift
+        sta     no_dither_shift
 
-        ; Patch img_x_to_hgr
-        lda     #C_ASL_ZP
-        sta     img_x_to_hgr
+        lda     #C_LSR_ZP
+        sta     sierra_dither_shift_short1
+        sta     sierra_dither_shift_short2
 
-        ; Patch hgr byte shifter to increase after writing to main
-        lda     #C_BPL
-        sta     check_store_byte
+        ; Need extra shift this way
+        lda     #C_LSR_A
+        sta     extra_pixel_shift
 
         ; Patch img_y_to_hgr
         lda     #C_INC_ZP
@@ -511,16 +514,20 @@ _setup_angle_180:
 
         lda     #<(_line_buf+DHGR_LINE_LEN)
         sta     line_buf_start_byte
-        lda     #$40
-        sta     hgr_start_mask
 
-        ; Patch img_x_to_hgr
-        lda     #C_LSR_ZP
-        sta     img_x_to_hgr
+        ; Patch pixel shifts
+        lda     #C_ROL_ZP
+        sta     bayer_dither_shift
+        sta     sierra_dither_shift
+        sta     no_dither_shift
 
-        ; Patch hgr byte shifter to decrease after writing to aux
-        lda     #C_BNE
-        sta     check_store_byte
+        lda     #C_ASL_ZP
+        sta     sierra_dither_shift_short1
+        sta     sierra_dither_shift_short2
+
+        ; No extra shift this way
+        lda     #C_NOP
+        sta     extra_pixel_shift
 
         ; Patch img_y_to_hgr
         lda     #C_DEC_ZP
