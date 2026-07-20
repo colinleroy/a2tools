@@ -268,7 +268,7 @@ load_data:
         lda     _is_thumb
         bne     thumbnail_load
 load_normal:
-        jsr     _load_normal_data
+        jsr     _load_normal_data ; Prepare the next 256 bytes
 data_loaded:
         ldx     _cur_buf_page+1
         stx     buf_ptr_load+2
@@ -436,7 +436,6 @@ dither_after_brighten:
         jmp     $FFFF
 
 ; Rotation setup. Will patch
-; - img_x_to_hgr
 ; - img_y_to_hgr
 ; - incs, decs, etc
 

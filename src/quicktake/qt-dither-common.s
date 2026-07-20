@@ -58,9 +58,12 @@ _clear_dhgr:
         jsr     clear_hgr_page
         rts
 
+NUM_LINES_READ = 8
+.assert BUFFER_SIZE = 256*NUM_LINES_READ, error
+
 _load_normal_data:
-        lda     img_y
-        and     #7
+        lda     img_y         ; We must read every 8 lines
+        and     #(NUM_LINES_READ-1)
         beq     read_buffer
         inc     _cur_buf_page+1
         rts
