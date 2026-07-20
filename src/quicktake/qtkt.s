@@ -159,7 +159,6 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB3+2
         sta     IB4+2
         sta     IB5+2
-        sta     IB6+2
 .endmacro
 
 .macro INC_FIRST_ROW_PAGES
@@ -185,7 +184,6 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB3+2
         sta     IB4+2
         sta     IB5+2
-        sta     IB6+2
 .endmacro
 
 ; QTKT file magic
@@ -403,19 +401,12 @@ next_ln_val:
         tay
 
 col_loop:
+IB1:    lda     IDX_BEHIND,y            ; Preload value we'll use for first addition
 cache_read = *+1
-        lda     $FFFF
-        inc     cache_read
-        beq     inc_cache_high
-
-handle_byte:
-        tax                             ; Keep full byte in X for indexing of gstep, and low nibble
-
+        ldx     $FFFF                   ; Load new byte to X for gstep indexing
         bmi     gstep_high_pos
 gstep_high_neg:
         ; High nibble
-IB1:    lda     IDX_BEHIND,y
-        ;clc
         adc     ln_val
         ror
         clc
@@ -426,36 +417,6 @@ IB2:    adc     IDX_BEHIND+2,y
         bcc     clamp_high_nibble_low
         clc
         jmp     store_hn_val
-
-; --------------------------------------; Inlined helpers, close enough to branch
-; Increment cache pointer page
-inc_cache_high:
-        inc     cache_read+1
-
-no_cache_read:
-        .assert CACHE_SIZE >= 19200, error ; the following trick wouldn't work otherwise
-        bne     handle_byte
-
-        ; Check for cache almost-end and restart floppy
-        ; Consider we have time to handle 1kB while the
-        ; drive restarts
-        ldx     cache_read+1
-        cpx     #(>CACHE_END)-4
-        bmi     :+
-start_floppy_motor:
-        sta     motor_on                ; Patched if on floppy
-
-:       ; Check for cache end and refill cache
-        cpx     #>CACHE_END
-        bne     handle_byte
-
-        pha
-        sty     tmp1                    ; Backup index
-        jsr     fill_cache
-        ldy     tmp1                    ; Restore index
-        pla
-        jmp     handle_byte
-; --------------------------------------; End of inlined helpers
 
 clamp_high_nibble_low:
         lda     #$00
@@ -493,12 +454,10 @@ IBFR4:  sta     IDX_BEHIND+4,y
 ; ----------------------------------
 
 gstep_high_pos:
-IB3:    lda     IDX_BEHIND,y
-        ;clc
         adc     ln_val
         ror
         clc
-IB4:    adc     IDX_BEHIND+2,y
+IB3:    adc     IDX_BEHIND+2,y
         ror
         clc
         adc     high_nibble_gstep_low,x ; Sets carry if overflow
@@ -519,12 +478,12 @@ I2:     sta     IDX+1,y
 
 do_low_nibble:
         ; Low nibble
-IB5:    lda     IDX_BEHIND+2,y
+IB4:    lda     IDX_BEHIND+2,y
         ;clc
         adc     hn_val
         ror
         clc
-IB6:    adc     IDX_BEHIND+4,y
+IB5:    adc     IDX_BEHIND+4,y
         ror
         clc
         adc     low_nibble_gstep_low,x  ; Sets carry if overflow
@@ -546,6 +505,11 @@ std_col_handler_low:
         clc
 I4:     sta     IDX+3,y
 
+        ; Ready for next byte, increment cache pointer
+        inc     cache_read
+        beq     inc_cache_high
+
+inc_cache_high_done:
         dec     loop
         beq     end_of_row
 
@@ -555,6 +519,35 @@ I4:     sta     IDX+3,y
         tay
         bcs     inc_idx_high
         jmp     col_loop
+
+; --------------------------------------; Inlined helpers, close enough to branch
+; Increment cache pointer page
+inc_cache_high:
+        inc     cache_read+1
+
+no_cache_read:
+        .assert CACHE_SIZE >= 19200, error ; the following trick wouldn't work otherwise
+        bne     inc_cache_high_done
+
+        ; Check for cache almost-end and restart floppy
+        ; Consider we have time to handle 1kB while the
+        ; drive restarts
+        ldx     cache_read+1
+        cpx     #(>CACHE_END)-4
+        bmi     :+
+start_floppy_motor:
+        sta     motor_on                ; Patched if on floppy
+
+:       ; Check for cache end and refill cache
+        cpx     #>CACHE_END
+        bne     inc_cache_high_done
+
+        pha
+        sty     tmp1                    ; Backup index
+        jsr     fill_cache
+        ldy     tmp1                    ; Restore index
+        pla
+        jmp     inc_cache_high_done
 
 clamp_low_nibble:
         eor     #$FF                     ; => 00 if negative, FE if positive
@@ -571,6 +564,7 @@ inc_idx_high:
 inc_first_row_handler:
         INC_FIRST_ROW_PAGES
         jmp     col_loop
+; --------------------------------------; End of inlined helpers
 
 end_of_row:
         lda     ln_val
