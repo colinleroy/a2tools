@@ -115,31 +115,6 @@ low_nibble_gstep_low:
         .byte        $59
         .endrep
 
-; gstep correction (sign byte for low nibble)
-low_nibble_gstep_high:
-        .repeat 16
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-        .byte        $FF
-
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .byte        $00
-        .endrep
-
-; gstep correction sign byte for high nibble is derived from high nibble's high bit
-; in the main loop so no array.
-
 IDX        = _raw_image + RAW_WIDTH
 IDX_BEHIND = (IDX-RAW_WIDTH+1)
 
@@ -159,6 +134,8 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB3+2
         sta     IB4+2
         sta     IB5+2
+        sta     IB6+2
+        sta     IB7+2
 .endmacro
 
 .macro INC_FIRST_ROW_PAGES
@@ -184,6 +161,8 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB3+2
         sta     IB4+2
         sta     IB5+2
+        sta     IB6+2
+        sta     IB7+2
 .endmacro
 
 ; QTKT file magic
@@ -404,7 +383,7 @@ col_loop:
 IB1:    lda     IDX_BEHIND,y            ; Preload value we'll use for first addition
 cache_read = *+1
         ldx     $FFFF                   ; Load new byte to X for gstep indexing
-        bmi     gstep_high_pos
+        bmi     gstep_high_pos          ; gstep's < 0 when high nibble >= 8
 gstep_high_neg:
         ; High nibble
         adc     ln_val
@@ -433,7 +412,7 @@ IBFR1:  sta     IDX_BEHIND+2,y
 IBFR2:  sta     IDX_BEHIND+4,y
 
 first_pixel_handler:
-        bcs     std_col_handler_high    ; Patched
+        bcs     std_col_handler_high    ; Patched out after first pixel 
         sta     IDX+1,y
         sta     IDX,y
         sta     next_ln_val+1
@@ -477,9 +456,10 @@ std_col_handler_high:
 I2:     sta     IDX+1,y
 
 do_low_nibble:
-        ; Low nibble
+        lda     low_nibble_gstep_low,x
+        bmi     low_nibble_neg
+low_nibble_pos:
 IB4:    lda     IDX_BEHIND+2,y
-        ;clc
         adc     hn_val
         ror
         clc
@@ -487,17 +467,25 @@ IB5:    adc     IDX_BEHIND+4,y
         ror
         clc
         adc     low_nibble_gstep_low,x  ; Sets carry if overflow
-        sta     ln_val
-        lda     low_nibble_gstep_high,x ; Carry set by previous adc if overflowed
-        adc     #0
-        bne     clamp_low_nibble
-        clc                             ; may need to clear carry if Z in case of ($FF + 0 + C)
-        lda     ln_val
+        bcs     clamp_low_nibble_high
+        jmp     store_ln_val
+low_nibble_neg:
+IB6:    lda     IDX_BEHIND+2,y
+        adc     hn_val
+        ror
+        clc
+IB7:    adc     IDX_BEHIND+4,y
+        ror
+        clc
+        adc     low_nibble_gstep_low,x  ; Sets carry if overflow
+        bcc     clamp_low_nibble_low
+        clc
 store_ln_val:
+        sta     ln_val
 I3:     sta     IDX+4,y
 
 low_nibble_special:
-        bcc     first_row_handler_low   ; Patched
+        bcc     first_row_handler_low   ; Patched with bcs at deactivation time
 
 std_col_handler_low:
         adc     hn_val
@@ -549,12 +537,12 @@ start_floppy_motor:
         pla
         jmp     inc_cache_high_done
 
-clamp_low_nibble:
-        eor     #$FF                     ; => 00 if negative, FE if positive
-        bpl     :+
-        lda     #$FF                     ; => FF if positive
+clamp_low_nibble_high:
+        lda     #$FF
         clc                              ; Need to clear carry here
-:       sta     ln_val
+        jmp     store_ln_val
+clamp_low_nibble_low:
+        lda     #$00
         jmp     store_ln_val
 
 inc_idx_high:
