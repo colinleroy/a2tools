@@ -14,13 +14,13 @@ s18:    lda     ser_status      ; 14    Check serial
 d18:    ldx     ser_data        ; 30    Load serial
 
         lda     #SPC            ; 32    Unset VU meter
-        STORE_TARGET_4          ; 36
+        STORE_TARGET_3          ; 35
 
-v18b:   sta     txt_level       ; 40
-        JMP_NEXT_6              ; 46
+v18b:   sta     txt_level       ; 39
+        JMP_NEXT_6              ; 45
 :
         WASTE_2                 ;    22
         ____SPKR_DUTY____4      ;    26 Toggle speaker
-        WASTE_10                ;    36
-        KBD_LOAD_7              ;    43
-        jmp     duty_cycle18    ;    46
+        WASTE_9                 ;    35
+        KBD_LOAD_7              ;    42
+        jmp     duty_cycle18    ;    45

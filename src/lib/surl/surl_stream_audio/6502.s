@@ -49,15 +49,24 @@
 .endmacro
 .else
 .macro DEBUG_JMP NUM
+        WASTE_2                 ; Min 2 cycles, for NTSC computers
 .endmacro
 .endif
 
         .code
 
+.ifdef AUDIO_FORCED_START
+.res AUDIO_WASTE_BYTES
+.endif
+
 ; ------------------------------------------------------------------------
 .align 256                      ; Make sure we don't cross page in the middle
 _AUDIO_CODE_START = *           ; of duty cycle handlers.
 _SAMPLES_BASE = *
+
+.ifdef AUDIO_FORCED_START
+.assert AUDIO_FORCED_START = _AUDIO_CODE_START, error
+.endif
 
 ; Ask proxy to send levels from this page, multiplied by 1. (no time for us to do it)
 SAMPLE_OFFSET = >_SAMPLES_BASE
