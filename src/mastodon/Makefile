@@ -186,7 +186,6 @@ hdv:
 mastoperso.po: mastodon.po
 	cp $< $@; \
 	java -jar ../../bin/ac.jar -p $@ mastsettings TXT < mastsettings; \
-	java -jar ../../bin/ac.jar -p $@ clisettings TXT < clisettings; \
 
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^ $(TARGET)-iobuf-0800.o
