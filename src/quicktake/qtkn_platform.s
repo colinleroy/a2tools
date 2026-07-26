@@ -775,26 +775,21 @@ declow2:
         dey
         sty     col
 
-        ; Same as earlier, order is important.
-        ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
-        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , l4c
-divt1c: lda     _div48,x    ; Store to output buffer while we're at it.
-dest1c: sta     $FFFF,y       ; Annoyingly this is 8 cycles lost if repeat is odd
-
-        ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
-        INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
-
-        ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
-        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , l4d
-divt0c: lda     _div48,x    ; Same. It's better to lose these 16 cycles than to
-dest0c: sta     $FFFF,y       ; test for evenness, for now.
-
-        ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
-        INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
-
         lda     rept          ; rep & 1 ? if rep is odd,
         and     #1
-        beq     rep_even
+        bne     rep_odd
+        jmp     rep_even
+
+rep_odd:
+        ; Same as earlier, order is important.
+        ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2lj, next2hj, $FF01, next1lj, next1hj, val1, , l4c
+        ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
+        INTERPOLATE_BUF_TOKEN val0, $FF03, next3lc, next3hc, val1, $FF02, next2lk, next2hk
+        ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lk, next1hk, $FF00, next0lc, next0hc, val0, , l4d
+        ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
+        INTERPOLATE_BUF_TOKEN val1, $FF02, next2ll, next2hl, val0, $FF01, next1ll, next1hl
 
         ; tk = gethuffdata(1) << 4;
         GETDATAHUFF_REPVAL repval_refill, repval_rts   ; we patch the values we just computed with this token.
@@ -814,17 +809,35 @@ dest1d: sta     $FFFF,y
         INCR_VAL_TOKEN val0
 divt0d: lda     _div48,x
 dest0d: sta     $FFFF,y
+        jmp     rep_done
 
+REFILLER repval_refill, repval_rts, #7, store
 
 rep_even:
+        ; Same as earlier, order is important.
+        ; val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
+        INTERPOLATE_VAL_TOKEN val0, $FF02, next2le, next2he, $FF01, next1le, next1he, val1, , l4c
+divt1c: lda     _div48,x
+dest1c: sta     $FFFF,y
+
+        ; next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
+        INTERPOLATE_BUF_TOKEN val0, $FF03, next3lb, next3hb, val1, $FF02, next2lf, next2hf
+
+        ; val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
+        INTERPOLATE_VAL_TOKEN val1, $FF01, next1lf, next1hf, $FF00, next0lb, next0hb, val0, , l4d
+divt0c: lda     _div48,x
+dest0c: sta     $FFFF,y
+
+        ; next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
+        INTERPOLATE_BUF_TOKEN val1, $FF02, next2lg, next2hg, val0, $FF01, next1lg, next1hg
+
+rep_done:
         ldx     rept          ; rep++
         inx
 rep_loop_check:
         cpx     #$FF
         beq     rep_loop_done
         jmp     do_rep_loop
-
-REFILLER repval_refill, repval_rts, #7, store
 
 rep_loop_done:
         jmp     nine_reps_loop; Patched with bit/jmp depending on whether nreps >= 9
@@ -1070,6 +1083,7 @@ init_done:
         ; Store it everywhere
         stx     _decode_row::next0ha+2
         stx     _decode_row::next0hb+2
+        stx     _decode_row::next0hc+2
 
         stx     _decode_row::next1ha+2
         stx     _decode_row::next1hb+2
@@ -1080,6 +1094,9 @@ init_done:
         stx     _decode_row::next1hg+2
         stx     _decode_row::next1hh+2
         stx     _decode_row::next1hi+2
+        stx     _decode_row::next1hj+2
+        stx     _decode_row::next1hk+2
+        stx     _decode_row::next1hl+2
 
         stx     _decode_row::next2ha+2
         stx     _decode_row::next2hb+2
@@ -1090,12 +1107,17 @@ init_done:
         stx     _decode_row::next2hg+2
         stx     _decode_row::next2hh+2
         stx     _decode_row::next2hi+2
+        stx     _decode_row::next2hj+2
+        stx     _decode_row::next2hk+2
+        stx     _decode_row::next2hl+2
 
         stx     _decode_row::next3ha+2
         stx     _decode_row::next3hb+2
+        stx     _decode_row::next3hc+2
 
         sta     _decode_row::next0la+2
         sta     _decode_row::next0lb+2
+        sta     _decode_row::next0lc+2
 
         sta     _decode_row::next1la+2
         sta     _decode_row::next1lb+2
@@ -1106,6 +1128,9 @@ init_done:
         sta     _decode_row::next1lg+2
         sta     _decode_row::next1lh+2
         sta     _decode_row::next1li+2
+        sta     _decode_row::next1lj+2
+        sta     _decode_row::next1lk+2
+        sta     _decode_row::next1ll+2
 
         sta     _decode_row::next2la+2
         sta     _decode_row::next2lb+2
@@ -1116,9 +1141,13 @@ init_done:
         sta     _decode_row::next2lg+2
         sta     _decode_row::next2lh+2
         sta     _decode_row::next2li+2
+        sta     _decode_row::next2lj+2
+        sta     _decode_row::next2lk+2
+        sta     _decode_row::next2ll+2
 
         sta     _decode_row::next3la+2
         sta     _decode_row::next3lb+2
+        sta     _decode_row::next3lc+2
         rts
 .endproc
 

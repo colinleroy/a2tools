@@ -264,27 +264,30 @@ void decode_row(void) {
           for (rep = 0; rep < rep_loop; rep++) {
             col-=2;
 
-            val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
-            SET_OUTPUT(1, val1);
-
-            next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
-
-            val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
-            SET_OUTPUT(0, val0);
-
-            next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
-
             if (rep & 1) {
+              val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
+              next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
+              val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
+              next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
+
               tk = ((int8)getdatahuff_rep_val()) << 4;
-              //e
+
               val1 += tk;
               SET_OUTPUT(1, val1);
-
               val0 += tk;
               SET_OUTPUT(0, val0);
-
               next_line[col+2] += tk;
               next_line[col+1] += tk;
+            } else {
+              val1 = ((((val0 + next_line[col+2]) >> 1) + next_line[col+1]) >> 1);
+              SET_OUTPUT(1, val1);
+
+              next_line[col+2] = ((((val0 + next_line[col+3]) >> 1) + val1) >> 1);
+
+              val0 = ((((val1 + next_line[col+1]) >> 1) + next_line[col+0]) >> 1);
+              SET_OUTPUT(0, val0);
+
+              next_line[col+1] = ((((val1 + next_line[col+2]) >> 1) + val0) >> 1);
             }
           }
         } while (nreps == 9);
