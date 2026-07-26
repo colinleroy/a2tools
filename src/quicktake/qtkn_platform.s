@@ -304,10 +304,9 @@ huff_data_done:
         sty     ybck
         sta     fact+1
 
-        lda     #0
-        sta     wordcnt
+        ldx     #0
 
-:       ldx     wordcnt
+:       stx     wordcnt
         lda     #$80
 .ifndef DEBUG_HD
 fact:   ldy     #$FF
@@ -317,29 +316,28 @@ fact:   ldy     #$FF
 fact:   lda     #$FF
         jsr     tosdiva0
 .endif
-        ldy     wordcnt
-        bmi     overflows_neg     ; stop if signed < 0
+        cpx     #$00
+        bne     overflows
+        ldx     wordcnt
 build_table_n:
-        sta     $FF00,y
-        txa
-        bne     overflows         ; Stop if result > 256
-        inc     wordcnt
+        sta     $FF00,x
+        inx
         bne     :-
         jmp     done
 
 overflows:                        ; Fill the rest
+        ldx     wordcnt
         lda     #$FF
 build_table_o:
-:       sta     $FF00,y
-        iny
-        bmi     overflows_neg
-        bne     :-
+:       sta     $FF00,x
+        inx
+        bpl     :-                ; Go fill neg overflows once (int8)Y < 0
 
 overflows_neg:
         lda     #$00
 build_table_u:
-:       sta     $FF00,y
-        iny
+:       sta     $FF00,x
+        inx
         bne     :-
 
 done:
@@ -1165,7 +1163,7 @@ init_done:
         beq     set_div48
 
 set_dyndiv:
-        ldx     #>_dyndiv         ; Factor not 48, update division table pointers
+        ldx     #>_dyndiv           ; Factor not 48, update division table pointers
         cmp     last_dyndiv         ; Factor different than last one,
         beq     factor_done
         stx     _init_divtable::build_table_n+2
