@@ -158,6 +158,7 @@ rts_addr:
         beq    :-             ; Nope. Go read another bit
 .endmacro
 
+; Y = bits to discard
 .macro DISCARDNDATAHUFF refiller_addr,rts_addr,table_label
         sty     num_discard
 
@@ -204,8 +205,8 @@ table_label = *+2             ; Get num bits
         stx     _vbits
 .endmacro
 
+; Y = bits to discard
 .macro DISCARDNBITS discardN_refill, discardN_rts
-        ldy     #4
         ldx     _vbits
 :       dex
         bmi     discardN_refill
@@ -253,10 +254,10 @@ data9_rts:
         sbc     _vbits            ; Once this byte is finished we have A bits to discard
         cmp     #16
         bcc     :+                ; Discard one or two full bytes?
-        jsr     _bitbuf_refill    ; Discard a full byte,
+        jsr     _bitbuf_skip_byte ; Discard a full byte,
         sec
         sbc     #8
-:       jsr     _bitbuf_refill    ; Discard another full byte,
+:       jsr     _bitbuf_skip_byte ; Discard another full byte,
 
         jsr     _bitbuf_refill    ; Load the next one,
 

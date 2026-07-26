@@ -18,9 +18,7 @@
         .import         decsp4, pusha0, pushax, popax, incsp2
         .import         mulax10, tosudiva0, tosmulax
 
-        .importzp       tmp1, _zp2, c_sp
-
-y_ptr = _zp2
+        .importzp       tmp1, c_sp
 
 .proc _write_raw
         ldy     _last_band_crop   ; Is there cropping?
@@ -54,6 +52,8 @@ no_crop:
         lda     #>_raw_image
         sta     store_dest_pixel+2
 
+        tsx                       ; Backup stack pointer which we'll use
+        stx     tmp1              ; for Y coordinate
         ldx     #$00
 next_y:
         lda     _orig_y_table_l,x
@@ -62,7 +62,7 @@ next_y:
         sta     load_source_pixel+2
 
         inx
-        stx     y_ptr
+        txs                       ; Cur Y to stack pointer
 
         ldy     #$00
         ldx     _orig_x_offset    ; Preload the first X offset, and
@@ -95,9 +95,12 @@ check_x:
         bne     next_x
         inc     store_dest_pixel+2; Next output page
 
-        ldx     y_ptr
+        tsx                       ; Cur Y from stack pointer
 y_end:  cpx     #$FF              ; Patched
         bcc     next_y
+
+        ldx     tmp1
+        txs                       ; Restore stack pointer
 
         jsr     decsp4            ; Call write
         ldy     #$03

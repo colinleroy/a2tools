@@ -13,7 +13,7 @@
         .import         floppy_motor_on
         .import         tk1, tk2, tk3, tk4
 
-        .export         _bitbuf, _vbits, _bitbuf_refill
+        .export         _bitbuf, _vbits, _bitbuf_refill, _bitbuf_skip_byte
         .export         _getfactor
         .export         get_4datahuff_interpolate
         .import         got_4datahuff
@@ -142,9 +142,9 @@ _init_floppy_starter:
 REFILLER discardN_fill, discardN_rts, #7
 
 discard4datahuff_interpolate:
-        ldy     #4
         cmp     #1            ; Is tree == 1?
         bne     check_2
+        ldy     #4
         DISCARDNBITS discardN_fill, discardN_rts
         dec     col
         jmp     discard_col_loop
@@ -161,6 +161,7 @@ discard_variable:             ; tree > 5, so discard unknown number of bits * 4
         clc
         adc     #>(_huff_data-4*256) ; Tree 6 is at huff_num[1]
         sta     discard_table
+        ldy     #4
         DISCARDNDATAHUFF data_discard_fill,data_discard_rts,discard_table
         dec     col
         jmp     discard_col_loop
@@ -309,7 +310,7 @@ _bitbuf_refill:
 cache_read = *+1
         ldx     $FFFF             ; 4
         stx     _bitbuf           ; 7
-
+_bitbuf_skip_byte:
         inc     cache_read        ; 17
         beq     inc_cache_high    ; 19  20
         rts

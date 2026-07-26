@@ -110,7 +110,6 @@ qtknconv_CC65SOURCES := \
 	../lib/asm/unlink_auxhgr.s \
 	../lib/extrazp.s \
 	../lib/asm/path_helper.s \
-	../lib/mult8x8x16.s \
 	../lib/mult16x16mid16.s \
 	../lib/approxdiv16x8.s \
 	../lib/a2_features.s \

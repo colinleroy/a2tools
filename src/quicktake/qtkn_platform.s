@@ -11,7 +11,7 @@
         .import       _row_idx
 
         .import       get_4datahuff_interpolate, discard4datahuff_interpolate
-        .import       _bitbuf_refill
+        .import       _bitbuf_refill, _bitbuf_skip_byte
         .import       _huff_data, _huff_ctrl, _src
 
         .import       huff_small_1
@@ -40,6 +40,8 @@
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
 
         .include      "qtkn_huffgetters.inc"
+        .include      "../lib/mult8x8x16_macro.inc"
+
 USEFUL_DATABUF_SIZE = DECODE_WIDTH+1
 DATA_INIT           = 8
 
@@ -396,15 +398,16 @@ data_standard:
 data_interpolate:
         jmp     discard4datahuff_interpolate ; will loop back to discard_col_loop
 
-data_repeat:
-        lda     col
-        cmp     #2
-        bcs     col_gt1
-
+col_lt2:
         ldx     #1
         jmp     check_nreps_2
 
 REFILLER data0_refill, data0_rts, #7
+
+data_repeat:
+        lda     col
+        cmp     #2
+        bcc     col_lt2
 
 col_gt1:
         GETDATAHUFF_NREPEATS data0_refill, data0_rts
@@ -414,7 +417,7 @@ check_nreps_2:
         cpx     #9
         bcc     store_nreps
 
-        lda     col           ; nreps 9
+        lda     col           ; nreps 9, col -= 8
         sec
         sbc     #8
         sta     col
@@ -459,13 +462,10 @@ rep_loop_sub:
 .endproc
 
 .macro INIT_BUF mult_factor, address, low_label, high_label
+        ldy     col
 mult_factor:
         ldx     #$FF
-        jsr     mult8x8r16_direct
-        ldy     col
-low_label: 
-        sta     address,y
-        txa
+        MULT_AX_STORE_LOW_TO_YIDX address, low_label
 high_label: 
         sta     address,y
 .endmacro
@@ -475,9 +475,8 @@ high_label:
 dest:   sta     $FFFF,y
 mult_factor:
         ldx     #$FF
-        jsr     mult8x8r16_direct
-        sta     value
-        stx     value+1
+        MULT_AX_STORE_LOW value
+        sta     value+1
 .endmacro
 
 
@@ -537,21 +536,24 @@ h2:     adc     addr2,y
 
         clc
 l3:     adc     addr3,y
-        sta     l4+1
+
+        .ifblank token
+        sta     res
+        .else
+        tax
+        .endif
+
         lda     tmp1
 h3:     adc     addr3,y
         cmp     #$80
         ror     a
 
         .ifblank token
+        ror     res
         sta     res+1
-        tax                    ; Final high byte in X
-l4:     lda     #$FF
-        ror     a
-        sta     res
-        .else
+        .else                 ; Now add token << 4
         sta     tmp1          ; High byte in tmp1
-l4:     lda     #$FF
+        txa
         ror     a             ; Low byte in A
 
 token:  ldx     #$FF
@@ -561,8 +563,8 @@ token:  ldx     #$FF
         lda     tmp1
         adc     _sshiftl4,x
         sta     res+1
-        tax                  ; Final high byte in X
         .endif
+        tax                  ; Final high byte in X for caller
 .endmacro
 
 .macro INCR_BUF_TOKEN addr1, l1, h1, addr2, l2, h2
@@ -865,7 +867,7 @@ small_val:                          ; Last is 8bit, do a small mult
         ldx     _val_from_last,y    ; and multiply
         lda     _factor
         sta     _last
-        jsr     mult8x8r16_direct
+        MULT_AX
 
 check_multiplier:
         cpx     #$0F                ; is multiplier 0xFF?

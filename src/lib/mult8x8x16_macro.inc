@@ -47,7 +47,7 @@ sm4 = * + 1
 .endmacro
 
 ; Multiply A by X, result in (h:A, l:LSTORE (or nowhere if no param))
-.macro MULT_AX_STORE_LOW LSTORE
+.macro MULT_AX_STORE_LOW LSTORE, LSTORE_LABEL
 .scope
         sta sm1           ; 4
         sta sm3           ; 8
@@ -60,6 +60,9 @@ sm1 = * + 1
         lda sqrLow,x      ; 24
 sm2 = * + 1
         sbc iSqrLow,x     ; 28
+        .if .paramcount = 2
+LSTORE_LABEL:
+        .endif
         .if .paramcount = 1
         sta LSTORE        ; 32
         .endif
@@ -68,6 +71,30 @@ sm3 = * + 1
 sm4 = * + 1
         sbc iSqrHigh,x    ; 40
 .endscope
+.endmacro
+
+; Multiply A by X, result in (h:A, l:LSTORE (or nowhere if no param))
+.macro MULT_AX_STORE_LOW_TO_YIDX LSTORE, LSTORE_LABEL
+.scope LSTORE_LABEL
+        sta sm1           ; 4
+        sta sm3           ; 8
+        eor #$ff          ; 10
+        sta sm2           ; 14
+        sta sm4           ; 18
+
+        sec               ; 20
+sm1 = * + 1
+        lda sqrLow,x      ; 24
+sm2 = * + 1
+        sbc iSqrLow,x     ; 28
+LSTORE_LABEL:
+        sta LSTORE,y      ; 32
+sm3 = * + 1
+        lda sqrHigh,x     ; 36
+sm4 = * + 1
+        sbc iSqrHigh,x    ; 40
+.endscope
+LSTORE_LABEL = LSTORE_LABEL::LSTORE_LABEL
 .endmacro
 
 .macro MULT_AX_STORE_HIGH HSTORE
