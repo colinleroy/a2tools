@@ -49,7 +49,7 @@
 .endmacro
 .else
 .macro DEBUG_JMP NUM
-        WASTE_2                 ; Min 2 cycles, for NTSC computers
+        ; timing issue tests... WASTE_8
 .endmacro
 .endif
 

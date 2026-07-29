@@ -678,7 +678,6 @@ restart_ui:
     }
   }
   /* Unreachable */
-  __asm__("brk");
 }
 
 #ifdef __CC65__
