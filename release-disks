@@ -2,7 +2,7 @@
 set -e
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$BRANCH" != "master" ]; then
+if [ "$BRANCH" != "main" ]; then
 	echo Not on release branch
 	exit 1
 fi

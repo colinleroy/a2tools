@@ -1,5 +1,5 @@
 #!/bin/bash
-ssh a2proxy.lan " \
+ssh a2proxy-wired.lan " \
 rm -rf a2tools && \
   git clone https://github.com/colinleroy/a2tools.git && \
   cd a2tools/src && \
