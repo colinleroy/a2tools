@@ -30,7 +30,6 @@ audio_status_patches:
                 .word s28
                 .word s29
                 .word s30
-                .word s31
                 .word ssil
                 .word st40
                 .word st80

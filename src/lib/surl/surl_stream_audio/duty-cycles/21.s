@@ -2,24 +2,23 @@ duty_cycle21:
         DEBUG_JMP   #'L'
         ____SPKR_DUTY____4      ; 4     Toggle speaker
 
-        lda     #INV_SPC        ; 6    Set VU meter
-v21a:   sta     txt_level       ; 10
+s21:    lda     ser_status      ; 8    Check serial
+        and     has_byte        ; 11
+        bne     d21             ; 13/14
 
-s21:    lda     ser_status      ; 14    Check serial
-        and     has_byte        ; 17
-        beq     :+              ; 19/20
-d21:    ldx     ser_data        ; 23    Load serial
+        lda     #INV_SPC        ; 15    Set VU meter
+v21a:   sta     txt_level       ; 19
+        WASTE_6                 ; 25
+        ____SPKR_DUTY____4      ; 29 Toggle speaker
+        KBD_LOAD_7              ; 36
+        lda     #SPC            ; 38    Unset VU meter
+v21b:   sta     txt_level       ; 42
+        jmp     duty_cycle21    ; 45
 
-        lda     #SPC            ; 25    Unset VU meter
+d21:    ldx     ser_data        ; 18    Load serial
+        ldy     safe_jumps,x    ; 22
+        WASTE_3                 ; 25
         ____SPKR_DUTY____4      ; 29    Toggle speaker
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
-
-v21b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
-:
-        WASTE_5                 ;    25
-        ____SPKR_DUTY____4      ;    29 Toggle speaker
-        WASTE_6                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle21    ;    45
+        sty     j21+2           ; 33
+        WASTE_9                 ; 42
+j21:    jmp     $FF00           ; 45

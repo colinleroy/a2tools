@@ -6,23 +6,12 @@ s30:    lda     ser_status      ; 8     Check serial
         and     has_byte        ; 11
         beq     :+              ; 13/14
 d30:    ldx     ser_data        ; 17    Load serial
-
-.ifdef STREAMER_65C02
-        lda     next,x          ; 21    Update target
-        sta     dest30+1        ; 25
-        inx                     ; 27
-        lda     next,x          ; 31
-
-        WASTE_3                 ; 34
+        ldy     safe_jumps,x    ; 21
+        sty     j30+2           ; 25
+        WASTE_9                 ; 34
         ____SPKR_DUTY____4      ; 38    Toggle speaker
-        sta     dest30+2        ; 42    Finish updating target
-.else
-        WASTE_11                ; 28
-        WASTE_6                 ; 34
-        ____SPKR_DUTY____4      ; 38    Toggle speaker
-        stx dest30+2            ; 42
-.endif
-dest30: jmp     $0000           ; 45
+        WASTE_4                 ; 42
+j30:    jmp     $FF00           ; 45
 
 :
         lda     #INV_SPC        ;    16 Set VU meter

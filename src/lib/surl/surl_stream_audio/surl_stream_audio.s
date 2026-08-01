@@ -8,6 +8,9 @@ _surl_stream_audio:
         jsr     patch_audio_registers
         jsr     patch_vu_meters
 
+        lda     #SPC
+        sta     spc
+
         lda     #$2F                    ; Ready
         jsr     _serial_putc_direct
 

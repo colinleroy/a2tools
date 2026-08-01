@@ -88,7 +88,7 @@ update_title_done:
 st:     lda     ser_status      ; Wait for next audio byte
         and     has_byte
         beq     st
-dt:     ldx     ser_data
+dt:     ldy     ser_data
         plp
-        STORE_TARGET_3
-        JMP_NEXT_6
+        sty     j_title+2
+j_title:jmp     $FF00

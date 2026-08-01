@@ -37,7 +37,7 @@
 #define AUDIO_MAX                256
 #define BUFFER_LEN               (60*10)
 
-#define AUDIO_MAX_LEVEL          31
+#define AUDIO_MAX_LEVEL          30
 #define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
 #define AUDIO_STREAM_TITLE       AUDIO_NUM_LEVELS
 #define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS + 1
@@ -1688,6 +1688,9 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   video_th_data->translit = translit;
   video_th_data->subtitles_url = subtitles_url;
   video_th_data->eta = ETA_MAX;
+  if (size != HGR_SCALE_HALF) {
+    video_th_data->interlace = 1;
+  }
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   LOG("Starting video decode thread\n");

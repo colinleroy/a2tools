@@ -10,15 +10,13 @@ v8a:    sta     txt_level       ; 10
 s8:     lda     ser_status      ; 20    Check serial
         and     has_byte        ; 23
 
-        beq     :+              ; 25/26
+        bne     d8              ; 25/26
+        WASTE_10                ; 35
+        KBD_LOAD_7              ; 42
+        jmp     duty_cycle8     ; 45
 
-d8:     ldx     ser_data        ; 29    Load serial
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
-
-v8b:    sty     txt_level       ; 39
-        JMP_NEXT_6              ; 45
-:
-        WASTE_9                 ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle8     ;    45
+d8:     ldx     ser_data        ; 30    Load serial
+v8b:    sty     txt_level       ; 34
+        ldy     safe_jumps,x    ; 38
+        sty     j8+2            ; 42
+j8:     jmp     $FF00           ; 45

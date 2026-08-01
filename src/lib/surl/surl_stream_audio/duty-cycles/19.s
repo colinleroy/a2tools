@@ -8,14 +8,15 @@ v19a:   sta     txt_level       ; 10
 s19:    lda     ser_status      ; 14    Check serial
         and     has_byte        ; 17
         beq     :+              ; 19/20
+
 d19:    ldx     ser_data        ; 23    Load serial
         ____SPKR_DUTY____4      ; 27    Toggle speaker
-        lda     #SPC            ; 29    Unset VU meter
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
+        lda     spc             ; 30    Unset VU meter
+        ldy     safe_jumps,x    ; 34
+        sty     j19+2           ; 38
+v19b:   sta     txt_level       ; 42
+j19:    jmp     $FF00           ; 45
 
-v19b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
 :
         WASTE_3                 ;    23
         ____SPKR_DUTY____4      ;    27 Toggle speaker

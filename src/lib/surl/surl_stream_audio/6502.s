@@ -25,21 +25,7 @@
 .endmacro
 
 .macro ____SPKR_DUTY____5 DC    ; Toggle speaker slower (but without phantom-read)
-          sta     SPKR-(SAMPLE_OFFSET+DC),x     ; 5
-.endmacro
-
-.macro STORE_TARGET_3           ; 3
-          stx   zp_jmp+2
-.endmacro
-
-.macro STORE_TARGET_4           ; 4
-          .byte $8E             ; stx abs
-          .byte zp_jmp+2
-          .byte $00
-.endmacro
-
-.macro JMP_NEXT_6               ; 6 because we jump to there
-        jmp     zp_jmp
+          sta     SPKR-(SAMPLE_OFFSET+DC),y     ; 5
 .endmacro
 
 .ifdef DO_DEBUG_JMPS
@@ -208,14 +194,13 @@ SAMPLE_MULT   = 1
 
 .align 256
 .assert * = _SAMPLES_BASE+$1F00, error
-.include "duty-cycles/31.s"
-
-.align 256
-.assert * = _SAMPLES_BASE+$2000, error
 .include "update_title.s"
 
 .align 256
-.assert * = _SAMPLES_BASE+$2100, error
+.assert * = _SAMPLES_BASE+$2000, error
 .include "break_out.s"
+
+.align 256
+.include "safe_jumps.s"
 
 _AUDIO_CODE_SIZE = * - _AUDIO_CODE_START

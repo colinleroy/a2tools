@@ -30,7 +30,6 @@ audio_data_patches:
                 .word d28
                 .word d29
                 .word d30
-                .word d31
                 .word dsil
                 .word dt40
                 .word dt80

@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean sixforty.po && mame apple2gs -window -flop1 sixforty.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug 

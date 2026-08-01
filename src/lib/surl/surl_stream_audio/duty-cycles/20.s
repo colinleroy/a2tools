@@ -17,9 +17,9 @@ d20:    ldx     ser_data        ; 18    Load serial
 v20a:   sta     txt_level       ; 24
 
         ____SPKR_DUTY____4      ; 28    Toggle speaker
-        STORE_TARGET_3          ; 31
+        ldy     safe_jumps,x    ; 32
+        sty     j20+2           ; 36
 
-        lda     #SPC            ; 33    Unset VU meter
-v20b:   sta     txt_level       ; 37
-        WASTE_2                 ; 39
-        JMP_NEXT_6              ; 45
+        lda     #SPC            ; 38    Unset VU meter
+v20b:   sta     txt_level       ; 42
+j20:    jmp     $FF00           ; 45

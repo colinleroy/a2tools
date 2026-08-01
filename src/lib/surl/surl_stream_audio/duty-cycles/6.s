@@ -8,17 +8,16 @@ v6a:    sta     txt_level       ; 10
         
 s6:     lda     ser_status      ; 18    Check serial
         and     has_byte        ; 21
-        beq     :+              ; 23/24
+        bne     d6              ; 23/24
 
-d6:     ldx     ser_data        ; 27    Load serial
+        WASTE_12                ; 35
+        KBD_LOAD_7              ; 42
+        jmp     duty_cycle6     ; 45
 
-        lda     #SPC            ; 29    Unset VU meter
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
+d6:     ldx     ser_data        ; 28    Load serial
 
-v6b:    sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
-:
-        WASTE_11                ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle6     ;    45
+        lda     #SPC            ; 30    Unset VU meter
+        ldy     safe_jumps,x    ; 34
+        sty     j6+2            ; 38
+v6b:    sta     txt_level       ; 42
+j6:     jmp     $FF00           ; 45

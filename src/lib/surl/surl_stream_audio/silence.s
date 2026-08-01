@@ -7,7 +7,7 @@ silence:
 ssil:   lda     ser_status
         and     has_byte
         beq     ssil
-dsil:   ldx     ser_data
-        STORE_TARGET_3
+dsil:   ldy     ser_data
+        sty     start_duty+2
 start_duty:
-        JMP_NEXT_6
+        jmp     $FF00

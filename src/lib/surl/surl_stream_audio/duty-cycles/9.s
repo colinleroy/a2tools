@@ -4,7 +4,7 @@ duty_cycle9:
 
         lda     #INV_SPC        ; 6    Set VU meter
 v9a:    sta     txt_level       ; 10
-        WASTE_3                 ; 13
+        ldy     spc             ; 13
         ____SPKR_DUTY____4      ; 17    Toggle speaker
         
 s9:     lda     ser_status      ; 21    Check serial
@@ -13,12 +13,11 @@ s9:     lda     ser_status      ; 21    Check serial
         beq     :+              ; 26/27
 
 d9:     ldx     ser_data        ; 30    Load serial
+v9b:    sty     txt_level       ; 42
+        ldy     safe_jumps,x    ; 34
+        sty     j9+2            ; 38
+j9:     jmp     $FF00           ; 45
 
-        lda     #SPC            ; 32    Unset VU meter
-        STORE_TARGET_3          ; 35
-
-v9b:    sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
 :
         WASTE_8                 ;    35
         KBD_LOAD_7              ;    42

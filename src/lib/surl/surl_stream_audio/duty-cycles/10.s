@@ -9,17 +9,16 @@ s10:    lda     ser_status      ; 14    Check serial
         ____SPKR_DUTY____4      ; 18    Toggle speaker
         and     has_byte        ; 21
 
-        beq     :+              ; 23/24
+        bne     d10             ; 23/24
 
-d10:    ldx     ser_data        ; 27    Load serial
+        WASTE_12                ; 35
+        KBD_LOAD_7              ; 42
+        jmp     duty_cycle10    ; 45
 
-        lda     #SPC            ; 29    Unset VU meter
-        STORE_TARGET_3          ; 32
-        WASTE_3                 ; 35
+d10:    ldx     ser_data        ; 28    Load serial
+        lda     #SPC            ; 30    Unset VU meter
+        ldy     safe_jumps,x    ; 34
+        sty     j10+2           ; 38
 
-v10b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
-:
-        WASTE_11                ;    35
-        KBD_LOAD_7              ;    42
-        jmp     duty_cycle10    ;    45
+v10b:   sta     txt_level       ; 42
+j10:    jmp     $FF00           ; 45

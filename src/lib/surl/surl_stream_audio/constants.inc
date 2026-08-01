@@ -1,8 +1,7 @@
 MAX_LEVEL         = 31
 
 has_byte      = tmp3
-
-zp_jmp        = _zp10
+spc           = tmp4
 
 INV_SPC      := ' '
 SPC          := ' '|$80

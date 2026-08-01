@@ -31,5 +31,4 @@ vu_patches_b:
                 .word v28b
                 .word v29b
                 .word v30b
-                .word v31b
                 .word $0000

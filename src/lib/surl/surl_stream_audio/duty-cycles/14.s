@@ -14,11 +14,11 @@ s14:    lda     ser_status      ; 14    Check serial
 d14:    ldx     ser_data        ; 28    Load serial
 
         lda     #SPC            ; 30    Unset VU meter
-        STORE_TARGET_3          ; 33
-        WASTE_2                 ; 35
+        ldy     safe_jumps,x    ; 34
+        sty     j14+2           ; 38
+v14b:   sta     txt_level       ; 42
+j14:    jmp     $FF00           ; 45
 
-v14b:   sta     txt_level       ; 39
-        JMP_NEXT_6              ; 45
 :
         WASTE_10                ;    35
         KBD_LOAD_7              ;    42

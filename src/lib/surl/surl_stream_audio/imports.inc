@@ -1,7 +1,7 @@
         .export         _surl_stream_audio
         .export         _SAMPLES_BASE, _AUDIO_CODE_START, _AUDIO_CODE_SIZE
 
-        .importzp       _zp6, _zp8, _zp10, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3
+        .importzp       _zp6, _zp8, _zp10, tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3
 
         .import         _ser_data_reg
         .import         _ser_status_reg

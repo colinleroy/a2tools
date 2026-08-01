@@ -10,13 +10,14 @@ s22:    lda     ser_status      ; 14    Check serial
         beq     :+              ; 19/20
 
 d22:    ldx     ser_data        ; 23    Load serial
-        WASTE_3                 ; 26
+        lda     spc             ; 26
         ____SPKR_DUTY____4      ; 30    Toggle speaker
+        ldy     safe_jumps,x    ; 34
+        sty     j22+2           ; 38
 
-        lda     #SPC            ; 32    Unset VU meter
-v22b:   sta     txt_level       ; 36
-        STORE_TARGET_3          ; 39
-        JMP_NEXT_6              ; 45
+v22b:   sta     txt_level       ; 42
+j22:    jmp     $FF00           ; 45
+
 :
         WASTE_6                 ;    26
         ____SPKR_DUTY____4      ;    30 Toggle speaker
