@@ -394,8 +394,8 @@ BaudOK:
         lda     #TX_RX_MODE_OFF
         jsr     writeSCCReg
 
-        ldy     #WR_MASTER_IRQ_RST      ; WR9 setup: Activate master IRQ
-        lda     #MASTER_IRQ_SET
+        ldy     #WR_MASTER_IRQ_RST      ; WR9 setup: Deactivate master IRQ
+        lda     #MASTER_IRQ_SHUTDOWN
         jsr     writeSCCReg
 
         lda     SER_FLAG                ; Get SerFlag's current value
@@ -532,11 +532,22 @@ BadCharDone:
 
 _z8530_set_irq:
         beq     :+
-        lda     #TX_RX_MODE_RXIRQ
-        bra     :++
-:       lda     #TX_RX_MODE_OFF
-:       ldy     #WR_TX_RX_MODE_CTRL
         ldx     Channel
+        ldy     #WR_MASTER_IRQ_RST
+        lda     #MASTER_IRQ_SET
+        jsr     writeSCCReg
+        ldx     Channel
+        ldy     #WR_TX_RX_MODE_CTRL
+        lda     #TX_RX_MODE_RXIRQ
+        jmp     writeSCCReg
+
+:       ldx     Channel
+        ldy     #WR_MASTER_IRQ_RST
+        lda     #MASTER_IRQ_SHUTDOWN
+        jsr     writeSCCReg
+        ldx     Channel
+        ldy     #WR_TX_RX_MODE_CTRL
+        lda     #TX_RX_MODE_OFF
         jmp     writeSCCReg
 .endif ; .ifdef SERIAL_ENABLE_IRQ
 
