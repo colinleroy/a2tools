@@ -5,7 +5,6 @@
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
         .import     _mul145_l, _mul145_m
-        .import     _mul217_l, _mul217_m
         .import     _mul51_l, _mul51_m
         .import     _mul106_l, _mul106_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
@@ -513,11 +512,6 @@ done:
         imul _mul106_l, _mul106_m, LB, HB
 .endmacro
 
-; uint16 __fastcall__ imul_b4(int16 w)
-.macro IMUL_B4
-        imul_reverse _mul217_l, _mul217_m
-.endmacro
-
 ; uint16 __fastcall__ imul_b5(int16 w)
 .macro IMUL_B5
         imul_reverse _mul51_l, _mul51_m
@@ -683,8 +677,8 @@ rx13l = ptr2
 rx13h = ptr2+1
 rx30l = ptr3
 rx30h = ptr3+1
-rres1l= ptr4
-rres1h= ptr4+1
+rx32l = ptr4
+rx32h = ptr4+1
 
         ; x5
         lda    _gCoeffBuf+2,y
@@ -720,12 +714,14 @@ rres1h= ptr4+1
         ; x32 = imul_b2(x13);
         ldx    rx13l
         ldy    rx13h
-        IMUL_B2 rx32l, rx32h
+        IMUL_B2 rx32l, rx32h    ; Trashes A, X, Y
 
         ; res3 = imul_b1(x5);
         ldx    rx5l
         ldy    rx5h
-        IMUL_B1
+        IMUL_B1                 ; Trashes A, X, Y
+        sta    rres3l
+        stx    rres3h
 
         ; gCoeffBuf[(idctRC)+1] = res3 + x30 - x32;
         clc
@@ -737,27 +733,27 @@ rres1h= ptr4+1
 
         tya
         sec
-rx32l = *+1
-        sbc    #$FF
+        sbc    rx32l
 
         ldy     inputIdx
         sta    _gCoeffBuf+2,y
         txa
-rx32h = *+1
-        sbc    #$FF
+        sbc    rx32h
         sta    _gCoeffBuf+3,y
 
         ; res1 = imul_b5(x5);
         ldx    rx5l
         ldy    rx5h
-        IMUL_B5
+        IMUL_B5                 ; Trashes A, X, Y
 
         ; gCoeffBuf[(idctRC)+2] = res1 + x30 - x13;
         clc
         adc    rx30l
+        sta    res1x30l
         tay
         txa
         adc    rx30h
+        sta    res1x30h
         tax
 
         sec
@@ -769,17 +765,17 @@ rx32h = *+1
         sbc    rx13h
         sta    _gCoeffBuf+5,y
 
-        ; res2 = imul_b4(x5);
-        ldx    rx5l
-        ldy    rx5h
-        IMUL_B4
-
-        ; gCoeffBuf[(idctRC)+3] = res2 + x30 + x32;
-        clc
-        adc    rx30l
+        ; gCoeffBuf[(idctRC)+3] = (res1 + x30) - res3 + x32;
+res1x30l = *+1
+        lda    #$FF
+        sec
+rres3l = *+1
+        sbc    #$FF
         tay
-        txa
-        adc    rx30h
+res1x30h = *+1
+        lda    #$FF
+rres3h = *+1
+        sbc    #$FF
         tax
 
         tya
@@ -826,12 +822,14 @@ nextCol:
 
         sta     val0
         sta     val1
-        ; val2 is A in cont_idct_cols
-        sta     val3
+        sta     val2
+        ; val3 is A in cont_idct_cols
         jmp     cont_idct_cols
 
 full_idct_cols:
 
+cx32l = ptr1
+cx32h = ptr1+1
 cx30l = ptr2
 cx30h = ptr2+1
 cx5l  = ptr3
@@ -879,35 +877,12 @@ cx12h = ptr4+1
         ldy     cx12h
         IMUL_B2 cx32l, cx32h
 
-        ;res2 = imul_b4(x5);
-        ldx     cx5l
-        ldy     cx5h
-        IMUL_B4
-
-        ; val3 = ((res2 + x30 + x32) >> PJPG_DCT_SCALE_BITS) +128;
-        clc
-        ldy     #0
-        adc     cx30l
-        bcc     :+
-        iny
-        clc
-:
-        adc     cx32l
-        sta     tmp1
-
-        txa
-        adc     cx30h
-        cpy     #1
-        adc     cx32h
-        ldy     tmp1
-
-        SHIFT_YA_7RIGHT_AND_CLAMP
-        sta     val3
-
         ;res3 = imul_b1(x5);
         ldx     cx5l
         ldy     cx5h
         IMUL_B1
+        sta     cres3l
+        stx     cres3h
 
         ; val1 = ((cres3 + cx30 - cx32) >> PJPG_DCT_SCALE_BITS) +128;
         clc
@@ -919,12 +894,10 @@ cx12h = ptr4+1
 
         sec
         tya
-cx32l = *+1
-        sbc     #$FF
+        sbc     cx32l
         tay
         txa
-cx32h = *+1
-        sbc     #$FF
+        sbc     cx32h
 
         SHIFT_YA_7RIGHT_AND_CLAMP
         sta     val1
@@ -937,9 +910,11 @@ cx32h = *+1
         ; cres1 + cx30 - cx12
         clc
         adc     cx30l
+        sta     cres1x30l
         tay
         txa
         adc     cx30h
+        sta     cres1x30h
         tax
 
         sec
@@ -950,22 +925,46 @@ cx32h = *+1
         sbc     cx12h
 
         SHIFT_YA_7RIGHT_AND_CLAMP
-        ; val2 = A
+        sta     val2
+
+        ; val3 = ((cres1 + x30 - cres3 + x32) >> PJPG_DCT_SCALE_BITS) +128;
+cres1x30l = *+1
+        lda     #$FF
+        sec
+cres3l = *+1
+        sbc     #$FF
+        tay
+cres1x30h = *+1
+        lda     #$FF
+cres3h = *+1
+        sbc     #$FF
+        tax
+
+        tya
+        clc
+        adc     cx32l
+        tay
+        txa
+        adc     cx32h
+
+        SHIFT_YA_7RIGHT_AND_CLAMP
+        ;sta     val3
+
 cont_idct_cols:
         ldy     _outputIdx
-_output2 = *+1
+_output3 = *+1
         sta     $FF00,y
-val0 = *+1
+val2 = *+1
         lda     #$FF
-_output0 = *+1
+_output2 = *+1
         sta     $FF00,y
 val1 = *+1
         lda     #$FF
 _output1 = *+1
         sta     $FF00,y
-val3 = *+1
+val0 = *+1
         lda     #$FF
-_output3 = *+1
+_output0 = *+1
         sta     $FF00,y
 
         iny

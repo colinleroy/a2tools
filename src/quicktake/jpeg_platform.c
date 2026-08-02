@@ -123,19 +123,10 @@ uint16 __fastcall__ imul_b2(int16 w)
   return (uint16)x;
 }
 
-uint16 __fastcall__ imul_b4(int16 w)
-{
-  uint32 x;
-  x = (uint32)(-w * 217);
-  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
-
-  return (uint16)x;
-}
-
 uint16 __fastcall__ imul_b5(int16 w)
 {
   uint32 x;
-  x = (uint32)(-w * 51);
+  x = (uint32)(w * -51);
   FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(x);
 
   return (uint16)x;
@@ -221,7 +212,7 @@ void idctRows(void)
       gCoeffBuf[(idctRC)+2] =
       gCoeffBuf[(idctRC)+3] = gCoeffBuf[(idctRC)+0];
     } else {
-       int16 x24, res1, res2, res3;
+       int16 x24, res1, res3;
        int16 x30, x31, x13, x5;
        int16 x32;
 
@@ -239,8 +230,7 @@ void idctRows(void)
        res1 = imul_b5(x5);
        gCoeffBuf[(idctRC)+2] = res1 + x30 - x13;
 
-       res2 = imul_b4(x5);
-       gCoeffBuf[(idctRC)+3] = res2 + x30 + x32;
+       gCoeffBuf[(idctRC)+3] = res1 + x30 - res3 + x32;
      }
   }
 }
@@ -288,9 +278,6 @@ void idctCols(void)
         val0 = CLAMP(t);
 
         cx32 = imul_b2(cx12);
-        cres2 = imul_b4(cx5);
-        t = DESCALE(cres2 + cx30 + cx32);
-        val3 = CLAMP(t);
 
         cres3 = imul_b1(cx5);
         t = DESCALE(cres3 + cx30 - cx32);
@@ -299,6 +286,9 @@ void idctCols(void)
         cres1 = imul_b5(cx5);
         t = DESCALE(cres1 + cx30 - cx12);
         val2 = CLAMP(t);
+
+        t = DESCALE(cres1 + cx30 - cres3 + cx32);
+        val3 = CLAMP(t);
       }
       output0[outputIdx] = val0;
       output1[outputIdx] = val1;

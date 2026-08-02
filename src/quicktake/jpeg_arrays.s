@@ -2,7 +2,6 @@
         .export _ZAG_Coeff, _extendTests_l, _extendTests_h
         .export _extendOffsets_l, _extendOffsets_h
         .export _mul145_m, _mul145_l
-        .export _mul217_m, _mul217_l
         .export _mul51_m, _mul51_l
         .export _mul106_m, _mul106_l
         .export _gWinogradQuant
@@ -83,22 +82,6 @@ _orig_y_table_h:        .res BAND_HEIGHT
 ; .proc _mul145_h
   .repeat 256, I
     .assert ((I*145) .SHR 16) .BITAND $FF = 0, error
-  .endrepeat
-; .endproc
-
-.proc _mul217_l
-  .repeat 256, I
-    .byte (I*217) .BITAND $FF
-  .endrepeat
-.endproc
-.proc _mul217_m
-  .repeat 256, I
-    .byte ((I*217) .SHR 8) .BITAND $FF
-  .endrepeat
-.endproc
-; .proc _mul217_h
-  .repeat 256, I
-    .assert ((I*217) .SHR 16) .BITAND $FF = 0, error
   .endrepeat
 ; .endproc
 

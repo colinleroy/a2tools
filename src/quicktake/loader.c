@@ -40,14 +40,14 @@ display:
     if (data_len == 256*192) {
       w = 256;
       h = 192;
-    } else if (data_len == 320*240) {
+    } else if (data_len == 320*240 || data_len == 76288) {
       w = 320;
       h = 240;
     } else if (data_len == 640*480) {
       w = 640;
       h = 480;
     } else {
-      printf("Can't guess size.\n");
+      printf("Can't guess size from %d.\n", data_len);
       w = 640;
       h = 480;
     }
