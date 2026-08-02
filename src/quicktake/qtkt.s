@@ -467,7 +467,10 @@ IB5:    adc     IDX_BEHIND+4,y
         ror
         clc
         adc     low_nibble_gstep_low,x  ; Sets carry if overflow
-        bcs     clamp_low_nibble_high
+        bcc     store_ln_val
+clamp_low_nibble_high:
+        lda     #$FF
+        clc                              ; Need to clear carry here
         jmp     store_ln_val
 low_nibble_neg:
 IB6:    lda     IDX_BEHIND+2,y
@@ -537,10 +540,6 @@ start_floppy_motor:
         pla
         jmp     inc_cache_high_done
 
-clamp_low_nibble_high:
-        lda     #$FF
-        clc                              ; Need to clear carry here
-        jmp     store_ln_val
 clamp_low_nibble_low:
         lda     #$00
         jmp     store_ln_val
