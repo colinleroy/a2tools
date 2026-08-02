@@ -1,3 +1,10 @@
+; Sanitizer table. Matches valid values to themselves,
+; and invalid values to mid-range, in order to avoid
+; jumping wrong and crashing in case a wrong byte is
+; received.
+
+.assert >_AUDIO_CODE_START = $40, error
+
 safe_jumps:
         .repeat $40
         .byte >duty_cycle16
