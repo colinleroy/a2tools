@@ -217,6 +217,11 @@ finish_patches:
         sec                       ; Once done,
         sbc     _file_width       ; Patch X bound check for thumbs
 
+        ldy     #<load_thumbnail
+        sty     load_data+1
+        ldy     #>load_thumbnail
+        sty     load_data+2
+
 x_init:
         sta     img_x_init
         sta     img_x_reinit
@@ -225,10 +230,9 @@ first_dither_handler:
         jmp     prepare_dither_sierra
 
 ;------- Inlined to avoid branching
-thumbnail_load:
+load_thumbnail:
         lda     img_y
-        jsr     _load_thumbnail_data
-        jmp     data_loaded
+        jmp     _load_thumbnail_data
 ;-------
 
 ; Line loop start
@@ -265,11 +269,7 @@ line_buf_start_byte = *+1
         sta     pixel_count
 
 load_data:
-        lda     _is_thumb
-        bne     thumbnail_load
-load_normal:
-        jsr     _load_normal_data ; Prepare the next 256 bytes
-data_loaded:
+        jsr     _load_normal_data ; Prepare the next 256 bytes (patched with load_thumbnail)
         ldx     _cur_buf_page+1
         stx     buf_ptr_load+2
         lda     #<(_buffer)
