@@ -55,6 +55,7 @@ no_crop:
         tsx                       ; Backup stack pointer which we'll use
         stx     tmp1              ; for Y coordinate
         ldx     #$00
+
 next_y:
         lda     _orig_y_table_l,x
         sta     load_source_pixel+1
@@ -68,14 +69,16 @@ next_y:
         ldx     _orig_x_offset    ; Preload the first X offset, and
         jmp     load_source_pixel ; skip the first page increment
 
-inc_orig_y_high:                  ; Out-of-band page increment of source data
+; --------------------------------------; Inlined helpers, close enough to branch
+inc_orig_y_high:                        ; Increment of source data
         inc     load_source_pixel+2
         ldx     _special_x_orig_offset,y
         jmp     load_source_pixel
 
-inc_histogram_high:               ; Out-of-band page increment of histogram
+inc_histogram_high:                     ; Increment of histogram
         inc     _histogram_high,x
         jmp     check_x
+; --------------------------------------; End of inlined helpers, close enough to branch
 
 next_x:
         ldx     _orig_x_offset,y  ; if (*cur_orig_x == 0) cur+=256
@@ -93,16 +96,16 @@ store_dest_pixel:
 check_x:
         iny
         bne     next_x
-        inc     store_dest_pixel+2; Next output page
+        inc     store_dest_pixel+2; Next output page and next line
 
-        tsx                       ; Cur Y from stack pointer
+        tsx                       ; Get back cur Y from stack pointer
 y_end:  cpx     #$FF              ; Patched
         bcc     next_y
 
-        ldx     tmp1
+        ldx     tmp1              ; All done!
         txs                       ; Restore stack pointer
 
-        jsr     decsp4            ; Call write
+        jsr     decsp4            ; Prepare to call write
         ldy     #$03
         lda     #$00              ; ofd is never going to be > 255
         sta     (c_sp),y
