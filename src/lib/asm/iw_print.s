@@ -291,24 +291,17 @@ out:
         bpl     :+
         sta     SET80COL
 
-:       ldy     #10
+:       ldy     #7
         jsr     subysp
         lda     #$FF
 
         dey                              ; -1,
         sta     (c_sp),y
-        dey
-        sta     (c_sp),y
 
         dey                              ; -1,
         sta     (c_sp),y
-        dey
-        sta     (c_sp),y
 
-        dey                              ; scrw
-        lda     #0
-        sta     (c_sp),y
-        dey
+        dey                              ; width,
         lda     _scrw
         sta     (c_sp),y
 

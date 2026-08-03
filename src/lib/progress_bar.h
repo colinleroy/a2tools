@@ -7,6 +7,6 @@
 
 /* Pass x = -1, y = -1 if you don't plan on repositioning cursor
  * between calls, for more performance. */
-void __fastcall__ progress_bar(int x, int y, int width, unsigned long cur, unsigned long end);
+void __fastcall__ progress_bar(signed char x, signed char y, unsigned char width, unsigned long cur, unsigned long end);
 
 #endif

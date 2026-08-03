@@ -257,7 +257,7 @@ try_again:
 #ifdef __CC65__
     cputsxy(0, 7, "Decoding    ");
 #endif
-    progress_bar(0, 8, 80, h, crop_end_y);
+    progress_bar(-1, -1, 80, h, crop_end_y);
 
     qt_load_raw(h);
     if (h >= crop_start_y) {

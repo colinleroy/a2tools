@@ -23,10 +23,11 @@
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 200)
-void __fastcall__ progress_bar(int x, int y, int width, unsigned long cur, unsigned long end) {
+void __fastcall__ progress_bar(signed char x, signed char y, unsigned char width, unsigned long cur, unsigned long end) {
   size_t percent;
   size_t i;
   static size_t last_percent;
+  static unsigned char last_x, last_y;
 
 #ifndef __CC65__
   return;
@@ -35,16 +36,23 @@ void __fastcall__ progress_bar(int x, int y, int width, unsigned long cur, unsig
   if (x >= 0) {
     gotoxy(x, y);
     last_percent = 0;
+  } else {
+    gotoxy(last_x, last_y);
   }
 
   percent = (size_t)(cur * width / end);
+  if (percent > width) {
+    percent = width;
+  }
 
   revers(1);
-  for (i = last_percent; i < percent && i < width; i++)
+  for (i = last_percent; i < percent; i++)
     cputc(' ');
   revers(0);
 
   last_percent = percent;
+  last_x = wherex();
+  last_y = wherey();
 
   if (x >= 0) {
     for (; i < width; i++)

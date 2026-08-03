@@ -83,24 +83,17 @@ read_buffer:
         rts
 
 _update_progress_bar:
-        ldy     #10
+        ldy     #7
         jsr     subysp
         lda     #$FF
 
         dey                              ; -1,
         sta     (c_sp),y
-        dey
-        sta     (c_sp),y
 
         dey                              ; -1,
         sta     (c_sp),y
-        dey
-        sta     (c_sp),y
 
-        dey                              ; scrw,
-        lda     #$0
-        sta     (c_sp),y
-        dey
+        dey                              ; width,
         lda     _scrw
         sta     (c_sp),y
 
@@ -122,7 +115,10 @@ _update_progress_bar:
         sta     sreg
         lda     _file_height
         ldx     _file_height+1
-        jmp     _progress_bar
+        jsr     _progress_bar
+        bit     $C083                   ; Re-WR-enable LC
+        bit     $C083                   ; as VTABZ disables it
+        rts
 
 .segment "BSS"
 

@@ -108,7 +108,7 @@ void qt_load_raw(uint16 top)
     if (row & 1) {
       x = 1;
       pgbar_state+=2;
-      progress_bar(-1, -1, 80*22, pgbar_state, height);
+      progress_bar(-1, -1, 80, pgbar_state, height);
     } else {
       x = 0;
     }
