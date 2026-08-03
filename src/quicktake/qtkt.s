@@ -178,7 +178,6 @@ _cache_start:
 _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
-
 ; Patcher for direct load, and end-of-cache high byte check.
 set_cache_data:
         lda     cur_cache_ptr
@@ -292,7 +291,7 @@ _qt_load_raw:
         bne     not_top
 
 top:
-        jsr     set_cache_data          ; Initialize cache things
+        jsr     set_cache_data          ; First band - Initialize cache things
 
         ; Compute how many full reads to do, and the size of the last read:
         ; We don't need to read the whole file, take advantage of that.
@@ -323,6 +322,10 @@ top:
         sta     _raw_image+256,y
         sta     _raw_image+512,y
         iny
+        sta     _raw_image,y
+        sta     _raw_image+256,y
+        sta     _raw_image+512,y
+        iny
         bne     :-
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
@@ -333,17 +336,15 @@ top:
         SET_BRANCH #$90, low_nibble_special
 
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
-        beq     row_loop
+        beq     :+
         sta     start_floppy_motor+1
         lda     #$C0                    ; Firmware access space
         sta     start_floppy_motor+2
-
-        jmp     row_loop
+:       jmp     row_loop
 
 not_top:                                ; Subsequent bands
                                         ; Shift the last band's last line, plus 2 pixels,
                                         ; to second line of the new band.
-
         SET_HIGH_PAGES
 
         ; Copy last line + 2 px to start of buf
@@ -352,16 +353,51 @@ not_top:                                ; Subsequent bands
         sta     _raw_image,y
         lda     last_line+256,y
         sta     _raw_image+256,y
+        iny                             ; Unroll a bit
+        lda     last_line,y
+        sta     _raw_image,y
+        lda     last_line+256,y
+        sta     _raw_image+256,y
         iny
         bne     :-
         ldy     #(RAW_WIDTH-640+2)      ; Plus the rest of the useful data
 :       lda     last_line+512,y
+        sta     _raw_image+512,y
+        dey                             ; Unroll a bit
+        lda     last_line+512,y
         sta     _raw_image+512,y
         dey
         bne     :-
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row
+        bne     row_loop                ; eq JMP
+
+; --------------------------------------; Inlined helpers, close enough to branch
+clamp_high_nibble_high:
+        lda     #$FF
+        clc
+        bcc     store_hn_val            ; eq JMP, carry's clear
+
+first_row_handler_high:
+IBFR1:  sta     IDX_BEHIND+2,y
+IBFR2:  sta     IDX_BEHIND+4,y
+
+first_pixel_handler:
+        bcs     std_col_handler_high    ; Patched out after first pixel
+        sta     IDX+1,y
+        sta     IDX,y
+        sta     next_ln_val+1
+        SET_BRANCH #$90, first_pixel_handler
+        bcc     do_low_nibble           ; eq JMP, carry's clear
+
+first_col_handler:
+IFC1:   sta     IDX+1,y
+IFC2:   sta     IDX,y
+        sta     next_ln_val+1
+        SET_BRANCH #$B0, high_nibble_special
+        bcc     do_low_nibble           ; eq JMP, carry's clear
+; --------------------------------------; End inlined helpers, close enough to branch
 
 row_loop:                               ; Row loop
 next_ln_val:
@@ -395,42 +431,7 @@ IB2:    adc     IDX_BEHIND+2,y
         adc     high_nibble_gstep_low,x ; Sets carry if overflow
         bcc     clamp_high_nibble_low
         clc
-        jmp     store_hn_val
-
-clamp_high_nibble_low:
-        lda     #$00
-        jmp    store_hn_val
-
-clamp_high_nibble_high:
-        lda     #$FF
-        clc
-        jmp     store_hn_val
-
-; ----------------------------------
-first_row_handler_high:
-IBFR1:  sta     IDX_BEHIND+2,y
-IBFR2:  sta     IDX_BEHIND+4,y
-
-first_pixel_handler:
-        bcs     std_col_handler_high    ; Patched out after first pixel 
-        sta     IDX+1,y
-        sta     IDX,y
-        sta     next_ln_val+1
-        SET_BRANCH #$90, first_pixel_handler
-        jmp     do_low_nibble
-
-first_col_handler:
-IFC1:   sta     IDX+1,y
-IFC2:   sta     IDX,y
-        sta     next_ln_val+1
-        SET_BRANCH #$B0, high_nibble_special
-        jmp     do_low_nibble
-
-first_row_handler_low:
-IBFR3:  sta     IDX_BEHIND+6,y
-IBFR4:  sta     IDX_BEHIND+4,y
-        jmp     std_col_handler_low
-; ----------------------------------
+        bcc     store_hn_val            ; eq JMP
 
 gstep_high_pos:
         adc     ln_val
@@ -458,6 +459,7 @@ I2:     sta     IDX+1,y
 do_low_nibble:
         lda     low_nibble_gstep_low,x
         bmi     low_nibble_neg
+
 low_nibble_pos:
 IB4:    lda     IDX_BEHIND+2,y
         adc     hn_val
@@ -471,7 +473,8 @@ IB5:    adc     IDX_BEHIND+4,y
 clamp_low_nibble_high:
         lda     #$FF
         clc                              ; Need to clear carry here
-        jmp     store_ln_val
+        bcc     store_ln_val             ; eq JMP
+
 low_nibble_neg:
 IB6:    lda     IDX_BEHIND+2,y
         adc     hn_val
@@ -483,6 +486,7 @@ IB7:    adc     IDX_BEHIND+4,y
         adc     low_nibble_gstep_low,x  ; Sets carry if overflow
         bcc     clamp_low_nibble_low
         clc
+
 store_ln_val:
         sta     ln_val
 I3:     sta     IDX+4,y
@@ -508,10 +512,19 @@ inc_cache_high_done:
         ;clc
         adc     #4
         tay
+        bcc     col_loop
         bcs     inc_idx_high
-        jmp     col_loop
 
 ; --------------------------------------; Inlined helpers, close enough to branch
+clamp_high_nibble_low:
+        lda     #$00
+        beq    store_hn_val             ; eq JMP
+
+first_row_handler_low:
+IBFR3:  sta     IDX_BEHIND+6,y
+IBFR4:  sta     IDX_BEHIND+4,y
+        bcc     std_col_handler_low     ; eq JMP, carry's clear
+
 ; Increment cache pointer page
 inc_cache_high:
         inc     cache_read+1
