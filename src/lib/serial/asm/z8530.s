@@ -167,6 +167,7 @@ RR_TX_RX_STATUS        = 4
 
 WR_TX_CTRL             = 5              ; (Ref page 5-9)
 RR_TX_STATUS           = 5              ; Corresponding status register
+TX_8BITS               = %01100000      ; 8bits
 TX_CTRL_ON             = %00001000      ; ORed, Tx enabled
 TX_CTRL_OFF            = %11110111      ; ANDed,Tx disabled
 TX_DTR_ON              = %01111111      ; ANDed,DTR ON (high)
@@ -536,7 +537,7 @@ _z8530_set_irq:
         ldy     #WR_MASTER_IRQ_RST
         lda     #MASTER_IRQ_SET
         jsr     writeSCCReg
-        ldx     Channel
+
         ldy     #WR_TX_RX_MODE_CTRL
         lda     #TX_RX_MODE_RXIRQ
         jmp     writeSCCReg
@@ -545,7 +546,7 @@ _z8530_set_irq:
         ldy     #WR_MASTER_IRQ_RST
         lda     #MASTER_IRQ_SHUTDOWN
         jsr     writeSCCReg
-        ldx     Channel
+
         ldy     #WR_TX_RX_MODE_CTRL
         lda     #TX_RX_MODE_OFF
         jmp     writeSCCReg
@@ -561,39 +562,41 @@ _z8530_set_speed:
         sta     _baudrate
         ldy     Opened            ; Don't write regs if not opened
         beq     sout
+        asl     a                 ; to BaudTable index
         tay
 
-        lda     BaudTable,y
-        ldx     #WR_BAUDL_CTRL
-        stx     SCCBREG
-        sta     SCCBREG
+        ldx     Channel
 
-        lda     #0
-        ldx     #WR_BAUDH_CTRL
-        stx     SCCBREG
-        sta     SCCBREG
+        phy
+        lda     BaudTable,y
+        ldy     #WR_BAUDL_CTRL
+        jsr     writeSCCReg
+
+        ply
+        iny
+        lda     BaudTable,y
+        ldy     #WR_BAUDH_CTRL
+        jsr     writeSCCReg
 sout:   rts
 
 ; Fixme: assumes 8 data bits, TX on, RTS on. Same thing as previously:
-; this is sufficient for surl-based uses. Slot ignored.
+; this is sufficient for surl-based uses.
 
 _z8530_slot_dtr_onoff:
         sta     tmp1              ; DTR to tmp1
         jsr     popa              ; Slot from TOS
-        ldy     tmp1
-        cpy     #0
+        tax                       ; and to writeSCCReg's param
+        ldy     #WR_TX_CTRL
+        lda     tmp1              ; DTR param back
         beq     :+
 
-        ldx     #WR_TX_CTRL
-        lda     #%01101010
-        stx     SCCBREG
-        sta     SCCBREG
+        lda     #((TX_8BITS|TX_CTRL_ON|TX_RTS_ON)&TX_DTR_ON)
+        jsr     writeSCCReg
         rts
 
-:       ldx     #WR_TX_CTRL
-        lda     #%11101010
-        stx     SCCBREG
-        sta     SCCBREG
+:       ldy     #WR_TX_CTRL       ; Turn DTR off
+        lda     #((TX_8BITS|TX_CTRL_ON|TX_RTS_ON)|TX_DTR_OFF)
+        jsr     writeSCCReg
         rts
 
 ; Fixme: assumes 1 stop bit. Same thing as previously:
@@ -610,8 +613,8 @@ _z8530_set_parity:
         ldy     CurClockSource    ; Clock multiplier
         ora     ClockMultiplier,y
 
-        ldx     #WR_TX_RX_CTRL
-        stx     SCCBREG
-        sta     SCCBREG
+        ldx     Channel
+        ldy     #WR_TX_RX_CTRL
+        jsr     writeSCCReg
 pout:   rts
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
