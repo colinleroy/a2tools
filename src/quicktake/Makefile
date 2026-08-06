@@ -158,8 +158,7 @@ slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-C ../../config/apple2enh-slowtake.cfg \
-	--start-addr 0x1900  #One file buffer
+	-C ../../config/apple2enh-slowtake.cfg
 
 # 4 full tracks cache!
 qtktconv_CLCFLAGS = \
