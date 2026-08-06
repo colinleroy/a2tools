@@ -8,6 +8,7 @@
 #ifndef __CC65__
 #include <sys/ioctl.h>
 #endif
+#include "clrzone.h"
 #include "platform.h"
 #include "extended_conio.h"
 #include "progress_bar.h"
@@ -18,6 +19,12 @@
 #define DEBUG_TIMING 0
 
 extern uint8 scrw, scrh;
+
+static const char *camera_drivers[] = {
+  "QT1X0.drv",
+  "QT200.drv",
+  NULL
+};
 
 uint8 serial_model = QT_MODEL_UNKNOWN;
 
@@ -51,6 +58,7 @@ extern uint8 cam_features;
 
 #pragma code-name(push, "RT_ONCE")
 
+/* Load driver from disk */
 uint8 load_camera_driver(const char *drv_name) {
   int fd = open(drv_name, O_RDONLY);
   if (fd == -1) {
@@ -64,6 +72,8 @@ uint8 load_camera_driver(const char *drv_name) {
 
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
+  uint8 i;
+
   /* Set initial settings */
   simple_serial_close();
 #ifdef __CC65__
@@ -82,14 +92,12 @@ uint8 qt_serial_connect(uint16 speed) {
   simple_serial_set_irq(1);
   simple_serial_flush();
 
-
-  /* Try and detect a QuickTake 1x0 */
-  if (load_camera_driver("QT1X0.DRV") == 0) {
-    serial_model = cam_wakeup(speed);
-  }
-  if (serial_model == QT_MODEL_UNKNOWN) {
-    if (load_camera_driver("QT200.DRV") == 0 && cam_wakeup(speed) == 0) {
-      serial_model = QT_MODEL_200;
+  for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
+    gotox(0); clreol();
+    if (load_camera_driver(camera_drivers[i]) == 0) {
+      if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
+        break;
+      }
     }
   }
 

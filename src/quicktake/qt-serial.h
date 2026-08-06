@@ -6,12 +6,13 @@
 #include <sys/types.h>
 
 #define QT_MODEL_UNKNOWN 0
-#define QT_MODEL_100 100
-#define QT_MODEL_150 150
-#define QT_MODEL_200 200
+#define QT_MODEL_100     10
+#define QT_MODEL_150     15
+#define QT_MODEL_200     20
 
 #define QUALITY_STANDARD 0x20
 #define QUALITY_HIGH 0x10
+
 #define FLASH_AUTO 0
 #define FLASH_OFF 1
 #define FLASH_ON 2
@@ -71,6 +72,7 @@ typedef struct _thumb_info {
 #error "Wrong buffer size defined"
 #endif
 extern unsigned char buffer[BUFFER_SIZE];
+
 extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */

@@ -11,7 +11,6 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt-conv.h"
-#include "qt200-serial.h"
 
 #pragma code-name(push, "QT200")
 #pragma rodata-name(push, "QT200")
@@ -27,6 +26,16 @@ unsigned char qt200_features = 0b10000000;
 //                               |||______ GET_THUMBNAIL,
 //                               ||_______ DELETE_PICTURES,
 //                               |________ RESERVED,
+
+/* Camera callbacks definitions */
+static uint8 qt200_wakeup(void);
+static uint8 qt200_set_speed(uint16 speed);
+
+/* Camera settings functions */
+static uint8 qt200_get_information(camera_info *info);
+
+/* Camera pictures functions */
+static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
 
 /* Camera callbacks */
 void *qt200_callbacks[] = {
@@ -75,7 +84,7 @@ static void end_session(void);
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
-uint8 qt200_wakeup(void) {
+static uint8 qt200_wakeup(void) {
   uint8 tries = 2;
   cputs("Pinging QuickTake 200... ");
 
@@ -86,13 +95,13 @@ again:
 
   if (qt200_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
-    return 0;
+    return QT_MODEL_200;
   } else {
     if (--tries) {
       goto again;
     }
     cputs("Timeout.");
-    return -1;
+    return QT_MODEL_UNKNOWN;
   }
 }
 
@@ -227,7 +236,7 @@ static uint8 qt200_send_ping(uint8 wait) {
 }
 
 /* Send the speed upgrade command */
-uint8 qt200_set_speed(uint16 speed) {
+static uint8 qt200_set_speed(uint16 speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
@@ -311,7 +320,7 @@ static uint8 qt200_stop(void) {
 }
 
 /* Get information from the camera */
-uint8 qt200_get_information(camera_info *info) {
+static uint8 qt200_get_information(camera_info *info) {
   char num_pics_cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
   char info_cmd[]= {0x00,FUJI_CMD_GET_INFO,0x00,0x00};
 
@@ -354,7 +363,7 @@ uint8 qt200_get_information(camera_info *info) {
   return 0;
 }
 
-uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
+static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
   char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};

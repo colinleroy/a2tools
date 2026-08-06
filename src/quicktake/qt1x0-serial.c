@@ -16,7 +16,6 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 #include "a2_features.h"
-#include "qt1x0-serial.h"
 
 #pragma code-name(push, "QT1X0")
 #pragma rodata-name(push, "QT1X0")
@@ -32,6 +31,23 @@ unsigned char qt1x0_features = 0b11111111;
 //                               |||______ GET_THUMBNAIL,
 //                               ||_______ DELETE_PICTURES,
 //                               |________ RESERVED,
+
+/* Camera callbacks definitions */
+static uint8 qt1x0_wakeup(uint16 speed);
+static uint8 qt1x0_set_speed(uint16 speed);
+
+/* Camera settings functions */
+static uint8 qt1x0_set_camera_name(const char *name);
+static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+static uint8 qt1x0_get_information(camera_info *info);
+static uint8 qt1x0_set_quality(uint8 quality);
+static uint8 qt1x0_set_flash(uint8 mode);
+
+/* Camera pictures functions */
+static uint8 qt1x0_take_picture(void);
+static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail);
+static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 qt1x0_delete_pictures(void);
 
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
@@ -167,7 +183,7 @@ static uint8 send_hello(uint16 speed) {
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise
  */
-uint8 qt1x0_wakeup(uint16 speed) {
+static uint8 qt1x0_wakeup(uint16 speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
 
   cputs("Pinging QuickTake 1x0... ");
@@ -203,7 +219,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
 }
 
 /* Send the speed upgrade command */
-uint8 qt1x0_set_speed(uint16 speed) {
+static uint8 qt1x0_set_speed(uint16 speed) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
@@ -316,14 +332,14 @@ static uint8 send_get_information_command(void) {
 }
 
 /* Take a picture */
-uint8 qt1x0_take_picture(void) {
+static uint8 qt1x0_take_picture(void) {
   char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
 
   return send_command(str, sizeof str, 1, 0, 20);
 }
 
 /* Set the camera name */
-uint8 qt1x0_set_camera_name(const char *name) {
+static uint8 qt1x0_set_camera_name(const char *name) {
   #define NAME_SET_IDX 0x0D
   char str[] = {0x16,0x2a,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x22,0x00,0x02,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
@@ -340,7 +356,7 @@ uint8 qt1x0_set_camera_name(const char *name) {
 }
 
 /* Set the camera time */
-uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   #define SET_MONTH_IDX 0x0D
   #define SET_DAY_IDX   0x0E
   #define SET_YEAR_IDX  0x0F
@@ -406,7 +422,7 @@ static uint8 receive_data(uint32 size, int fd) {
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
-uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
+static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define HDR_SKIP       0x04
 
   #define WH_OFFSET      0x220
@@ -494,7 +510,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 }
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   uint8 status_line;
 
   /* Seems useless but needed for IIc+ */
@@ -537,14 +553,14 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 }
 
 /* Delete all pictures from the camera */
-uint8 qt1x0_delete_pictures(void) {
+static uint8 qt1x0_delete_pictures(void) {
   char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
   return send_command(str, sizeof str, 1, 0, 60);
 }
 
 /* Set quality */
-uint8 qt1x0_set_quality(uint8 quality) {
+static uint8 qt1x0_set_quality(uint8 quality) {
   #define SET_QUALITY_IDX 0x0D
   //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
   char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
@@ -555,7 +571,7 @@ uint8 qt1x0_set_quality(uint8 quality) {
 }
 
 /* Set flash mode */
-uint8 qt1x0_set_flash(uint8 mode) {
+static uint8 qt1x0_set_flash(uint8 mode) {
   #define SET_FLASH_IDX 0x0D
   //           {????,????,????,????,????,????,????,????,????,????,????,????,FLSH,????}
   char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
@@ -566,7 +582,7 @@ uint8 qt1x0_set_flash(uint8 mode) {
 }
 
 /* Get information from the camera */
-uint8 qt1x0_get_information(camera_info *info) {
+static uint8 qt1x0_get_information(camera_info *info) {
   #define BATTERY_IDX    0x02 /* ?? 0xA7 = charging, full ; 0x63 = not charging, full */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
