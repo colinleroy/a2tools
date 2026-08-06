@@ -143,9 +143,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         bpl     :+
         ldx     #0
         stx     min_slot_idx
-        stx     slot_idx
         inx
-        stx     printer_slot_idx
         inx
         stx     max_slot_idx
 

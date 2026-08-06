@@ -554,7 +554,7 @@ _z8530_set_irq:
 .ifdef SERIAL_LOW_LEVEL_CONTROL
 ; FIXME does not handle 115200 bps yet. Not a problem as of now, as the
 ; only current user of this function is the Quicktake program, which
-; doesn't do 115200. cc65's driver can open at SER_BAUD_115200 and that's
+; doesn't do 115200. The core can open at SER_BAUD_115200 and that's
 ; sufficient for the surl-based programs.
 
 _z8530_set_speed:
