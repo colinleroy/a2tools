@@ -114,9 +114,9 @@ sm2 = * + 1
 sm3 = * + 1
         lda sqrHigh,x     ; 34
 sm4 = * + 1
-        sbc iSqrHigh,x    ; 48
+        sbc iSqrHigh,x    ; 38
         .if .paramcount = 1
-        sta HSTORE
+        sta HSTORE        ; 42
         .endif
         tya
 .endscope
