@@ -27,7 +27,6 @@ slowtake_SOURCES := \
 	qt200-serial.c \
 	qt-edit-image.c \
 	qt-state.c \
-	qt-decompress.c \
 	../lib/dget_text_single.c \
 	../lib/strtrim.c \
 	../lib/progress_bar.c \
@@ -45,6 +44,7 @@ slowtake_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/asm/simple_serial_read_no_irq.s \
 	../lib/a2_features.s \
+	../lib/asm/zx02_decompress_in_place.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \

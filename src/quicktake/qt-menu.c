@@ -23,7 +23,7 @@
 #include "qt-state.h"
 #include "runtime_once_clean.h"
 #include "a2_features.h"
-#include "qt-decompress.h"
+#include "zx02_decompress_in_place.h"
 
 uint8 scrw, scrh;
 uint8 camera_connected;
