@@ -27,6 +27,7 @@ slowtake_SOURCES := \
 	qt200-serial.c \
 	qt-edit-image.c \
 	qt-state.c \
+	qt-decompress.c \
 	../lib/dget_text_single.c \
 	../lib/strtrim.c \
 	../lib/progress_bar.c \
@@ -249,16 +250,23 @@ all: quicktake.po
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
 
-about: about.in
-	sed "s/__VERSION__/v$(VERSION)/" about.in > about
+ABOUT.ZX: about.in
+	sed "s/__VERSION__/v$(VERSION)/" about.in > about.tmp; \
+	zx02 -f about.tmp ABOUT.ZX; \
+	rm about.tmp
 
-add_disk: about
+QT1X0.ZX: slowtake.bin
+	zx02 -f QT1X0.DRV QT1X0.ZX
+
+QT200.ZX: slowtake.bin
+	zx02 -f QT200.DRV QT200.ZX
+
+add_disk: ABOUT.ZX QT1X0.ZX QT200.ZX
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
-	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT BIN 0x2000 < about; \
-	for r in *.DRV; do \
-		java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)$$(basename $$r) BIN 0xC00 < $$r; \
-	done; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT200.ZX BIN 0xC00 < QT200.ZX; \
 	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;

@@ -23,6 +23,7 @@
 #include "qt-state.h"
 #include "runtime_once_clean.h"
 #include "a2_features.h"
+#include "qt-decompress.h"
 
 uint8 scrw, scrh;
 uint8 camera_connected;
@@ -517,16 +518,11 @@ static void show_about(void) {
   size_t r;
 
   reopen_start_device();
-  fd = open("about", O_RDONLY);
-  if (fd <= 0) {
-    return;
-  }
+  bzero(buffer, sizeof(buffer));
+  zx02_decompress_in_place("ABOUT.ZX", buffer, buffer+sizeof(buffer));
   set_scrollwindow(0, scrh);
   clrscr();
-  while((r = read(fd, (char *)buffer, sizeof(buffer) - 1))) {
-    buffer[r] = '\0';
-    cputs((char *)buffer);
-  }
+  cputs((char *)buffer);
   close(fd);
   cgetc();
 }

@@ -15,14 +15,15 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt-conv.h"
+#include "qt-decompress.h"
 
 #define DEBUG_TIMING 0
 
 extern uint8 scrw, scrh;
 
 static const char *camera_drivers[] = {
-  "QT1X0.drv",
-  "QT200.drv",
+  "QT1X0.ZX",
+  "QT200.ZX",
   NULL
 };
 
@@ -58,18 +59,6 @@ extern uint8 cam_features;
 
 #pragma code-name(push, "RT_ONCE")
 
-/* Load driver from disk */
-uint8 load_camera_driver(const char *drv_name) {
-  int fd = open(drv_name, O_RDONLY);
-  if (fd == -1) {
-    return -1;
-  }
-  read(fd, (char *)0xC00, (size_t)0x2000-0xC00);
-  close(fd);
-
-  return 0;
-}
-
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
   uint8 i;
@@ -92,7 +81,7 @@ uint8 qt_serial_connect(uint16 speed) {
 
   for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
     gotox(0); clreol();
-    if (load_camera_driver(camera_drivers[i]) == 0) {
+    if (zx02_decompress_in_place(camera_drivers[i], (char *)0xC00, (char *)0x1900) == 0) {
       if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
         break;
       }
