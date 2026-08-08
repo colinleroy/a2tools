@@ -43,7 +43,7 @@ display:
     } else if (data_len == 320*240 || data_len == 76288) {
       w = 320;
       h = 240;
-    } else if (data_len == 640*480) {
+    } else if (data_len == 640*480 || data_len == 306688) {
       w = 640;
       h = 480;
     } else {

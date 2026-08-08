@@ -22,8 +22,11 @@
         .export         _simple_serial_open_printer
         .export         _simple_serial_close
         .export         _simple_serial_settings_io
+
+.ifdef SERIAL_ENABLE_IRQ
         .export         _simple_serial_getc_with_timeout
         .export         _simple_serial_getc
+.endif
 
         .export         simple_serial_ram_settings
         .export         simple_serial_disk_settings
@@ -230,6 +233,8 @@ write_mode_str: .asciiz "w"
         .segment "LOWCODE"
         .endif
 
+.ifdef SERIAL_ENABLE_IRQ
+
 ;char __fastcall__ simple_serial_getc(void) {
 .proc _simple_serial_getc: near
         jsr     _simple_serial_getc_with_timeout
@@ -237,6 +242,7 @@ write_mode_str: .asciiz "w"
         beq     _simple_serial_getc
         rts
 .endproc
+
 ;char __fastcall__ simple_serial_getc_with_timeout(void) {
 .proc _simple_serial_getc_with_timeout: near
         ; Init cycle counter
@@ -286,6 +292,8 @@ write_mode_str: .asciiz "w"
         ldx     c+1
         rts
 .endproc
+
+.endif
 
         .bss
 

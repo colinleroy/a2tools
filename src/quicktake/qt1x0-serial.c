@@ -69,8 +69,9 @@ extern uint8 scrw, scrh;
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
+  char c;
   while (wait--) {
-    if (simple_serial_getc_with_timeout() == 0x00) {
+    if (simple_serial_read_no_irq(&c, 1) == 0x00 && c == 0x00) {
       return 0;
     }
   }
@@ -106,26 +107,16 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, u
 
 /* Get first data from the camera after connecting */
 static uint8 get_hello(void) {
-  int c;
-  uint8 wait;
-
-  wait = 5;
-  while (wait--) {
-    c = simple_serial_getc_with_timeout();
-    if (c != EOF) {
-      goto read;
-    }
-  }
-  cputs("Timeout. ");
-  return QT_MODEL_UNKNOWN;
-
-read:
-  buffer[0] = (unsigned char)c;
-  if (buffer[0] != 0xA5) {
-    cprintf("Unexpected $%04X. ", c);
+  
+  if (simple_serial_read_no_irq((char *)buffer, 7) == EOF) {
+    cputs("Timeout. ");
     return QT_MODEL_UNKNOWN;
   }
-  simple_serial_read((char *)buffer + 1, 6);
+
+  if (buffer[0] != 0xA5) {
+    cprintf("Unexpected $%04X. ", buffer[0]);
+    return QT_MODEL_UNKNOWN;
+  }
 
   DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
@@ -141,8 +132,7 @@ static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHKSUM_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
-  int c;
-  unsigned char chk;
+  unsigned char chk, c;
 
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
@@ -162,16 +152,15 @@ static uint8 send_hello(uint16 speed) {
   DUMP_END();
 
   simple_serial_write(str_hello, sizeof(str_hello));
-  if ((c = simple_serial_getc_with_timeout()) == EOF) {
+  if (simple_serial_read_no_irq((char *)buffer, 10) == EOF) {
     cputs("Timeout. ");
     return -1;
   }
-  if (c != 0x00) {
+
+  if (buffer[0] != 0x00) {
     cprintf("Error ($%02X).\r\n", c);
     return -1;
   }
-  buffer[0] = c;
-  simple_serial_read((char *)buffer + 1, 9);
 
   DUMP_START("qt_hello_reply");
   DUMP_DATA(buffer, 10);
@@ -266,7 +255,8 @@ static uint8 qt1x0_set_speed(uint16 speed) {
   simple_serial_set_speed(spd_code);
 
   /* We don't care about the bytes we receive here */
-  simple_serial_flush();
+  while(simple_serial_read_no_irq((char *)buffer, 256) != EOF);
+  
 
   send_ack();
   return get_ack(5);
@@ -274,20 +264,8 @@ static uint8 qt1x0_set_speed(uint16 speed) {
 
 #define PNUM_IDX       0x06
 #define PSIZE_IDX      0x07
+#define FMT_IDX        0x03
 #define THUMBNAIL_SIZE 0x0960UL
-
-/* Gets thumbnail of the photo (?)
- * At least, the data received is 2400 bytes long, which correspond
- * to raw 4-bit data for a 80x60 image.
- */
-static uint8 send_photo_thumbnail_command(uint8 pnum) {
-  //            {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
-  char str[] = {0x16,0x28,0x00,0x00,0x00,0x00,0x01,0x00,0x09,0x60,0x00};
-
-  str[PNUM_IDX] = pnum;
-
-  return send_command(str, sizeof str, 1, 1, 5);
-}
 
 /* Gets photo header */
 static uint8 send_photo_header_command(uint8 pnum) {
@@ -312,13 +290,19 @@ static uint8 send_photo_header_command(uint8 pnum) {
   return send_command(str, sizeof str, 1, 1, 5);
 }
 
+#define PHOTO_FULL  0x10
+#define PHOTO_THUMB 0x00
+
 /* Gets photo data */
-static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
-  //           {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
+static uint8 send_photo_data_command(uint8 pnum, uint8 format, uint32 picture_size) {
+  //           {????,????,????,FMT ,????,????,PNUM,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x10,0x00,0x00,0x01,0x00,0x70,0x80,0x00};
 
-  str[PNUM_IDX] = pnum;
-  memcpy(str + PSIZE_IDX, picture_size, 3);
+  str[PNUM_IDX]    = pnum;
+  str[FMT_IDX]     = format;
+  str[PSIZE_IDX]   = (picture_size >> 16) & 0xFF;
+  str[PSIZE_IDX+1] = (picture_size >> 8)  & 0xFF;
+  str[PSIZE_IDX+2] = (picture_size)       & 0xFF;
 
   return send_command(str, sizeof str, 1, 1, 5);
 }
@@ -376,7 +360,7 @@ static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hou
   return send_command(str, sizeof str, 1, 0, 5);
 }
 
-static uint8 receive_data(uint32 size, int fd) {
+static uint8 receive_data(uint8 n_pic, uint8 type, uint32 size, int fd) {
   uint8 y = wherey();
   uint16 i;
   uint8 err = 0;
@@ -389,14 +373,21 @@ static uint8 receive_data(uint32 size, int fd) {
 
   progress_bar(2, y, scrw - 2, 0, blocks);
 
+  send_photo_data_command(n_pic, type, size);
+
   for (i = 0; i < blocks; i++) {
     /* No need to be smart, read more than one block and
      * batch multiple blocks writes, this isn't faster, on
      * the contrary. */
-    simple_serial_read((char *)buffer, BLOCK_SIZE);
+    if (simple_serial_read_no_irq((char *)buffer, BLOCK_SIZE) == EOF) {
+      errno = EBUSY;
+      return -1;
+    }
     if (write(fd, buffer, BLOCK_SIZE) < BLOCK_SIZE) {
       err = -1;
       errno = EIO;
+      /* Write error. But keep reading from serial,
+       * otherwise we'll crash the camera. */
     }
     DUMP_DATA(buffer, BLOCK_SIZE);
 
@@ -405,7 +396,10 @@ static uint8 receive_data(uint32 size, int fd) {
     send_ack();
   }
 
-  simple_serial_read((char *)buffer, rem);
+  if (simple_serial_read_no_irq((char *)buffer, rem) == EOF) {
+    errno = EBUSY;
+    return -1;
+  }
   if (write(fd, buffer, rem) < rem) {
     err = -1;
     errno = EIO;
@@ -429,7 +423,6 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define DATA_OFFSET    0x2E0
 
   uint16 width, height;
-  unsigned char pic_size_str[3];
   unsigned long pic_size_int;
   uint8 status_line;
   const char *format;
@@ -450,22 +443,19 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  simple_serial_read((char *)buffer, 64);
+  if (simple_serial_read_no_irq((char *)buffer, 64) == EOF) {
+    errno = EBUSY;
+    return -1;
+  }
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
 
-  /* Get size */
-  memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
-
-#ifndef __CC65__
-  pic_size_int = (pic_size_str[0]<<16) + (pic_size_str[1]<<8) + (pic_size_str[2]);
-#else
-  ((unsigned char *)&pic_size_int)[0] = pic_size_str[2];
-  ((unsigned char *)&pic_size_int)[1] = pic_size_str[1];
-  ((unsigned char *)&pic_size_int)[2] = pic_size_str[0];
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&pic_size_int)[0] = buffer[IMG_SIZE_IDX+2];
+  ((unsigned char *)&pic_size_int)[1] = buffer[IMG_SIZE_IDX+1];
+  ((unsigned char *)&pic_size_int)[2] = buffer[IMG_SIZE_IDX+0];
   ((unsigned char *)&pic_size_int)[3] = 0;
-#endif
 
   if (pic_size_int > avail) {
     errno = ENOSPC;
@@ -504,9 +494,7 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   cputs("  Getting picture...\r\n");
   gotoy(status_line+2);
 
-  send_photo_data_command(n_pic, pic_size_str);
-
-  return receive_data(pic_size_int, fd);
+  return receive_data(n_pic, PHOTO_FULL, pic_size_int, fd);
 }
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
@@ -523,10 +511,16 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 
   DUMP_START("header");
 
-  if (send_photo_header_command(n_pic) != 0)
+  if (send_photo_header_command(n_pic) != 0) {
+    errno = EIO;
     return -1;
+  }
 
-  simple_serial_read((char *)buffer, 64);
+  if (simple_serial_read_no_irq((char *)buffer, 64) == EOF) {
+    errno = EBUSY;
+    return -1;
+  }
+
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
@@ -547,9 +541,8 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   gotoxy(0, status_line);
   cprintf("  Getting thumbnail %d...\r\n", n_pic);
   gotoy(status_line+2);
-  send_photo_thumbnail_command(n_pic);
 
-  return receive_data(THUMBNAIL_SIZE, fd);
+  return receive_data(n_pic, PHOTO_THUMB, THUMBNAIL_SIZE, fd);
 }
 
 /* Delete all pictures from the camera */
@@ -600,10 +593,15 @@ static uint8 qt1x0_get_information(camera_info *info) {
 
   DUMP_START("summary");
 
-  if (send_get_information_command() != 0)
+  if (send_get_information_command() != 0) {
+    errno = EIO;
     return -1;
+  }
 
-  simple_serial_read((char *)buffer, 128);
+  if (simple_serial_read_no_irq((char *)buffer, 128) == EOF) {
+    errno = EBUSY;
+    return -1;
+  }
 
   DUMP_DATA(buffer, 128);
   DUMP_END();

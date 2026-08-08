@@ -53,6 +53,8 @@ void __fastcall__ simple_serial_flush(void);
 void __fastcall__ simple_serial_set_irq(unsigned char on);
 void __fastcall__ simple_serial_configure(void);
 void __fastcall__ simple_serial_setup_no_irq_regs(void);
+
+int simple_serial_read_no_irq(char *buffer, size_t len);
 unsigned char __fastcall__ serial_read_byte_no_irq(void);
 
 #define simple_serial_putc serial_putc_direct

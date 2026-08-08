@@ -117,7 +117,9 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   uint16 i;
   if (expect_header) {
     /* Read the header */
-    simple_serial_read((char *)buf, 6);
+    if (simple_serial_read_no_irq((char *)buf, 6) == EOF) {
+      return -1;
+    }
 
     if (buf[0] != ESC || buf[1] != STX) {
 #ifdef DEBUG_PROTO
@@ -145,16 +147,16 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   end_buf = cur_buf + response_len;
   i = 0;
   while (cur_buf != end_buf) {
-    *cur_buf = simple_serial_getc();
+    *cur_buf = serial_read_byte_no_irq();
     if (*cur_buf == ESC) {
       /* Skip escape */
-      *cur_buf = simple_serial_getc();
+      *cur_buf = serial_read_byte_no_irq();
     }
     cur_buf++;
     i++;
   }
   /* Read footer */
-  simple_serial_read((char *)eot_buf, 3);
+  simple_serial_read_no_irq((char *)eot_buf, 3);
 
 #ifdef DEBUG_PROTO
   printf("read %d bytes: ", i);
@@ -202,7 +204,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
   simple_serial_write((char *)header, sizeof header);
   simple_serial_write((char *)cmd_buffer, len);
 
-  if (get_ack && simple_serial_getc_with_timeout() != ACK)
+  if (get_ack && (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK))
     return -1;
 
   if (read_response(buffer, BLOCK_SIZE, get_ack) != 0) {
@@ -219,8 +221,7 @@ static uint8 qt200_send_ping(uint8 wait) {
   simple_serial_putc(ENQ);
 
   while (wait--) {
-    c = simple_serial_getc_with_timeout();
-    if (c != EOF)
+    if (simple_serial_read_no_irq((char *)&c, 1) == 0)
       break;
     if (kbhit() && cgetc() == CH_ESC) {
       break;

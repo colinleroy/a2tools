@@ -2,7 +2,7 @@
   QTKT/QTKN decoding wrapper
   Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
-  Decoder's core code. Depends on scaler for scaling and an 
+  Decoder's core code. Depends on scaler for scaling and an
   implementation of qt_load_raw(uint16 top), expected to decode
   a band of BAND_HEIGHT pixels high and fill in raw_image[]
 
@@ -10,11 +10,12 @@
   and defines:
   char magic[5];
   char *model;
-  RAW_IMAGE_SIZE;
-  uint8 raw_image[RAW_IMAGE_SIZE];
+  uint8 raw_image[]; - the decoded band buffer
 
-  and the decoding function:
-  void qt_load_raw(uint16 top)
+
+  and the decoding functions:
+  char qt_setup_decode(void) - check file validity and setup width/height/cache position
+  void qt_load_raw(uint16 top) - decode a 20px band
 
   This file provides the actual uint16 height and width to the decoder.
  */
@@ -71,16 +72,6 @@ int fullsize_fd = -1;
 
 #pragma code-name (push, "LC")
 
-#ifndef JPEGCONV
-static uint16 __fastcall__ src_file_get_uint16(void) {
-  uint16 v;
-
-  ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
-  ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
-  return v;
-}
-#endif
-
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 200)
@@ -95,55 +86,20 @@ uint8 *cur_cache_ptr;
 
 static uint8 identify(const char *name)
 {
-/* INIT */
+  /* INIT */
   height = width = 0;
 
+  /* Fill cache */
   read(ifd, cache_start, CACHE_SIZE);
-  
+
   cputsxy(0, 0, "Decompressing image ");
-  if (memcmp (cache_start, magic, 4)) {
-    cputs("- Invalid file.\r\n");
-    return -1;
-  }
+  cputs((char *)name);
+  cputs("...\r\n");
 
-#ifndef JPEGCONV
-  /* For Quicktake 1x0 */
-  if (!memcmp(cache_start, QTKT_MAGIC, 3)) {
-    cur_cache_ptr = cache_start + WH_OFFSET;
-    height = src_file_get_uint16();
-    width  = src_file_get_uint16();
-
-    cputs((char *)name);
-    cputs("...\r\n");
-
-    /* Skip those */
-    src_file_get_uint16();
-    src_file_get_uint16();
-
-    if (src_file_get_uint16() == 30)
-      cur_cache_ptr = cache_start + (738);
-    else
-      cur_cache_ptr = cache_start + (736);
-
-#ifdef QTKNCONV
-    if (!memcmp(cache_start, QTKN_MAGIC, 4)) {
-      width = DECODE_WIDTH;
-      height = DECODE_HEIGHT;
-    }
-#endif
-  }
-#endif
-#ifdef JPEGCONV
-  if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
-    /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
-    cputs((char *)name);
-    cputs("...\r\n");
-    width = DECODE_WIDTH;
-    height = DECODE_HEIGHT;
-    cur_cache_ptr = cache_start;
-  }
-#endif
-  return 0;
+  /* Check file type, figure out height and width,
+   * and position cache at the beginning of the
+   * data stream */
+  return qt_setup_decode();
 }
 
 #ifdef JPEGCONV

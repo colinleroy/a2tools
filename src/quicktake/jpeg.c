@@ -41,6 +41,9 @@ extern uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
 uint8 *cache_start = cache + N_STUFF_CHARS;
 extern uint8 raw_image[RAW_IMAGE_SIZE];
 
+uint8 gCompHSamp[3];
+uint8 gCompVSamp[3];
+
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 600)
@@ -501,14 +504,16 @@ static uint8 readSOFMarker(void)
    for (i = 0; i < gCompsInFrame; i++)
    {
       gCompIdent[i] = (uint8)getByteNoFF();
-      getByteNoFF();
+      gCompHSamp[i] = (uint8)getByteNoFF();
+      gCompVSamp[i] = gCompHSamp[i] & 0x0F;
+      gCompHSamp[i] = gCompHSamp[i] >> 4;
+
       gCompQuant[i] = getByteNoFF();
       if (gCompQuant[i] > 1)
          return PJPG_UNSUPPORTED_QUANT_TABLE;
    }
 
    setQuant(gCompQuant[0]);
-
    return 0;
 }
 //------------------------------------------------------------------------------
@@ -868,19 +873,41 @@ static uint8 initScan(void)
   return 0;
 }
 
+uint8 gMaxMCUSPerRow, gMaxMCUXSize;
+uint8 gMaxMCUSPerCol, gMaxMCUYSize;
+uint8 gScanType;
+
 //------------------------------------------------------------------------------
 static uint8 initFrame(void)
 {
-   gMaxBlocksPerMCU = 4;
-   gMCUOrg[0] = 0;
-   gMCUOrg[1] = 0;
-   gMCUOrg[2] = 1;
-   gMCUOrg[3] = 2;
+   if ((gCompHSamp[0] == 2) && (gCompVSamp[0] == 1)) {
+     gScanType = PJPG_YH2V1;
+     gMaxBlocksPerMCU = 4;
+     gMCUOrg[0] = 0;
+     gMCUOrg[1] = 0;
+     gMCUOrg[2] = 1;
+     gMCUOrg[3] = 2;
 
-   gNumMCUSRemainingX = GMAXMCUSPERROW;
-   gNumMCUSRemainingY = GMAXMCUSPERCOL;
+     gMaxMCUXSize = 16;
+     gMaxMCUYSize = 8;
+  } else if ((gCompHSamp[0] == 2) && (gCompVSamp[0] == 2))
+  {
+     gScanType = PJPG_YH2V2;
+     gMaxBlocksPerMCU = 6;
+     gMCUOrg[0] = 0;
+     gMCUOrg[1] = 0;
+     gMCUOrg[2] = 0;
+     gMCUOrg[3] = 0;
+     gMCUOrg[4] = 1;
+     gMCUOrg[5] = 2;
 
-   return 0;
+     gMaxMCUXSize = 16;
+     gMaxMCUYSize = 16;
+  }
+   gNumMCUSRemainingX = gMaxMCUSPerRow = (640 + (gMaxMCUXSize - 1)) >> ((gMaxMCUXSize == 8) ? 3 : 4);
+   gNumMCUSRemainingY = gMaxMCUSPerCol = (480 + (gMaxMCUYSize - 1)) >> ((gMaxMCUYSize == 8) ? 3 : 4);
+
+  return 0;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -943,9 +970,9 @@ void qt_load_raw(uint16 top)
       return;
     }
 
-    #define M_MCUHEIGHT (GMAXMCUYSIZE/2)
+    #define M_MCUHEIGHT (gMaxMCUYSize/2)
 
-    if (++mcu_x == GMAXMCUSPERROW) {
+    if (++mcu_x == gMaxMCUSPerRow) {
       mcu_x = 0;
       if ((++dst_y == (BAND_HEIGHT/M_MCUHEIGHT))) {
         break;

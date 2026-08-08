@@ -18,7 +18,9 @@
         .export         _simple_serial_puts
         .export         _simple_serial_puts_nl
         .export         _simple_serial_write
+.ifdef SERIAL_ENABLE_IRQ
         .export         _simple_serial_flush
+.endif
         .export         simple_serial_compute_ptr_end
         .export         throbber_on, throbber_off, _serial_throbber_set
 
@@ -136,12 +138,14 @@ write_check:
         jmp     throbber_off
 .endproc
 
+.ifdef SERIAL_ENABLE_IRQ
 .proc _simple_serial_flush: near
         jsr     _simple_serial_getc_with_timeout
         cpx     #$FF
         bne     _simple_serial_flush
         rts
 .endproc
+.endif
 
 _serial_throbber_set:
         sta     throbber_store+1

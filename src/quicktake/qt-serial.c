@@ -89,8 +89,6 @@ uint8 qt_serial_connect(uint16 speed) {
     cputs("Cannot open port\r\n");
     return -1;
   }
-  simple_serial_set_irq(1);
-  simple_serial_flush();
 
   for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
     gotox(0); clreol();

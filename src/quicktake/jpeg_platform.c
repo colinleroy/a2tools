@@ -239,6 +239,7 @@ void idctRows(void)
 
 uint8 *output0, *output1, *output2, *output3;
 uint16 outputIdx;
+
 void idctCols(void)
 {
    uint8 idctCC;
@@ -395,7 +396,7 @@ uint8 decodeNextMCU(void)
     gRestartsLeft--;
   }
 
-  for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
+  for (mcuBlock = 0; mcuBlock < gMaxBlocksPerMCU-2; mcuBlock++) {
     if (gMCUOrg[mcuBlock] != 0) {
       /* see initFrame, componentID = 0 for mcuBlocks 0/1 */
       printf("Unexpected thingy.\n");
@@ -456,7 +457,7 @@ uint8 decodeNextMCU(void)
     * input bits
     */
   skipBits = 1;
-  for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
+  for (; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];
 
     s = huffDecode(skipDCHuff, skipDCHuffVal);
@@ -481,6 +482,9 @@ uint8 decodeNextMCU(void)
   return 0;
 }
 
+extern uint8 gMaxMCUSPerRow;
+extern uint8 gMaxMCUSPerCol;
+
 //------------------------------------------------------------------------------
 unsigned char pjpeg_decode_mcu(void)
 {
@@ -490,7 +494,7 @@ unsigned char pjpeg_decode_mcu(void)
    if (!--gNumMCUSRemainingX)
    {
 	  if (--gNumMCUSRemainingY > 0)
-		  gNumMCUSRemainingX = GMAXMCUSPERROW;
+		  gNumMCUSRemainingX = gMaxMCUSPerRow;
    }
 
    return 0;

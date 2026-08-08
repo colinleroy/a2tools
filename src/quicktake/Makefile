@@ -3,7 +3,6 @@ TARGET := apple2
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
-	--asm-define SERIAL_ENABLE_IRQ \
 	--asm-define SERIAL_LOW_LEVEL_CONTROL \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
@@ -42,10 +41,8 @@ slowtake_CC65SOURCES := \
 	../lib/serial/asm/z8530.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/serial/asm/simple_serial_read.s \
 	../lib/serial/asm/simple_serial_configure.s \
-	../lib/fastirq.s \
-	../lib/fastirq-iigs.s \
+	../lib/serial/asm/simple_serial_read_no_irq.s \
 	../lib/a2_features.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -78,6 +75,7 @@ slowtake_GCCSOURCES := \
 
 qtktconv_SOURCES := \
 	qt-conv.c \
+	qtkt_setup_decode.c \
 	../lib/progress_bar.c
 
 qtktconv_CC65SOURCES := \
@@ -97,6 +95,7 @@ qtktconv_GCCSOURCES := \
 
 qtknconv_SOURCES := \
 	qt-conv.c \
+	qtkn_setup_decode.c \
 	qtkn.c \
 	../lib/progress_bar.c
 
@@ -122,6 +121,7 @@ qtknconv_GCCSOURCES := \
 
 jpegconv_SOURCES := \
 	qt-conv.c \
+	jpeg_setup_decode.c \
 	jpeg.c \
 	../lib/progress_bar.c
 
@@ -187,7 +187,7 @@ qtknconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_CLCFLAGS = \
-	-DCACHE_SIZE=15360  --asm-define CACHE_SIZE=15360 \
+	-DCACHE_SIZE=10240  --asm-define CACHE_SIZE=10240 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \

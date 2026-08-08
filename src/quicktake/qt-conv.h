@@ -61,6 +61,11 @@ extern uint16 raw_width, raw_image_size;
 extern char magic[5];
 extern char *model;
 
+/* Figure out height and width, and position cache
+ * at the beginning of the data stream */
+char qt_setup_decode(void);
+
+/* Decode a band of 20px high to pre-scaling buffer */
 void qt_load_raw(uint16 top);
 
 #endif
