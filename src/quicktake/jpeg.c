@@ -948,6 +948,8 @@ static uint8 dst_y;
 void qt_load_raw(uint16 top)
 {
   static uint8 *pDst_row;
+  static uint8 bandStop;
+  static uint16 bandInc;
 
   if (top == 0) {
 #ifdef __CC65__
@@ -960,29 +962,28 @@ void qt_load_raw(uint16 top)
       cputs("pjpeg_decode_init() failed\r\n");
       return;
     }
+
+    bandStop = (BAND_HEIGHT*2)/gMaxMCUYSize;
+    bandInc  = (RAW_WIDTH/2)*gMaxMCUYSize;
   }
 
   dst_y = 0;
   pDst_row = raw_image;
-  output0 = pDst_row;
-  output1 = output0+RAW_WIDTH;
-  output2 = output1+RAW_WIDTH;
-  output3 = output2+RAW_WIDTH;
-  outputIdx = 0;
+  goto setup_output_pointers;
+
   for ( ; ; ) {
     if (pjpeg_decode_mcu()) {
       cputs("pjpeg_decode_mcu() failed\r\n");
       return;
     }
 
-    #define M_MCUHEIGHT (gMaxMCUYSize/2)
-
     if (++mcu_x == gMaxMCUSPerRow) {
       mcu_x = 0;
-      if ((++dst_y == (BAND_HEIGHT/M_MCUHEIGHT))) {
+      if ((++dst_y == bandStop)) {
         break;
       }
-      pDst_row += M_MCUHEIGHT*RAW_WIDTH;
+      pDst_row += bandInc;
+setup_output_pointers:
       output0 = pDst_row;
       output1 = output0+RAW_WIDTH;
       output2 = output1+RAW_WIDTH;
