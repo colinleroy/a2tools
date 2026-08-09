@@ -188,7 +188,7 @@ qtknconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_CLCFLAGS = \
-	-DCACHE_SIZE=10240  --asm-define CACHE_SIZE=10240 \
+	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \

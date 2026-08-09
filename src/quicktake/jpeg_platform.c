@@ -1,6 +1,8 @@
 #include "jpeg_platform.h"
 #include "qt-conv.h"
 
+uint8 gMaxBlocksPerMCU;
+
 static uint8 skipBits = 0;
 uint8 raw_image[RAW_IMAGE_SIZE];
 
@@ -16,6 +18,7 @@ int16 __fastcall__ huffExtend(uint16 x, uint8 s)
   return (int16)x;
 }
 
+uint8 numNormalMCUBlocks;
 extern uint8 gBitBuf;
 extern uint8 gBitsLeft;
 uint8 FFCheck;
@@ -239,6 +242,7 @@ void idctRows(void)
 
 uint8 *output0, *output1, *output2, *output3;
 uint16 outputIdx;
+
 void idctCols(void)
 {
    uint8 idctCC;
@@ -316,8 +320,6 @@ void setQuant(uint8 quantId) {
       large_mults = 1;
     }
   }
-  printf("Quant table %d has%s 16-bits mults\n",
-         quantId, large_mults ? "":" no");
 }
 
 uint8 compACTab;
@@ -374,6 +376,12 @@ void setACDCTabs(void) {
   }
 }
 
+size_t getOffset(void) {
+  size_t xxoff = lseek(ifd, 0, SEEK_CUR);
+  return xxoff-CACHE_SIZE+(size_t)(cur_cache_ptr-cache_start);
+}
+
+size_t total_mcu = 0;
 uint8 decodeNextMCU(void)
 {
   uint8 status;
@@ -394,8 +402,9 @@ uint8 decodeNextMCU(void)
     }
     gRestartsLeft--;
   }
+  total_mcu++;
 
-  for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
+  for (mcuBlock = 0; mcuBlock < numNormalMCUBlocks; mcuBlock++) {
     if (gMCUOrg[mcuBlock] != 0) {
       /* see initFrame, componentID = 0 for mcuBlocks 0/1 */
       printf("Unexpected thingy.\n");
@@ -456,7 +465,7 @@ uint8 decodeNextMCU(void)
     * input bits
     */
   skipBits = 1;
-  for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
+  for (; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];
 
     s = huffDecode(skipDCHuff, skipDCHuffVal);
@@ -474,12 +483,15 @@ uint8 decodeNextMCU(void)
         getBitsFF(numExtraBits);
 
       cur_ZAG_coeff += (s >> 4) + 1;
-   }
+    }
   }
   skipBits = 0;
 
   return 0;
 }
+
+extern uint8 gMaxMCUSPerRow;
+extern uint8 gMaxMCUSPerCol;
 
 //------------------------------------------------------------------------------
 unsigned char pjpeg_decode_mcu(void)
@@ -490,7 +502,7 @@ unsigned char pjpeg_decode_mcu(void)
    if (!--gNumMCUSRemainingX)
    {
 	  if (--gNumMCUSRemainingY > 0)
-		  gNumMCUSRemainingX = GMAXMCUSPERROW;
+		  gNumMCUSRemainingX = gMaxMCUSPerRow;
    }
 
    return 0;

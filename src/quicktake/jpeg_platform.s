@@ -8,7 +8,7 @@
         .import     _mul51_l, _mul51_m
         .import     _mul106_l, _mul106_m
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
-        .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
+        .import     _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
         .import     _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf
         .import     _ZAG_Coeff
@@ -27,6 +27,7 @@
         .export     _getByteNoFF, _setFFCheck
         .export     _output0, _output1, _output2, _output3
         .export     _outputIdx
+        .export     _numNormalMCUBlocks, _gMaxBlocksPerMCU
 
         .include    "../lib/mult8x8x16_macro.inc"
         .include    "../lib/mult16xcommon.inc"
@@ -1287,6 +1288,7 @@ ZAG_finished:
 
         inc     mcuBlock
         ldx     mcuBlock
+_numNormalMCUBlocks = *+1
         cpx     #2
         bcc     :+
         jmp     nextUselessBlock
@@ -1346,7 +1348,8 @@ rsx:    lda     right_shift_4
 ZAG2_Done:
         ldx     mcuBlock
         inx
-        cpx     _gMaxBlocksPerMCU
+_gMaxBlocksPerMCU = *+1
+        cpx     #4
         bcc     nextUselessBlock
 
 uselessBlocksDone:
