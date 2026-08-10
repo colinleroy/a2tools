@@ -63,8 +63,9 @@ void reload_menu(const char *filename);
 void __fastcall__ build_scale_table(const char *ofname) {
   uint8 row, col;
   uint16 xoff, prev_xoff;
+  unsigned char *offset;
 
-  if (width == 320) {
+  if (width == 320 || width == 384) {
     /* Crop boundaries are 640x480 bound, divide them */
     crop_start_x /= 2;
     crop_end_x   /= 2;
@@ -108,6 +109,12 @@ void __fastcall__ build_scale_table(const char *ofname) {
       break;
   }
 
+  /* Hack for 768px wide pics */
+  if (width == 384) {
+    crop_start_x += 32;
+    crop_end_x -= 32;
+  }
+
   col = 0;
   prev_xoff = 0;
   do {
@@ -124,9 +131,10 @@ void __fastcall__ build_scale_table(const char *ofname) {
   } while (col); /* FILE_WIDTH == 256 */
 
   row = scaled_band_height;
+  offset = raw_image + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
   while (row--) {
     /* Y cropping is handled in main decode/save loop */
-    orig_y_table[row] = (row*10/scaling_factor)*RAW_WIDTH + raw_image + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
+    orig_y_table[row] = (row*10/scaling_factor)*RAW_WIDTH + offset;
   }
 }
 
@@ -152,7 +160,7 @@ void __fastcall__ write_raw(uint16 h)
   dst_ptr = raw_image;
 
   for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
-    write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), width);
+    write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*width), width);
   }
   y_len = 0;
   dst_ptr = raw_image;

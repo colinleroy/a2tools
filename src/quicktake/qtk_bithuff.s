@@ -84,14 +84,15 @@ _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
 
-_next_line_l:  .res        322
+_next_line_l:  .res        RAW_WIDTH+2
 _ushiftl3p4:   .res        32
-free1:         .res        158
+free1:         .res        94
 
+.assert <* = 0, error
 _ushiftl4:     .res        256
+
 _sshiftl4:     .res        256
 _ushiftr4:     .res        256
-
 .assert <* = 0, error
 
 _huff_ctrl:   .res        (9*256*2)
@@ -101,9 +102,10 @@ _dyndiv:      .res        256
 .assert <* = 0, error
 _raw_image:   .res        (BAND_HEIGHT*RAW_WIDTH)  ; Cool, this is aligned!
 .assert <* = 0, error
-_next_line_h:  .res        322
+_next_line_h:  .res       RAW_WIDTH+2
+free2:         .res       126
 
-; No need to align anymore
+.assert <* = 0, error
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
 

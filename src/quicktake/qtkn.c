@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "qt-conv.h"
 #include "qtk_bithuff.h"
 #include "qtkn_platform.h"
@@ -88,6 +89,7 @@ uint8 factor;
 uint8 last = 16;
 
 uint8 *row_idx;
+extern uint8 bitbuf;
 
 #pragma code-name(push, "LC")
 void qt_load_raw(uint16 top)
@@ -101,13 +103,27 @@ void qt_load_raw(uint16 top)
     /* Init */
     init_top();
 
-    if (width != 320) {
+    if (width != 320 && width != 384) {
       cputs("Unsupported format\r\n");
       exit(1);
     }
+
+    /* Skip first 16 lines if 768x512 */
+    if (width == 384) {
+      row_idx = raw_image - RAW_WIDTH;
+      for (row = 0; row < 16; row += 2) {
+        factor = getfactor();
+        getfactor();
+        getfactor();
+
+        init_row();
+        decode_row();
+        consume_extra();
+      }
+    }
   }
 
-  row_idx = raw_image - DECODE_WIDTH;
+  row_idx = raw_image - RAW_WIDTH;
 
   for (row=0; row != BAND_HEIGHT; row+=2) {
     factor = getfactor();

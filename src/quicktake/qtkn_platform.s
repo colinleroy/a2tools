@@ -8,7 +8,7 @@
         .export       _init_huff
         .export       tk1, tk2, tk3, tk4, got_4datahuff
         .export       discard_col_loop
-        .import       _row_idx
+        .import       _row_idx, _width
 
         .import       get_4datahuff_interpolate, discard4datahuff_interpolate
         .import       _bitbuf_refill, _bitbuf_skip_byte
@@ -42,7 +42,7 @@
         .include      "qtkn_huffgetters.inc"
         .include      "../lib/mult8x8x16_macro.inc"
 
-USEFUL_DATABUF_SIZE = DECODE_WIDTH+1
+USEFUL_DATABUF_SIZE = RAW_WIDTH+2
 DATA_INIT           = 8
 
 ; ZP vars share locations when they can - they're usually limited to one function
@@ -297,8 +297,6 @@ huff_data_done:
 ; Expects genptr to point to table
 ; factor in A
 .proc _init_divtable
-        bit     $C083
-        bit     $C083
         sta     abck
         stx     xbck
         sty     ybck
@@ -367,7 +365,9 @@ REFILLER ctrl_discard_fill, ctrl_discard_rts, #7
 repeat_loop:
         lda     #1
         sta     tree
-        lda     #<(DECODE_WIDTH/2)
+        sec                   ; shortcut, we know width high byte to be 1
+        lda     _width
+        ror
         sta     col
 
 discard_col_loop:
@@ -450,6 +450,8 @@ rep_loop_sub:
         jsr     _init_huff
         jsr     _init_shiftl4
         ldx     #>_div48
+        bit     $C083                   ; init_divtable is in LC
+        bit     $C083
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2
@@ -609,11 +611,11 @@ next_pass:
 
 :       clc                   ; Advance row in output buffer
         lda     _row_idx
-        adc     #<DECODE_WIDTH
+        adc     #<RAW_WIDTH
         sta     _row_idx
         tay                   ; For init_pass
         lda     _row_idx+1
-        adc     #>DECODE_WIDTH
+        adc     #>RAW_WIDTH
         sta     _row_idx+1
         tax
         jsr     init_pass
@@ -1031,19 +1033,19 @@ init_done:
         ror     a                   ; put initial low bit back to high bit of low byte
 
         ; val0 = next_line[WIDTH+1] = factor<<7
-        stx     _next_line_h+DECODE_WIDTH+1
+        stx     _next_line_h+RAW_WIDTH+1
         stx     val0+1
-        sta     _next_line_l+DECODE_WIDTH+1
+        sta     _next_line_l+RAW_WIDTH+1
         sta     val0
 
         ; tree = 1,
         lda     #1
         sta     tree
 
-        ; col = DECODE_WIDTH
-        lda     #<DECODE_WIDTH
+        ; col = width
+        lda     _width
         sta     col
-        ldx     #>DECODE_WIDTH
+        ldx     _width+1
         stx     colh
 
         ; Init the numerous patched locations
@@ -1166,6 +1168,8 @@ set_dyndiv:
         ldx     #>_dyndiv           ; Factor not 48, update division table pointers
         cmp     last_dyndiv         ; Factor different than last one,
         beq     factor_done
+        bit     $C083               ; init_divtable is in LC
+        bit     $C083
         stx     _init_divtable::build_table_n+2
         stx     _init_divtable::build_table_o+2
         stx     _init_divtable::build_table_u+2

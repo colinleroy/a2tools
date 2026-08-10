@@ -12,7 +12,7 @@ uint8 raw_image[RAW_IMAGE_SIZE];
 #pragma code-name(push, "LC")
 void init_next_line(void) {
   uint16 i;
-  for (i = 0; i < DATABUF_SIZE; i++) {
+  for (i = 0; i < USEFUL_DATABUF_SIZE; i++) {
     next_line[i] = 2048;
   }
 }
@@ -122,7 +122,7 @@ void consume_extra(void) {
   uint8 rep, rep_loop, nreps;
   /* Consume RADC tokens but don't care about them. */
   for (c=1; c != 3; c++) {
-    for (tree = 1, col = DECODE_WIDTH/2; col; ) {
+    for (tree = 1, col = width/2; col; ) {
       tree = getctrlhuff(tree*2);
       if (tree) {
         col--;
@@ -184,12 +184,12 @@ void init_row(void) {
   if (val == 0x100) {
     /* do nothing */
   } else if (val == 0xFF) {
-    for (i = 0; i < DATABUF_SIZE-1; i++) {
+    for (i = 0; i < USEFUL_DATABUF_SIZE; i++) {
       tmp32 = next_line[i];
       next_line[i] = tmp32 - (tmp32>>8);
     }
   } else {
-    for (i = 0; i < DATABUF_SIZE-1; i++) {
+    for (i = 0; i < USEFUL_DATABUF_SIZE; i++) {
       tmp32 = (val * next_line[i]) >> 8;
       next_line[i] = tmp32;
     }
@@ -209,12 +209,13 @@ void decode_row(void) {
 
   for (r=0; r != 2; r++) {
     val0 = ((int16)factor)<<7;
-    next_line[DECODE_WIDTH+1] = factor << 7;
+    next_line[RAW_WIDTH+1] = factor << 7;
 
-    row_idx += DECODE_WIDTH;
+    row_idx += RAW_WIDTH;
     dest = row_idx;
 
-    col = DECODE_WIDTH;
+    col = width;
+
     tree = 1;
 
     while(col) {
@@ -294,4 +295,12 @@ void decode_row(void) {
       }
     }
   }
+  // for (int t = 0; t < RAW_WIDTH; t++) {
+  //   if (t % 16 == 0) {
+  //     printf("\n%02X: ", t+0x8900);
+  //   }
+  //   printf("%02X ", dest[t]);
+  // }
+  // printf("\n");
+  cgetc();
 }

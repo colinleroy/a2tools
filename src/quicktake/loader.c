@@ -51,9 +51,9 @@ display:
     } else if (data_len == 640*480 || data_len == 306688) {
       w = 640;
       h = 480;
-    } else if (data_len == 384*256 || data_len == 99328 || data_len == 183808) {
+    } else if (data_len == 91648) {
       w = 384;
-      h = 256;
+      h = 240;
     } else {
       printf("Can't guess size from %d.\n", data_len);
       w = 640;

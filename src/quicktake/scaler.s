@@ -130,10 +130,15 @@ y_end:  cpx     #$FF              ; Patched
 .proc _build_scale_table
         jsr     pushax            ; Backup ofname
 
-        lda     _width            ; Divide crop boundaries if 320x240
+        lda     _width+1          ; Divide crop boundaries if 320w or 384
+        cmp     #>320             ; (or 384, same high byte)
+        bne     :+
+        lda     _width
+        cmp     #<384
+        beq     div2
         cmp     #<320
         bne     :+
-        lsr     _crop_start_x+1
+div2:   lsr     _crop_start_x+1
         ror     _crop_start_x
         lsr     _crop_start_y+1
         ror     _crop_start_y
@@ -233,7 +238,30 @@ finish_scale:
         sta     _output_write_len
         stx     _output_write_len+1
 
-        ; Write-enable LC, some vars can be put there.
+        lda     _width+1
+        cmp     #>384
+        bne     :+
+        lda     _width
+        cmp     #<384
+        bne    :+
+
+        clc
+        lda     _crop_start_x
+        adc     #32
+        sta     _crop_start_x
+        lda     _crop_start_x+1
+        adc     #0
+        sta     _crop_start_x+1
+
+        sec
+        lda     _crop_end_x
+        sbc     #32
+        sta     _crop_start_x
+        lda     _crop_start_x+1
+        sbc     #0
+        sta     _crop_start_x+1
+
+:       ; Write-enable LC, some vars can be put there.
         bit     $C083
         bit     $C083
 
@@ -272,6 +300,22 @@ advance_col:
         iny                       ; col++
         bne     next_col
 
+        ; offset = raw_image + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
+        lda     #<(RAW_Y_OFFSET*RAW_WIDTH)
+        clc
+        adc     _crop_start_x
+        tay
+        lda     #>(RAW_Y_OFFSET*RAW_WIDTH)
+        adc     _crop_start_x+1
+        tax
+        tya
+        clc
+        adc     #<_raw_image
+        sta     offset_l
+        txa
+        adc     #>_raw_image
+        sta     offset_h
+
         ; Compute lines scaling pointers
         ldy     _scaled_band_height
         dey
@@ -285,31 +329,18 @@ next_row:
         lda     _scaling_factor   ; / scaling_factor
         jsr     tosudiva0
         jsr     pushax
-        lda     #<RAW_WIDTH       ; * RAW_WIDTH
+        lda     #<RAW_WIDTH
         ldx     #>RAW_WIDTH
         jsr     tosmulax
         clc
-        adc     #<_raw_image      ; + raw_image
-        tay
-        txa
-        adc     #>_raw_image
-        tax
 
-        tya                       ; + crop_start_x
-        clc
-        adc     _crop_start_x
-        tay
-        txa
-        adc     _crop_start_x+1
-        tax
-
-        tya                       ; + RAW_Y_OFFSET*RAW_WIDTH
-        clc
-        adc     #<(RAW_Y_OFFSET*RAW_WIDTH)
         ldy     row
+offset_l = *+1
+        adc     #$FF
         sta     _orig_y_table_l,y
         txa
-        adc     #>(RAW_Y_OFFSET*RAW_WIDTH)
+offset_h = *+1
+        adc     #$FF
         sta     _orig_y_table_h,y
 
         dey

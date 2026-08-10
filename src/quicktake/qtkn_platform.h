@@ -3,7 +3,7 @@
 
 #include "platform.h"
 
-#define DATABUF_SIZE 322
+#define USEFUL_DATABUF_SIZE RAW_WIDTH+2
 
 extern uint8 val_hi_from_last[17];
 extern uint8 val_from_last[256];

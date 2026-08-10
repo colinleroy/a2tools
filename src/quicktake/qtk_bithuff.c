@@ -8,7 +8,7 @@
 static uint16 tmp;
 static uint8 shift;
 
-int16 next_line[DATABUF_SIZE];
+int16 next_line[USEFUL_DATABUF_SIZE];
 uint8 huff_split[18*2][256];
 uint8 huff_ctrl[9*2][256];
 

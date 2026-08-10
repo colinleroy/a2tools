@@ -173,12 +173,21 @@ qtktconv_CLCFLAGS = \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg \
 	--start-addr 0x1000  #Two file buffers
 
+qtktconv_GCCCFLAGS = \
+	-DCACHE_SIZE=20480 \
+	-DRAW_X_OFFSET=1 \
+	-DRAW_Y_OFFSET=1 \
+	-DRAW_WIDTH=768 \
+	-DBAND_HEIGHT=20 \
+	-DFILE_WIDTH=256 \
+	-DQTKTCONV=1 \
+
 # 3.5 tracks cache
 qtknconv_CLCFLAGS = \
-	-DCACHE_SIZE=16384  --asm-define CACHE_SIZE=16384 \
+	-DCACHE_SIZE=10240  --asm-define CACHE_SIZE=10240 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
-	-DRAW_WIDTH=320     --asm-define RAW_WIDTH=320 \
+	-DRAW_WIDTH=384     --asm-define RAW_WIDTH=384 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
@@ -186,6 +195,16 @@ qtknconv_CLCFLAGS = \
 	-DQTKNCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
+
+qtknconv_GCCCFLAGS = \
+	-DCACHE_SIZE=10240 \
+	-DRAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=384 \
+	-DBAND_HEIGHT=20 \
+	-DDECODE_WIDTH=320 \
+	-DFILE_WIDTH=256 \
+	-DQTKNCONV=1 \
 
 jpegconv_CLCFLAGS = \
 	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
@@ -202,29 +221,6 @@ jpegconv_CLCFLAGS = \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
 
-GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
-	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
-	-fno-omit-frame-pointer \
-	$(shell sdl-config --cflags)
-qtktconv_GCCCFLAGS = \
-	-DCACHE_SIZE=20480 \
-	-DRAW_X_OFFSET=1 \
-	-DRAW_Y_OFFSET=1 \
-	-DRAW_WIDTH=768 \
-	-DBAND_HEIGHT=20 \
-	-DFILE_WIDTH=256 \
-	-DQTKTCONV=1 \
-
-qtknconv_GCCCFLAGS = \
-	-DCACHE_SIZE=16384 \
-	-DRAW_X_OFFSET=0 \
-	-DRAW_Y_OFFSET=0 \
-	-DRAW_WIDTH=320 \
-	-DBAND_HEIGHT=20 \
-	-DDECODE_WIDTH=320 \
-	-DFILE_WIDTH=256 \
-	-DQTKNCONV=1 \
-
 jpegconv_GCCCFLAGS = \
 	-DCACHE_SIZE=15360 \
 	-DRAW_X_OFFSET=0 \
@@ -237,6 +233,11 @@ jpegconv_GCCCFLAGS = \
 	-DDECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256 \
 	-DJPEGCONV=1 \
+
+GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
+	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
+	-fno-omit-frame-pointer \
+	$(shell sdl-config --cflags)
 
 GCCLDFLAGS = $(shell sdl-config --libs)
 

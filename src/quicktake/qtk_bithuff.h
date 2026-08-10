@@ -6,7 +6,7 @@
 
 #define DATA_INIT 8
 
-extern int16 next_line[DATABUF_SIZE];
+extern int16 next_line[USEFUL_DATABUF_SIZE];
 extern uint8 huff_split[18*2][256];
 extern uint8 huff_ctrl[9*2][256];
 extern uint8 huff_data[4][256];
