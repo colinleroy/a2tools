@@ -376,10 +376,10 @@ void setACDCTabs(void) {
   }
 }
 
-size_t getOffset(void) {
-  size_t xxoff = lseek(ifd, 0, SEEK_CUR);
-  return xxoff-CACHE_SIZE+(size_t)(cur_cache_ptr-cache_start);
-}
+//size_t getOffset(void) {
+//  size_t xxoff = lseek(ifd, 0, SEEK_CUR);
+//  return xxoff-CACHE_SIZE+(size_t)(cur_cache_ptr-cache_start);
+//}
 
 size_t total_mcu = 0;
 uint8 decodeNextMCU(void)

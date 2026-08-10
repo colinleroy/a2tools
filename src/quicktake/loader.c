@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +34,10 @@ display:
     fclose(fp2);
   }
   fp = fopen(argv[1],"r");
+  if (!fp) {
+    printf("Can't open %s (%s)\n", argv[1], strerror(errno));
+    exit(1);
+  }
   if (argc < 4) {
     size_t data_len;
     fseek(fp, 0, SEEK_END);
@@ -46,6 +51,9 @@ display:
     } else if (data_len == 640*480 || data_len == 306688) {
       w = 640;
       h = 480;
+    } else if (data_len == 384*256 || data_len == 99328 || data_len == 183808) {
+      w = 384;
+      h = 256;
     } else {
       printf("Can't guess size from %d.\n", data_len);
       w = 640;

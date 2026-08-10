@@ -188,6 +188,7 @@ try_again:
   ofd = open (TMP_NAME, O_RDWR|O_CREAT, 00600);
 
   #ifndef __CC65__
+  unlink("LARGE_"TMP_NAME);
   fullsize_fd = open ("LARGE_"TMP_NAME, O_RDWR|O_CREAT, 00600);
   if (height == 480) {
     write(fullsize_fd, PNM_HEADER_480, PNM_HEADER_SIZE);

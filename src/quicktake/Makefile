@@ -221,10 +221,7 @@ qtknconv_GCCCFLAGS = \
 	-DRAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=320 \
 	-DBAND_HEIGHT=20 \
-	-DINPUT_WIDTH=640 \
-	-DINPUT_HEIGHT=480 \
 	-DDECODE_WIDTH=320 \
-	-DDECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256 \
 	-DQTKNCONV=1 \
 
@@ -311,7 +308,7 @@ jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 loader.x86_64: loader.c
-	gcc -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
+	gcc -g -O0 -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
 
 clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po
