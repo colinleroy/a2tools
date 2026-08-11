@@ -84,13 +84,17 @@ int fullsize_fd = -1;
 uint8 *cur_cache_ptr;
 #endif
 
+#ifndef INITIAL_CACHE_READ
+#define INITIAL_CACHE_READ CACHE_SIZE
+#endif
+
 static uint8 identify(const char *name)
 {
   /* INIT */
   height = width = 0;
 
   /* Fill cache */
-  read(ifd, cache_start, CACHE_SIZE);
+  read(ifd, cache_start, INITIAL_CACHE_READ);
 
   cputsxy(0, 0, "Decompressing image ");
   cputs((char *)name);

@@ -15,22 +15,20 @@ char qt_setup_decode(void) {
     ((unsigned char *)&v)[1] = cache[WH_OFFSET + 8];
     ((unsigned char *)&v)[0] = cache[WH_OFFSET + 9];
     if (v == 30)
-      cur_cache_ptr = cache + (738);
+      data_offset = 738;
     else
-      cur_cache_ptr = cache + (736);
+      data_offset = 736;
   } else if (!memcmp (cache_start, "MM\0*", 4)) {
     width = 768/2;
     height = 512/2;
 
     data_offset = 19712;
-    if (data_offset > CACHE_SIZE) {
-      lseek(ifd, data_offset, SEEK_SET);
-      read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
-    }
   } else {
     cputs("Invalid file.\r\n");
     return -1;
   }
+  lseek(ifd, data_offset, SEEK_SET);
+  read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
 
   return 0;
 }

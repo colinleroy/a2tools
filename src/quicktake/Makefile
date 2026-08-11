@@ -184,7 +184,8 @@ qtktconv_GCCCFLAGS = \
 
 # 3.5 tracks cache
 qtknconv_CLCFLAGS = \
-	-DCACHE_SIZE=10240  --asm-define CACHE_SIZE=10240 \
+	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
+	-DINITIAL_CACHE_READ=1024 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=384     --asm-define RAW_WIDTH=384 \
@@ -197,7 +198,7 @@ qtknconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 qtknconv_GCCCFLAGS = \
-	-DCACHE_SIZE=10240 \
+	-DCACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=384 \
