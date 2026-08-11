@@ -31,9 +31,9 @@
         .import       tosmula0, pushax, pusha0
         .import       _memset, aslax4
 .ifdef DEBUG_HD
-        .import       tosdiva0          ; Force real div for sha1sum comparison
+         .import       tosdiva0          ; Force real div for sha1sum comparison
 .else
-        .import       approx_div16x8_direct
+         .import       approx_div16x8_direct
 .endif
 
         .importzp     tmp1, ptr2, tmp2, tmp3
@@ -919,9 +919,9 @@ store_next_lf:
         rts
 
 check_0x100:
-        cpx     #10                 ; or 0x100? in which case we have nothing to do
+        cpx     #$10                ; or 0x100? in which case we have nothing to do
         bne     :+                  ; as ((tmp*0x100) >> 8) = ((tmp<<8)>>8) = tmp
-        cmp     #10
+        cmp     #$10
         bcc     init_done
 
 :       tay                         ; No luck. Arbitrary multiplier, shift it >> 4
