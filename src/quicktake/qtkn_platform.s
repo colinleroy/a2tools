@@ -6,6 +6,7 @@
         .export       _init_shiftl4
         .export       _init_next_line
         .export       _init_huff
+        .export       _kodak_cbpp
         .export       tk1, tk2, tk3, tk4, got_4datahuff
         .export       discard_col_loop
         .import       _row_idx, _width
@@ -25,7 +26,8 @@
         .import       _next_line_l, _next_line_h
         .import       _div48
         .import       _dyndiv
-        .import       _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
+        .import       _ushiftl4, _sshiftl4, _ushiftr4
+        .import       _huffinitshifttab
 
         .import       mult16x16mid16_direct, mult8x8r16_direct
         .import       tosmula0, pushax, pusha0
@@ -90,14 +92,37 @@ _vbits           = _zp13  ; byte - used everywhere, across bands
         iny
         bne     :-
 
-        ; shift left 3 and add 4 (first 32 values)
-        ldy     #31
+        ; 5 or 6bits huff init table
+        ; shift left 3 and OR 4 (first 32 values) for 5bits per pixel,
+        ; shift left 2 and OR 2 (first 64 values) for 6 bits per pixel
+        ; This is also where we patch the number of bits to get in
+        ; GETDATAHUFF_INIT and DISCARD4DATAHUFF_INIT
+        ldy     _kodak_cbpp
+        cpy     #3
+        beq     :+
+        ; Patch table builder for << 2 | 2
+        ldy     #$EA          ; NOP
+        sty     shift3
+        ldy     #$02
+        sty     oraval+1
+
+        ldy     #6            ; patch getters
+        sty     ibits1+1
+        sty     ibits2+1
+        sty     ibits3+1
+        sty     ibits4+1
+        ldy     #24
+        sty     idbits+1
+
+:       ldy     #63
 :       tya
         asl
         asl
+shift3:
         asl
+oraval:
         ora     #$04
-        sta     _ushiftl3p4,y
+        sta     _huffinitshifttab,y
         dey
         bpl     :-
 
@@ -389,7 +414,7 @@ data_standard:
         cmp     #8
         bne     data_interpolate
 
-        DISCARD4DATAHUFF_INIT
+        DISCARD4DATAHUFF_INIT idbits
         dec     col
         jmp     discard_col_loop
 
@@ -445,6 +470,7 @@ rep_loop_sub:
 
         rts
 .endproc
+idbits = _consume_extra::idbits
 
 .proc _init_top
         jsr     _init_huff
@@ -675,19 +701,19 @@ REFILLER data9b_fill, data9b_rts, #7
 
 ; "init": Set values directly from 5 bits codes
 data_init:
-        GETDATAHUFF_INIT data9a_fill, data9a_rts
+        GETDATAHUFF_INIT data9a_fill, data9a_rts, ibits1
         ; val1 = code*factor
         INIT_VAL mult_factor1, val1, dest1a
 
-        GETDATAHUFF_INIT data9b_fill, data9b_rts
+        GETDATAHUFF_INIT data9b_fill, data9b_rts, ibits2
         ; val0 = code*factor
         INIT_VAL mult_factor2, val0, dest0a
 
-        GETDATAHUFF_INIT data9c_fill, data9c_rts
+        GETDATAHUFF_INIT data9c_fill, data9c_rts, ibits3
         ; next_line[col+2] = code*factor
         INIT_BUF mult_factor3, $FF02, next2la, next2ha
 
-        GETDATAHUFF_INIT data9d_fill, data9d_rts
+        GETDATAHUFF_INIT data9d_fill, data9d_rts, ibits4
         ; next_line[col+1] = code*factor
         INIT_BUF mult_factor4, $FF01, next1la, next1ha
 
@@ -848,6 +874,10 @@ all_passes_done:
 
         rts
 .endproc
+ibits1 = _decode_row::ibits1
+ibits2 = _decode_row::ibits2
+ibits3 = _decode_row::ibits3
+ibits4 = _decode_row::ibits4
 
 .proc _init_row
         ldx     #>(_next_line_l+256)      ; start at second page
@@ -1198,6 +1228,9 @@ tk3           = _decode_row::tk3
 tk4           = _decode_row::tk4
 got_4datahuff = _decode_row::got_4datahuff
 discard_col_loop = _consume_extra::discard_col_loop
+
+.segment "DATA"
+_kodak_cbpp:    .byte 3
 
 .segment "BSS"
 pass:           .res 1

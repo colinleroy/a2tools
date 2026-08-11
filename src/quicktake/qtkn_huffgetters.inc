@@ -230,8 +230,9 @@ discardN_rts:
 :
 .endmacro
 
-.macro GETDATAHUFF_INIT data9_fill, data9_rts
+.macro GETDATAHUFF_INIT data9_fill, data9_rts, init_huffbits
         lda     #0             ; Read and consume 5 bits
+init_huffbits:
         ldy     #5
         ldx     _vbits
 :       dex
@@ -244,11 +245,12 @@ data9_rts:
 
         stx     _vbits
         tax
-        lda    _ushiftl3p4,x
+        lda    _huffinitshifttab,x
 .endmacro
 
-.macro DISCARD4DATAHUFF_INIT
-; Returns nothing, discards 4 5-bit tokens
+.macro DISCARD4DATAHUFF_INIT idbits
+; Returns nothing, discards 4x 5-or-6-bit tokens
+idbits:
         lda     #20
         sec
         sbc     _vbits            ; Once this byte is finished we have A bits to discard

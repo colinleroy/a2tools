@@ -136,11 +136,15 @@ uint8 __fastcall__ getdatahuff_interpolate (uint8 huff_num) {
   return huff_data[huff_num][r+128];
 }
 
+extern uint8 inithuff_bits;
+extern uint8 inithuff_shift;
+extern uint8 inithuff_or;
+
 uint8 __fastcall__ getdatahuff_init (void) {
   uint8 r = 0;
-  uint8 n = 5;
+  uint8 n = inithuff_bits;
   while (n--) {
     r = (r<<1) | getbit();
   }
-  return (r<<3)|0x04;
+  return (r<<inithuff_shift)|inithuff_or;
 }

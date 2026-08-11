@@ -7,6 +7,11 @@ extern uint8 *row_idx;
 extern uint8 last;
 extern uint16 val;
 extern uint8 factor;
+uint8 kodak_cbpp = 3;
+uint8 inithuff_bits  = 5;
+uint8 inithuff_shift = 3;
+uint8 inithuff_or    = 4;
+
 uint8 raw_image[RAW_IMAGE_SIZE];
 
 #pragma code-name(push, "LC")
@@ -108,6 +113,11 @@ void init_huff(void) {
 }
 
 void init_top(void) {
+  if (kodak_cbpp == 2) {
+    inithuff_bits  = 6;
+    inithuff_shift = 2;
+    inithuff_or    = 2;
+  }
   init_huff();
   init_div48();
   init_next_line();

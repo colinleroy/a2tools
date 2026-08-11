@@ -27,7 +27,8 @@
         .export         _init_floppy_starter
         .export         _next_line_l, _next_line_h
         .export         _raw_image, _huff_ctrl, _huff_data
-        .export         _ushiftl3p4, _ushiftl4, _sshiftl4, _ushiftr4
+        .export         _ushiftl4, _sshiftl4, _ushiftr4
+        .export         _huffinitshifttab
         .export         _div48
         .export         _dyndiv
 
@@ -84,9 +85,9 @@ _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
 
-_next_line_l:  .res        RAW_WIDTH+2
-_ushiftl3p4:   .res        32
-free1:         .res        94
+_next_line_l:           .res RAW_WIDTH+2
+_huffinitshifttab:      .res 64
+free1:                  .res 62
 
 .assert <* = 0, error
 _ushiftl4:     .res        256

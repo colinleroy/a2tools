@@ -5,6 +5,7 @@
 
 #define WH_OFFSET 544
 
+extern uint8 kodak_cbpp;
 char qt_setup_decode(void) {
   uint16 v;
   uint16 data_offset;
@@ -21,8 +22,8 @@ char qt_setup_decode(void) {
   } else if (!memcmp (cache_start, "MM\0*", 4)) {
     width = 768/2;
     height = 512/2;
-
     data_offset = 19712;
+    kodak_cbpp = cache[1063] == 243 ? 2:3;
   } else {
     cputs("Invalid file.\r\n");
     return -1;
