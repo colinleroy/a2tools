@@ -531,19 +531,15 @@ static uint8 setup(int argc, char *argv[]) {
   uint16 is_reedit = 0;
   char *reedit_name;
 
-#ifndef __CC65__
-  uint16 target_speed = 57600U;
-  scrw = 80; scrh = 24;
-#else
-  uint16 target_speed = 19200U;
-#endif
+  uint8 target_speed = SER_BAUD_19200;
+
   register_start_device();
 
 #ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
 #endif
 if (is_iigs) {
-  target_speed = 57600U;
+  target_speed = SER_BAUD_57600;
 }
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD
@@ -595,17 +591,17 @@ if (is_iigs) {
     char c;
 
     cprintf("Please turn the Quicktake off and on. Try again?\r\n");
-    if (target_speed != 9600)
-      cprintf("Y: try at %ubps, 9: try at 9600bps, C: configure, N: don't try (Y/9/c/n)\r\n", target_speed);
+    if (target_speed != SER_BAUD_9600)
+      cputs("Y: retry, 9: try at 9600bps, C: configure, N: don't try (Y/9/c/n)\r\n");
     else
-      cprintf("Y: try at %ubps, C: configure, N: don't try (Y/c/n)\r\n", target_speed);
+      cputs("Y: retry, C: configure, N: don't try (Y/c/n)\r\n");
 
     c = tolower(cgetc());
     if (c == 'n')
       return 0;
     print_welcome();
     if(c == '9')
-      target_speed = 9600;
+      target_speed = SER_BAUD_9600;
     if(c == 'c') {
       init_text();
       set_scrollwindow(0, scrh);

@@ -33,8 +33,8 @@ unsigned char qt1x0_features = 0b11111111;
 //                               |________ RESERVED,
 
 /* Camera callbacks definitions */
-static uint8 qt1x0_wakeup(uint16 speed);
-static uint8 qt1x0_set_speed(uint16 speed);
+static uint8 qt1x0_wakeup(uint8 speed);
+static uint8 qt1x0_set_speed(uint8 speed);
 
 /* Camera settings functions */
 static uint8 qt1x0_set_camera_name(const char *name);
@@ -128,16 +128,16 @@ static uint8 get_hello(void) {
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
  */
-static uint8 send_hello(uint16 speed) {
+static uint8 send_hello(uint8 speed) {
   #define SPD_IDX 0x06
   #define CHKSUM_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
   unsigned char chk, c;
 
-  if (speed == 19200) {
+  if (speed == SER_BAUD_19200) {
     str_hello[SPD_IDX]   = 0x4B;
     str_hello[SPD_IDX+1] = 0x00;
-  } else if (speed == 57600U) {
+  } else if (speed == SER_BAUD_57600) {
     str_hello[SPD_IDX]   = 0xE1;
     str_hello[SPD_IDX+1] = 0x00;
   }
@@ -172,7 +172,7 @@ static uint8 send_hello(uint16 speed) {
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise
  */
-static uint8 qt1x0_wakeup(uint16 speed) {
+static uint8 qt1x0_wakeup(uint8 speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
 
   cputs("Pinging QuickTake 1x0... ");
@@ -208,40 +208,29 @@ static uint8 qt1x0_wakeup(uint16 speed) {
 }
 
 /* Send the speed upgrade command */
-static uint8 qt1x0_set_speed(uint16 speed) {
+static uint8 qt1x0_set_speed(uint8 speed) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
-  int spd_code;
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
 
   switch(speed) {
-    case 19200:
-#ifdef __CC65__
-      spd_code = SER_BAUD_19200;
-#else
-      spd_code = B19200;
-#endif
+    case SER_BAUD_19200:
       str_speed[SPD_CMD_IDX] = 0x10;
       break;
 
-    case 57600U:
-#ifdef __CC65__
-      spd_code = SER_BAUD_57600;
-#else
-      spd_code = B57600;
-#endif
+    case SER_BAUD_57600:
       str_speed[SPD_CMD_IDX] = 0x30;
       break;
 
-    case 9600:
+    case SER_BAUD_9600:
     default:
       /* just ping */
       return send_command(NULL, 0, 1, 0, 0);
   }
 
-  cprintf("Setting speed to %u...\r\n", speed);
+  cprintf("Negociating speed...\r\n");
   simple_serial_write(str_speed, sizeof str_speed);
 
   /* get ack */
@@ -252,7 +241,7 @@ static uint8 qt1x0_set_speed(uint16 speed) {
   send_ack();
 
   platform_msleep(200);
-  simple_serial_set_speed(spd_code);
+  simple_serial_set_speed(speed);
 
   /* We don't care about the bytes we receive here */
   while(simple_serial_read_no_irq((char *)buffer, 256) != EOF);

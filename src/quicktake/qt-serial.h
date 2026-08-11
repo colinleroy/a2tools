@@ -76,7 +76,7 @@ extern unsigned char buffer[BUFFER_SIZE];
 extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
-uint8 qt_serial_connect(uint16 speed);
+uint8 qt_serial_connect(uint8 speed);
 uint8 qt_get_information(camera_info *info);
 uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail);
 
@@ -94,8 +94,8 @@ const char *qt_get_quality_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
 /* Callbacks */
-uint8 cam_wakeup(uint16 speed);
-uint8 cam_set_speed(uint16 speed);
+uint8 cam_wakeup(uint8 speed);
+uint8 cam_set_speed(uint8 speed);
 uint8 cam_set_camera_name(const char *name);
 uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
 uint8 qt_get_information(camera_info *info);

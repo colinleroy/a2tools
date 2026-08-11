@@ -86,7 +86,7 @@ static uint8 load_driver(char *drv, uint16 speed) {
 }
 
 /* Connect to a QuickTake and detect its model */
-uint8 qt_serial_connect(uint16 speed) {
+uint8 qt_serial_connect(uint8 speed) {
   uint8 i;
 
   /* Set initial settings */

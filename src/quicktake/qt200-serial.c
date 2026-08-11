@@ -29,7 +29,7 @@ unsigned char qt200_features = 0b10000000;
 
 /* Camera callbacks definitions */
 static uint8 qt200_wakeup(void);
-static uint8 qt200_set_speed(uint16 speed);
+static uint8 qt200_set_speed(uint8 speed);
 
 /* Camera settings functions */
 static uint8 qt200_get_information(camera_info *info);
@@ -213,7 +213,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
   return 0;
 }
 
-static uint16 my_speed = 9600;
+static uint8 my_speed = SER_BAUD_9600;
 
 /* Ping the camera */
 static uint8 qt200_send_ping(uint8 wait) {
@@ -237,38 +237,23 @@ static uint8 qt200_send_ping(uint8 wait) {
 }
 
 /* Send the speed upgrade command */
-static uint8 qt200_set_speed(uint16 speed) {
+static uint8 qt200_set_speed(uint8 speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
-#ifdef __CC65__
-  int spd_code = SER_BAUD_9600;
-#else
-  int spd_code = B9600;
-#endif
 
   switch(speed) {
-    case 19200:
-#ifdef __CC65__
-      spd_code = SER_BAUD_19200;
-#else
-      spd_code = B19200;
-#endif
+    case SER_BAUD_19200:
       str_speed[SPD_CMD_IDX] = 0x04;
       break;
 
-    case 57600U:
-#ifdef __CC65__
-      spd_code = SER_BAUD_57600;
-#else
-      spd_code = B57600;
-#endif
+    case SER_BAUD_57600:
       str_speed[SPD_CMD_IDX] = 0x07;
       break;
   }
 
 #ifdef DEBUG_PROTO
-  printf("Setting speed to %u...\n", speed);
+  printf("Negociating speed...\n");
 #endif
   DUMP_START("set_speed");
   if (send_command(str_speed, sizeof str_speed, 1, 5) != 0) {
@@ -285,19 +270,19 @@ static uint8 qt200_set_speed(uint16 speed) {
   platform_msleep(500);
 
   /* Toggle speed */
-  simple_serial_set_speed(spd_code);
+  simple_serial_set_speed(speed);
 
 
   /* ping again */
   if (qt200_send_ping(STD_WAIT) != 0) {
 #ifdef DEBUG_PROTO
-    printf("Speed set to %d: Communication check failed.\n", speed);
+    printf("Communication check failed.\n");
     cgetc();
 #endif
     return -1;
   }
 
-  if (speed != 9600) {
+  if (speed != SER_BAUD_9600) {
     my_speed = speed;
   }
   return 0;
@@ -317,7 +302,7 @@ static uint8 qt200_stop(void) {
 #ifdef DEBUG_PROTO
   printf("Session stop\n");
 #endif
-  return qt200_set_speed(9600);
+  return qt200_set_speed(SER_BAUD_9600);
 }
 
 /* Get information from the camera */
