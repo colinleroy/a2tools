@@ -295,12 +295,4 @@ void decode_row(void) {
       }
     }
   }
-  // for (int t = 0; t < RAW_WIDTH; t++) {
-  //   if (t % 16 == 0) {
-  //     printf("\n%02X: ", t+0x8900);
-  //   }
-  //   printf("%02X ", dest[t]);
-  // }
-  // printf("\n");
-  cgetc();
 }
