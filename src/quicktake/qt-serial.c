@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
 #ifndef __CC65__
 #include <sys/ioctl.h>
 #endif
@@ -59,6 +60,31 @@ extern uint8 cam_features;
 
 #pragma code-name(push, "RT_ONCE")
 
+char last_driver[] = "\0\0\0\0\0\0\0\0\0";
+uint8 tried_default = 0;
+char *default_driver(int mode) {
+  int fd = open("LASTDRV", mode);
+  if (fd == -1) {
+    return NULL;
+  }
+  if (mode == O_RDONLY) {
+    read(fd, last_driver, 8);
+  } else {
+    write(fd, last_driver, 8);
+  }
+  close(fd);
+}
+
+static uint8 load_driver(char *drv, uint16 speed) {
+  gotox(0); clreol();
+  if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x1900) == 0) {
+    if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
+      return 0;
+    }
+  }
+  return -1;
+}
+
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
   uint8 i;
@@ -79,15 +105,23 @@ uint8 qt_serial_connect(uint16 speed) {
     return -1;
   }
 
+  /* Get last driver used */
+  default_driver(O_RDONLY);
+  if (last_driver[0] && load_driver(last_driver, speed) == 0) {
+    goto load_done;
+  }
+
   for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
-    gotox(0); clreol();
-    if (zx02_decompress_in_place(camera_drivers[i], (char *)0xC00, (char *)0x1900) == 0) {
-      if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
-        break;
-      }
+    /* Don't retry the last driver, it just failed. */
+    if (strcmp(last_driver, camera_drivers[i]) && load_driver(camera_drivers[i], speed) == 0) {
+      /* Register new default driver */
+      strcpy(last_driver, camera_drivers[i]);
+      default_driver(O_WRONLY|O_CREAT);
+      break;
     }
   }
 
+load_done:
   cputs("\r\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {

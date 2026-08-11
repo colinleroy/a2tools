@@ -515,7 +515,6 @@ static void print_welcome(void) {
 
 static void show_about(void) {
   int fd;
-  size_t r;
 
   reopen_start_device();
   bzero(buffer, sizeof(buffer));
