@@ -138,13 +138,13 @@ uint16 __fastcall__ imul_b5(int16 w)
 
 uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
-  int8 i = 6;
+  int8 i = 7;
   uint8 j;
   uint16 code;
   HuffTable *curTable = pHuffTable;
 
   FFCheck = 1;
-  code = getBits(2); /* start with two bits as 1 is never enough */
+  code = getBit();
 
   pHuffTable->totalCalls++;
   pHuffTable->totalGetBit++;

@@ -524,10 +524,8 @@ done:
         INLINE_GETBIT
         lda     #0
         rol             ; Now A = 0 or 1 depending on bit
-        INLINE_GETBIT 1 ; 1 bit is never enough
-        rol
 
-        ldx     #6
+        ldx     #7
 nextLoopS:
         ldy     TABLE+hufftable_t::mGetMore+8,x
         bne     incrementS
