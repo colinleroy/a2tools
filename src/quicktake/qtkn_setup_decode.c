@@ -6,6 +6,7 @@
 #define WH_OFFSET 544
 
 extern uint8 kodak_cbpp;
+
 char qt_setup_decode(void) {
   uint16 v;
   uint16 data_offset;

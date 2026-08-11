@@ -59,7 +59,7 @@ extern uint8 raw_image[];
 extern uint16 raw_width, raw_image_size;
 
 extern char magic[5];
-extern char *model;
+extern char *decoder_name;
 
 /* Figure out height and width, and position cache
  * at the beginning of the data stream */

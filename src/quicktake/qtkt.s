@@ -11,7 +11,7 @@
 
         .export          _raw_image
         .export          _magic
-        .export          _model
+        .export          _decoder_name
         .export          _qt_load_raw
         .export          _cache
         .export          _cache_start
@@ -166,12 +166,12 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
 .endmacro
 
 ; QTKT file magic
-model_str:
-        .byte        $31,$30,$30,$00
+decoder_name_str:
+        .asciiz      "QKTK"
 _magic:
         .byte        $71,$6B,$74,$6B,$00
-_model:
-        .addr        model_str
+_decoder_name:
+        .addr        decoder_name_str
 _cache_start:
         .addr        _cache
 

@@ -29,7 +29,8 @@
 
 /* Shared with qt-conv.c */
 char magic[5] = JPEG_EXIF_MAGIC;
-char *model = "200";
+char *decoder_name = "JPEG";
+
 uint16 *huff_ptr;
 
 #define N_STUFF_CHARS 4

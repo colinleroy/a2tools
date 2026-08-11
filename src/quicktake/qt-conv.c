@@ -143,9 +143,8 @@ int main (int argc, const char **argv)
 #ifdef __CC65__
   reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
-  cputsxy(0, 23, "Quicktake ");
-  cputs(model);
-  cputs(" for Apple II decoder - Free memory: ");
+  cputsxy(0, 23, decoder_name);
+  cputs(" decoder for Apple II - Free memory: ");
   cputs(utoa(_heapmaxavail(), ofname, 10));
   cputs(" bytes\r\n");
 #endif
