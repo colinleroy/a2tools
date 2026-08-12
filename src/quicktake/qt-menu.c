@@ -523,7 +523,7 @@ static void show_about(void) {
 
   reopen_start_device();
   bzero(buffer, sizeof(buffer));
-  zx02_decompress_in_place("ABOUT.ZX", buffer, buffer+sizeof(buffer));
+  zx02_decompress_in_place("ABOUT.ZX", (char *)buffer, (char *)buffer+sizeof(buffer));
   set_scrollwindow(0, scrh);
   clrscr();
   cputs((char *)buffer);

@@ -17,17 +17,18 @@
 #define FLASH_OFF 1
 #define FLASH_ON 2
 
-#define CAM_WAKEUP          0
-#define CAM_SET_SPEED       1
-#define CAM_SET_CAMERA_NAME 2
-#define CAM_SET_CAMERA_TIME 3
-#define CAM_GET_INFORMATION 4
-#define CAM_SET_QUALITY     5
-#define CAM_SET_FLASH       6
-#define CAM_TAKE_PICTURE    7
-#define CAM_GET_PICTURE     8
-#define CAM_GET_THUMBNAIL   9
-#define CAM_DELETE_PICTURES 10
+#define CAM_FEATURES        0
+#define CAM_WAKEUP          1
+#define CAM_SET_SPEED       2
+#define CAM_SET_CAMERA_NAME 3
+#define CAM_SET_CAMERA_TIME 4
+#define CAM_GET_INFORMATION 5
+#define CAM_SET_QUALITY     6
+#define CAM_SET_FLASH       7
+#define CAM_TAKE_PICTURE    8
+#define CAM_GET_PICTURE     9
+#define CAM_GET_THUMBNAIL   10
+#define CAM_DELETE_PICTURES 11
 
 #define CAM_CAN_SET_CAMERA_NAME 0x01
 #define CAM_CAN_SET_CAMERA_TIME 0x02
@@ -36,6 +37,18 @@
 #define CAM_CAN_TAKE_PICTURE    0x10
 #define CAM_CAN_GET_THUMBNAIL   0x20
 #define CAM_CAN_DELETE_PICTURES 0x40
+
+#ifdef __CC65__
+#define CamSpeed uint8
+#else
+#define CamSpeed int
+#define SER_BAUD_9600   B9600
+#define SER_BAUD_19200  B19200
+#define SER_BAUD_57600  B57600
+#define SER_BAUD_115200 B115200
+#define SER_PAR_EVEN    PARENB
+#define SER_PAR_NONE    (~PARENB)
+#endif
 
 extern uint8 camera_connected;
 typedef struct _camera_date {
@@ -73,7 +86,7 @@ extern unsigned char buffer[BUFFER_SIZE];
 
 extern uint8 serial_model;
 /* Camera interface functions, protocol-agnostic */
-uint8 qt_serial_connect(uint8 speed);
+uint8 qt_serial_connect(CamSpeed speed);
 uint8 qt_get_information(camera_info *info);
 uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail);
 
@@ -92,8 +105,8 @@ const char *qt_get_flash_str(uint8 mode);
 
 /* Callbacks */
 extern uint16 cam_features;
-uint8 cam_wakeup(uint8 speed);
-uint8 cam_set_speed(uint8 speed);
+uint8 cam_wakeup(CamSpeed speed);
+uint8 cam_set_speed(CamSpeed speed);
 uint8 cam_set_camera_name(const char *name);
 uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
 uint8 qt_get_information(camera_info *info);

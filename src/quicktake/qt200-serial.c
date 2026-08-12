@@ -28,8 +28,8 @@
 //                               |________ RESERVED,
 
 /* Camera callbacks definitions */
-static uint8 qt200_wakeup(uint8 speed);
-static uint8 qt200_set_speed(uint8 speed);
+static uint8 qt200_wakeup(CamSpeed speed);
+static uint8 qt200_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
 static uint8 qt200_get_information(camera_info *info);
@@ -86,7 +86,7 @@ static void end_session(void);
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
-static uint8 qt200_wakeup(uint8 speed) {
+static uint8 qt200_wakeup(CamSpeed speed) {
   uint8 tries = 2;
   cputs("Pinging QuickTake 200... ");
 
@@ -225,11 +225,11 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
   return 0;
 }
 
-static uint8 my_speed = SER_BAUD_9600;
+static CamSpeed my_speed = SER_BAUD_9600;
 
 /* Ping the camera */
 static uint8 qt200_send_ping(uint8 wait) {
-  int c;
+  char c;
   simple_serial_putc(ENQ);
 
   while (wait--) {
@@ -239,6 +239,7 @@ static uint8 qt200_send_ping(uint8 wait) {
       break;
     }
   }
+
   if (c != ACK) {
     if (do_debug) {
       cprintf("Ping failed (%02X)\r\n", c);
@@ -252,7 +253,7 @@ static uint8 qt200_send_ping(uint8 wait) {
 }
 
 /* Send the speed upgrade command */
-static uint8 qt200_set_speed(uint8 speed) {
+static uint8 qt200_set_speed(CamSpeed speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
@@ -395,7 +396,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   data_cmd[NUM_PIC_IDX] = n_pic;
 
-  cputs("  Getting size...\r\n");
+  cputs("  Getting size...");
   size_cmd[NUM_PIC_IDX] = n_pic;
 
   DUMP_START("pic_size");
@@ -420,7 +421,8 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-
+  gotox(0);
+  cputs("  Getting image...\r\n");
   cprintf("  Width 640, height 480, %lu bytes (jpg)\r\n",
          picture_size);
 

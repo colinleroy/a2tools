@@ -33,8 +33,8 @@
 //                               |________ RESERVED,
 
 /* Camera callbacks definitions */
-static uint8 qt1x0_wakeup(uint8 speed);
-static uint8 qt1x0_set_speed(uint8 speed);
+static uint8 qt1x0_wakeup(CamSpeed speed);
+static uint8 qt1x0_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
 static uint8 qt1x0_set_camera_name(const char *name);
@@ -129,7 +129,7 @@ static uint8 get_hello(void) {
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
  */
-static uint8 send_hello(uint8 speed) {
+static uint8 send_hello(CamSpeed speed) {
   #define SPD_IDX 0x06
   #define CHKSUM_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
@@ -173,7 +173,7 @@ static uint8 send_hello(uint8 speed) {
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise
  */
-static uint8 qt1x0_wakeup(uint8 speed) {
+static uint8 qt1x0_wakeup(CamSpeed speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
 
   cputs("Pinging QuickTake 1x0... ");
@@ -209,7 +209,7 @@ static uint8 qt1x0_wakeup(uint8 speed) {
 }
 
 /* Send the speed upgrade command */
-static uint8 qt1x0_set_speed(uint8 speed) {
+static uint8 qt1x0_set_speed(CamSpeed speed) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
 

@@ -22,7 +22,7 @@
 
 extern uint8 scrw, scrh;
 
-static const char *camera_drivers[] = {
+static char *camera_drivers[] = {
   "QT1X0.ZX",
   "QT200.ZX",
   NULL
@@ -36,34 +36,14 @@ FILE *dbgfp = NULL;
 
 extern unsigned char buffer[BUFFER_SIZE];
 
-#define CAM_WAKEUP          0
-#define CAM_SET_SPEED       1
-#define CAM_SET_CAMERA_NAME 2
-#define CAM_SET_CAMERA_TIME 3
-#define CAM_GET_INFORMATION 4
-#define CAM_SET_QUALITY     5
-#define CAM_SET_FLASH       6
-#define CAM_TAKE_PICTURE    7
-#define CAM_GET_PICTURE     8
-#define CAM_GET_THUMBNAIL   9
-#define CAM_DELETE_PICTURES 10
-
-#define CAM_CAN_SET_CAMERA_NAME 0x01
-#define CAM_CAN_SET_CAMERA_TIME 0x02
-#define CAM_CAN_SET_QUALITY     0x04
-#define CAM_CAN_SET_FLASH       0x08
-#define CAM_CAN_TAKE_PICTURE    0x10
-#define CAM_CAN_GET_THUMBNAIL   0x20
-#define CAM_CAN_DELETE_PICTURES 0x40
-
 #pragma code-name(push, "RT_ONCE")
 
 char last_driver[] = "\0\0\0\0\0\0\0\0\0";
-uint8 tried_default = 0;
-char *default_driver(int mode) {
+
+void default_driver(int mode) {
   int fd = open("LASTDRV", mode);
   if (fd == -1) {
-    return NULL;
+    return;
   }
   if (mode == O_RDONLY) {
     read(fd, last_driver, 8);
@@ -73,7 +53,8 @@ char *default_driver(int mode) {
   close(fd);
 }
 
-static uint8 load_driver(char *drv, uint16 speed) {
+#ifdef __CC65__
+static uint8 load_driver(char *drv, CamSpeed speed) {
   gotox(0); clreol();
   if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x1900) == 0) {
     if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
@@ -82,9 +63,17 @@ static uint8 load_driver(char *drv, uint16 speed) {
   }
   return -1;
 }
+#else
+static uint8 load_driver(char *drv, CamSpeed speed) {
+  if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
+    return 0;
+  }
+  return -1;
+}
+#endif
 
 /* Connect to a QuickTake and detect its model */
-uint8 qt_serial_connect(uint8 speed) {
+uint8 qt_serial_connect(CamSpeed speed) {
   uint8 i;
 
   /* Set initial settings */
