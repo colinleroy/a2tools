@@ -22,7 +22,7 @@
 #pragma data-name(push, "QT1X0")
 
 /* Camera features */
-unsigned char qt1x0_features = 0b11111111;
+#define qt1x0_features 0b0000000011111111
 //                               ||||||||_ SET_CAMERA_NAME
 //                               |||||||__ SET_CAMERA_TIME
 //                               ||||||___ SET_QUALITY,
@@ -51,6 +51,7 @@ static uint8 qt1x0_delete_pictures(void);
 
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
+  /* FEATURES */        (void *)qt1x0_features,
   /* WAKEUP */          qt1x0_wakeup,
   /* SET_SPEED */       qt1x0_set_speed,
   /* SET_CAMERA_NAME */ qt1x0_set_camera_name,

@@ -56,8 +56,6 @@ extern unsigned char buffer[BUFFER_SIZE];
 #define CAM_CAN_GET_THUMBNAIL   0x20
 #define CAM_CAN_DELETE_PICTURES 0x40
 
-extern uint8 cam_features;
-
 #pragma code-name(push, "RT_ONCE")
 
 char last_driver[] = "\0\0\0\0\0\0\0\0\0";

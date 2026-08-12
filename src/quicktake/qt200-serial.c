@@ -17,7 +17,7 @@
 #pragma data-name(push, "QT200")
 
 /* Camera features */
-unsigned char qt200_features = 0b10000000;
+#define qt200_features 0b0000000010000000
 //                               ||||||||_ SET_CAMERA_NAME
 //                               |||||||__ SET_CAMERA_TIME
 //                               ||||||___ SET_QUALITY,
@@ -28,7 +28,7 @@ unsigned char qt200_features = 0b10000000;
 //                               |________ RESERVED,
 
 /* Camera callbacks definitions */
-static uint8 qt200_wakeup(void);
+static uint8 qt200_wakeup(uint8 speed);
 static uint8 qt200_set_speed(uint8 speed);
 
 /* Camera settings functions */
@@ -39,6 +39,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
 
 /* Camera callbacks */
 void *qt200_callbacks[] = {
+  /* FEATURES */        (void *)qt200_features,
   /* WAKEUP */          qt200_wakeup,
   /* SET_SPEED */       qt200_set_speed,
   /* SET_CAMERA_NAME */ NULL,
@@ -85,7 +86,7 @@ static void end_session(void);
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
-static uint8 qt200_wakeup(void) {
+static uint8 qt200_wakeup(uint8 speed) {
   uint8 tries = 2;
   cputs("Pinging QuickTake 200... ");
 
@@ -183,7 +184,7 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
 
 
 /* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait) {
+static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
   uint8 header[] = {ESC, STX};
   uint8 cmd_buffer[32];
   uint8 i, checksum = 0x00;
@@ -274,7 +275,7 @@ static uint8 qt200_set_speed(uint8 speed) {
     cprintf("Negociating speed...\r\n");
   }
   DUMP_START("set_speed");
-  if (send_command(str_speed, sizeof str_speed, 1, 5) != 0) {
+  if (send_command(str_speed, sizeof str_speed, 1) != 0) {
     cprintf("Speed set command failed (%d).\r\n", speed);
     if (do_debug) {
       cgetc();
@@ -333,7 +334,7 @@ static uint8 qt200_get_information(camera_info *info) {
   qt200_start();
 
   DUMP_START("num_pics");
-  if (send_command(num_pics_cmd, sizeof num_pics_cmd, 1, 5) != 0) {
+  if (send_command(num_pics_cmd, sizeof num_pics_cmd, 1) != 0) {
     DUMP_END();
     return -1;
   }
@@ -341,7 +342,7 @@ static uint8 qt200_get_information(camera_info *info) {
   info->num_pics = (buffer[1] << 8) + buffer[0];
 
   DUMP_START("info");
-  if (send_command(info_cmd, sizeof info_cmd, 1, 5) != 0) {
+  if (send_command(info_cmd, sizeof info_cmd, 1) != 0) {
     DUMP_END();
     return -1;
   }
@@ -398,7 +399,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   size_cmd[NUM_PIC_IDX] = n_pic;
 
   DUMP_START("pic_size");
-  if (send_command(size_cmd, sizeof size_cmd, 1, 5) != 0) {
+  if (send_command(size_cmd, sizeof size_cmd, 1) != 0) {
     DUMP_END();
     errno = EIO;
     return -1;
@@ -431,7 +432,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   y = wherey();
   progress_bar(2, y, scrw - 2, 0, num_blocks);
 
-  if (send_command(data_cmd, sizeof data_cmd, 1, 5) != 0) {
+  if (send_command(data_cmd, sizeof data_cmd, 1) != 0) {
     if (do_debug) {
       cputs("Could not send get command\r\n");
       cgetc();

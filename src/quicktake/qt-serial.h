@@ -37,8 +37,6 @@
 #define CAM_CAN_GET_THUMBNAIL   0x20
 #define CAM_CAN_DELETE_PICTURES 0x40
 
-extern uint8 cam_features;
-
 extern uint8 camera_connected;
 typedef struct _camera_date {
   uint16 year;
@@ -74,7 +72,6 @@ typedef struct _thumb_info {
 extern unsigned char buffer[BUFFER_SIZE];
 
 extern uint8 serial_model;
-
 /* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint8 speed);
 uint8 qt_get_information(camera_info *info);
@@ -94,6 +91,7 @@ const char *qt_get_quality_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
 /* Callbacks */
+extern uint16 cam_features;
 uint8 cam_wakeup(uint8 speed);
 uint8 cam_set_speed(uint8 speed);
 uint8 cam_set_camera_name(const char *name);
