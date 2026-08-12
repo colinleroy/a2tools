@@ -48,9 +48,9 @@ int bps = B19200;
 char *opt_tty_path = NULL;
 char *opt_aux_tty_path = NULL;
 
-static int opt_tty_speed = B115200;
+int opt_tty_speed = B115200;
 static int opt_aux_tty_speed = B9600;
-static int opt_tty_hw_handshake = 1;
+static int opt_tty_hw_handshake = 0;
 
 SimpleSerialParams ser_params = {
   B115200,
@@ -78,7 +78,7 @@ const char *get_cfg_dir(void) {
   return cfg_dir;
 }
 
-static int tty_speed_from_str(char *tmp) {
+int tty_speed_from_str(char *tmp) {
   if (!strcmp(tmp, "300"))
     return B300;
   if (!strcmp(tmp, "600"))

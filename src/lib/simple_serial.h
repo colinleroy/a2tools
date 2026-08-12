@@ -78,6 +78,10 @@ int simple_serial_close_printer(void);
 int simple_serial_close(void);
 void simple_serial_flush(void);
 void simple_serial_flush_fd(int fd);
+int simple_serial_read_no_irq(char *buffer, size_t len);
+int tty_speed_from_str(char *tmp);
+#define serial_read_byte_no_irq simple_serial_getc
+
 #define simple_serial_configure()
 #define simple_serial_setup_no_irq_regs()
 #define simple_serial_set_irq(i)
