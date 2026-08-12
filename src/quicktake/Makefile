@@ -19,6 +19,19 @@ endif
 
 VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"' -f2)
 
+microserial_SOURCES := \
+	micro-serial.c \
+	qt-serial.c \
+	qt1x0-serial.c \
+	qt200-serial.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/serial/c/simple_serial_read_no_irq.c \
+	../lib/serial/c/serial_control.c \
+	../lib/c/malloc0.c \
+	../lib/progress_bar.c \
+	../lib/strtrim.c \
+
 slowtake_SOURCES := \
 	qt-menu.c \
 	qt-serial.c \
@@ -154,6 +167,9 @@ CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
+microserial_GCCCFLAGS = \
+	-DBUFFER_SIZE=2048
+
 slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DPROGRAM_NAME='"SLOWTAKE"' \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
@@ -244,7 +260,7 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
 
-all: quicktake.po
+all: quicktake.po microserial.x86_64
 
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
@@ -288,8 +304,8 @@ splash.h: splash.hgr
 slowtake.bin: $(slowtake_CC65SOURCES) $(slowtake_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
-slowtake.x86_64: $(slowtake_SOURCES) $(slowtake_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
+microserial.x86_64: $(microserial_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(microserial_GCCCFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
