@@ -28,6 +28,7 @@
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
+uint8 do_debug = 0;
 static unsigned char exec_pass = 0;
 
 #ifdef __CC65__
@@ -505,12 +506,16 @@ done:
 }
 
 static void print_welcome(void) {
-  init_graphics(1, 0);
-  set_scrollwindow(20, scrh);
-  hgr_mixon();
-  clrscr();
+  if (!do_debug) {
+    init_graphics(1, 0);
+    set_scrollwindow(20, scrh);
+    hgr_mixon();
+    clrscr();
+  }
   cputs(WELCOME_STR);
-  set_scrollwindow(21, scrh);
+  if (!do_debug) {
+    set_scrollwindow(21, scrh);
+  }
 }
 
 static void show_about(void) {
@@ -629,12 +634,18 @@ int main(int argc, char *argv[])
 {
   uint8 choice;
 
+  clrscr();
+
   if (!has_128k) {
     cputs("This program requires 128kB of memory.");
     cgetc();
     exit(1);
   }
 
+  __asm__("bit $C061");     /* Open-Apple ? */
+  __asm__("bpl %g", nodebug);
+  do_debug = 1;
+nodebug:
   reserve_auxhgr_file();
   atexit(&unlink_temp_files);
   camera_connected = setup(argc, argv);

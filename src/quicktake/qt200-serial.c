@@ -53,6 +53,7 @@ void *qt200_callbacks[] = {
 };
 
 extern uint8 scrw, scrh;
+extern uint8 do_debug;
 
 #define STX 0x02 /* Start of data */
 #define ETX 0x03 /* End of data */
@@ -118,26 +119,33 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   if (expect_header) {
     /* Read the header */
     if (simple_serial_read_no_irq((char *)buf, 6) == EOF) {
+      if (do_debug) {
+        cputs("Timeout reading 6 chars.\r\n");
+      }
       return -1;
     }
 
     if (buf[0] != ESC || buf[1] != STX) {
-#ifdef DEBUG_PROTO
-      cputs("Unexpected header.\r\n");
-      cgetc();
-#endif
+      if (do_debug) {
+        for (i = 0; i < 6; i++) {
+          cprintf("%02X ", buf[i]);
+        }
+        cputs(": Unexpected header.\r\n");
+        cgetc();
+      }
       return -1;
     }
-#ifdef DEBUG_PROTO
-    printf("header: %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-#endif
+    if (do_debug) {
+      cprintf("header: %02x %02x %02x %02x %02x %02x\r\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+    }
+
     response_len = (buf[5] << 8) | buf[4];
     if (response_len > len) {
       /* Buffer overflow awaiting */
-#ifdef DEBUG_PROTO
-      printf("data too long (%d bytes)\n", response_len);
-      cgetc();
-#endif
+      if (do_debug) {
+        cprintf("data too long (%d bytes)\r\n", response_len);
+        cgetc();
+      }
       return -1;
     }
   } else {
@@ -158,14 +166,15 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   /* Read footer */
   simple_serial_read_no_irq((char *)eot_buf, 3);
 
-#ifdef DEBUG_PROTO
-  printf("read %d bytes: ", i);
-  for (i = 0; i < response_len; i++) {
-    printf("%02x ", buf[i]);
+
+  if (do_debug) {
+    cprintf("read %d bytes: ", i);
+    for (i = 0; i < response_len; i++) {
+      cprintf("%02x ", buf[i]);
+    }
+    cprintf(", footer: %02x %02x %02x\r\n", eot_buf[0], eot_buf[1], eot_buf[2]);
   }
-  printf("\n");
-  printf("footer: %02x %02x %02x\n", eot_buf[0], eot_buf[1], eot_buf[2]);
-#endif
+
   DUMP_DATA(buf, response_len);
   /* If cur_buf[1] == ETB, there will be more to read */
   response_continues = (eot_buf[1] == ETB);
@@ -194,13 +203,15 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
   cmd_buffer[len++] = ETX;
   checksum ^= ETX;
   cmd_buffer[len++] = checksum;
-#ifdef DEBUG_PROTO
-  printf("\nsending ");
-  for (i = 0; i < len; i++) {
-    printf("%02x ", cmd_buffer[i]);
+
+  if (do_debug) {
+    cprintf("\r\nSending ");
+    for (i = 0; i < len; i++) {
+      cprintf("%02x ", cmd_buffer[i]);
+    }
+    cprintf("\r\n");
   }
-  printf("\n");
-#endif
+
   simple_serial_write((char *)header, sizeof header);
   simple_serial_write((char *)cmd_buffer, len);
 
@@ -228,10 +239,13 @@ static uint8 qt200_send_ping(uint8 wait) {
     }
   }
   if (c != ACK) {
-#ifdef DEBUG_PROTO
-    printf("Ping failed (%d)\n", c);
-#endif
+    if (do_debug) {
+      cprintf("Ping failed (%02X)\r\n", c);
+    }
     return -1;
+  }
+  if (do_debug) {
+    cprintf("Ping success (%02X)\r\n", c);
   }
   return 0;
 }
@@ -243,6 +257,10 @@ static uint8 qt200_set_speed(uint8 speed) {
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
 
   switch(speed) {
+    case SER_BAUD_9600:
+      str_speed[SPD_CMD_IDX] = 0x00;
+      break;
+
     case SER_BAUD_19200:
       str_speed[SPD_CMD_IDX] = 0x04;
       break;
@@ -252,15 +270,15 @@ static uint8 qt200_set_speed(uint8 speed) {
       break;
   }
 
-#ifdef DEBUG_PROTO
-  printf("Negociating speed...\n");
-#endif
+  if (do_debug) {
+    cprintf("Negociating speed...\r\n");
+  }
   DUMP_START("set_speed");
   if (send_command(str_speed, sizeof str_speed, 1, 5) != 0) {
-#ifdef DEBUG_PROTO
-    printf("Speed set command failed.\n");
-    cgetc();
-#endif
+    cprintf("Speed set command failed (%d).\r\n", speed);
+    if (do_debug) {
+      cgetc();
+    }
     return -1;
   }
   DUMP_END();
@@ -272,16 +290,18 @@ static uint8 qt200_set_speed(uint8 speed) {
   /* Toggle speed */
   simple_serial_set_speed(speed);
 
-
   /* ping again */
   if (qt200_send_ping(STD_WAIT) != 0) {
-#ifdef DEBUG_PROTO
-    printf("Communication check failed.\n");
-    cgetc();
-#endif
+    if (do_debug) {
+      cprintf("Communication check failed.\r\n");
+      cgetc();
+    }
     return -1;
   }
 
+  if (do_debug) {
+    cprintf("Success setting speed to %d\r\n", speed);
+  }
   if (speed != SER_BAUD_9600) {
     my_speed = speed;
   }
@@ -289,9 +309,9 @@ static uint8 qt200_set_speed(uint8 speed) {
 }
 
 static uint8 qt200_start(void) {
-#ifdef DEBUG_PROTO
-  printf("Session start, going to %d\n", my_speed);
-#endif
+  if (do_debug) {
+    cprintf("Session start, going to %d\r\n", my_speed);
+  }
   if (qt200_send_ping(STD_WAIT) == 0) {
     return qt200_set_speed(my_speed);
   }
@@ -299,9 +319,9 @@ static uint8 qt200_start(void) {
 }
 
 static uint8 qt200_stop(void) {
-#ifdef DEBUG_PROTO
-  printf("Session stop\n");
-#endif
+  if (do_debug) {
+    cprintf("Session stop\r\n");
+  }
   return qt200_set_speed(SER_BAUD_9600);
 }
 
@@ -362,10 +382,10 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint8 y;
 
   if (qt200_start() != 0) {
-#ifdef DEBUG_PROTO
-    printf("Communication error.\n");
-    cgetc();
-#endif
+    if (do_debug) {
+      cprintf("Communication error.\r\n");
+      cgetc();
+    }
     errno = EIO;
     return -1;
   }
@@ -412,10 +432,10 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   progress_bar(2, y, scrw - 2, 0, num_blocks);
 
   if (send_command(data_cmd, sizeof data_cmd, 1, 5) != 0) {
-#ifdef DEBUG_PROTO
-    cputs("Could not send get command\r\n");
-    cgetc();
-#endif
+    if (do_debug) {
+      cputs("Could not send get command\r\n");
+      cgetc();
+    }
     errno = EIO;
     return -1;
   }
