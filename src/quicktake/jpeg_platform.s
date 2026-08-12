@@ -13,7 +13,7 @@
         .import     _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf
         .import     _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
-        .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
+        .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY, _gMaxMCUSPerRow
         .import     _gWinogradQuant
         .import     floppy_motor_on
         .import     right_shift_4
@@ -1369,7 +1369,7 @@ retOk:
 noMoreX:
         dec    _gNumMCUSRemainingY
         beq    :+
-        lda    #((640 + (16 - 1)) >> 4) ; gMaxMCUSPerRow
+        lda    _gMaxMCUSPerRow
         sta    _gNumMCUSRemainingX
 :       lda    #0
 retErr:
