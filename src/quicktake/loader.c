@@ -41,23 +41,30 @@ display:
   if (argc < 4) {
     size_t data_len;
     fseek(fp, 0, SEEK_END);
-    data_len = ftell(fp) - PNM_HEADER_SIZE - 512; // 512=sizeof(histogram)
-    if (data_len == 256*192) {
-      w = 256;
-      h = 192;
-    } else if (data_len == 320*240 || data_len == 76288) {
-      w = 320;
-      h = 240;
-    } else if (data_len == 640*480 || data_len == 306688) {
-      w = 640;
-      h = 480;
-    } else if (data_len == 91648) {
-      w = 384;
-      h = 240;
+    printf("%d\n", ftell(fp));
+    if (ftell(fp) == 2400) {
+      /* Raw thumb */
+      w = 80;
+      h = 60;
     } else {
-      printf("Can't guess size from %d.\n", data_len);
-      w = 640;
-      h = 480;
+      data_len = ftell(fp) - PNM_HEADER_SIZE - 512; // 512=sizeof(histogram)
+      if (data_len == 256*192) {
+        w = 256;
+        h = 192;
+      } else if (data_len == 320*240 || data_len == 76288) {
+        w = 320;
+        h = 240;
+      } else if (data_len == 640*480 || data_len == 306688) {
+        w = 640;
+        h = 480;
+      } else if (data_len == 91648) {
+        w = 384;
+        h = 240;
+      } else {
+        printf("Can't guess size from %d.\n", data_len);
+        w = 640;
+        h = 480;
+      }
     }
 
     if (argc == 3) {
@@ -122,6 +129,8 @@ display:
     char line[80], *cur_in;
     char out[160], *cur_out;
     int i, a, b, c, x, y;
+
+    rewind(fp);
     for (y = 0; y < 60*2; y+=2) {
       if (qt150) {
         fread(line, 1, 80, fp);
@@ -161,7 +170,6 @@ display:
           c = *cur_in++;
           a   = (((c>>4) & 0b00001111) << 4);
           b   = (((c)    & 0b00001111) << 4);
-          printf("%02d %02d ", a, b);
           *cur_out++ = a;
           *cur_out++ = b;
         }
@@ -182,7 +190,6 @@ display:
           sdl_set_pixel(screen, x+1, y+1, b, b, b);
           x+=2;
         }
-        printf("\n");
       }
     }
   }
@@ -193,7 +200,7 @@ display:
     int timeout = 10;
     while (!SDL_PollEvent(&e)) {
       usleep(100*1000);
-      if (timeout-- == 0) {
+      if (timeout-- == 0 && w != 80) {
         goto display;
       }
     }
