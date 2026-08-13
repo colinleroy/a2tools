@@ -232,6 +232,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
   simple_serial_write((char *)header, sizeof header);
   simple_serial_write((char *)cmd_buffer, len);
 
+  response_len = 0;
   if (get_ack && (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK))
     return -1;
 
@@ -350,21 +351,22 @@ static uint8 qt200_stop(void) {
 
 /* Get information from the camera */
 static uint8 qt200_get_information(camera_info *info) {
-  char num_pics_cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
-  char info_cmd[]= {0x00,FUJI_CMD_GET_INFO,0x00,0x00};
+  char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
+  uint16 i;
 
   qt200_start();
 
   DUMP_START("num_pics");
-  if (send_command(num_pics_cmd, sizeof num_pics_cmd, 1) != 0) {
+  if (send_command(cmd, sizeof cmd, 1) != 0) {
     DUMP_END();
     return -1;
   }
   DUMP_END();
   info->num_pics = (buffer[1] << 8) + buffer[0];
 
+  cmd[1] = FUJI_CMD_GET_INFO;
   DUMP_START("info");
-  if (send_command(info_cmd, sizeof info_cmd, 1) != 0) {
+  if (send_command(cmd, sizeof cmd, 1) != 0) {
     DUMP_END();
     return -1;
   }
