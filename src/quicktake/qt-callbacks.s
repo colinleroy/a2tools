@@ -2,11 +2,11 @@
         .export _cam_set_speed
         .export _cam_set_camera_name
         .export _cam_set_camera_time
-        .export _qt_get_information
+        .export _cam_get_information
         .export _cam_set_quality
         .export _cam_set_flash
         .export _cam_take_picture
-        .export _qt_get_picture
+        .export _cam_get_picture
         .export _cam_get_thumbnail
         .export _cam_delete_pictures
         .export _cam_features
@@ -22,7 +22,7 @@ CAM_SET_FLASH       = 7
 CAM_TAKE_PICTURE    = 8
 CAM_GET_PICTURE     = 9
 CAM_GET_THUMBNAIL   = 10
-CAM_DELETE_PICTURES = 111
+CAM_DELETE_PICTURES = 11
 
 _cam_features = $0C00
 
@@ -38,7 +38,7 @@ _cam_set_camera_name:
 _cam_set_camera_time:
         jmp     ($0C00 + CAM_SET_CAMERA_TIME*2)
 
-_qt_get_information:
+_cam_get_information:
         jmp     ($0C00 + CAM_GET_INFORMATION*2)
 
 _cam_set_quality:
@@ -50,7 +50,7 @@ _cam_set_flash:
 _cam_take_picture:
         jmp     ($0C00 + CAM_TAKE_PICTURE*2)
 
-_qt_get_picture:
+_cam_get_picture:
         jmp     ($0C00 + CAM_GET_PICTURE*2)
 
 _cam_get_thumbnail:

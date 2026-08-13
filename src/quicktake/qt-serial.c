@@ -73,7 +73,7 @@ static uint8 load_driver(char *drv, CamSpeed speed) {
 #endif
 
 /* Connect to a QuickTake and detect its model */
-uint8 qt_serial_connect(CamSpeed speed) {
+uint8 cam_serial_connect(CamSpeed speed) {
   uint8 i;
 
   /* Set initial settings */
@@ -127,57 +127,7 @@ load_done:
 #pragma code-name(pop)
 #pragma code-name(push, "LC")
 
-uint8 qt_take_picture(void) {
-  if (cam_features & CAM_CAN_TAKE_PICTURE)
-    return cam_take_picture();
-  else
-    return -1;
-}
-
-uint8 qt_set_camera_name(const char *name) {
-  if (cam_features & CAM_CAN_SET_CAMERA_NAME)
-    return cam_set_camera_name(name);
-  else
-    return -1;
-}
-
-uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  if (cam_features & CAM_CAN_SET_CAMERA_TIME)
-    return cam_set_camera_time(day, month, year, hour, minute, second);
-  else
-    return -1;
-}
-
-uint8 qt_set_quality(uint8 quality) {
-  if (cam_features & CAM_CAN_SET_QUALITY)
-    return cam_set_quality(quality);
-  else
-    return -1;
-}
-
-uint8 qt_set_flash(uint8 mode) {
-  if (cam_features & CAM_CAN_SET_FLASH)
-    return cam_set_flash(mode);
-  else
-    return -1;
-}
-
-uint8 qt_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  if (cam_features & CAM_CAN_GET_THUMBNAIL)
-    return cam_get_thumbnail(n_pic, fd, info);
-  else
-    return -1;
-}
-
-
-uint8 qt_delete_pictures(void) {
-  if (cam_features & CAM_CAN_DELETE_PICTURES)
-    return cam_delete_pictures();
-  else
-    return -1;
-}
-
-const char *qt_get_quality_str(uint8 mode) {
+const char *cam_get_quality_str(uint8 mode) {
   switch(mode) {
     case QUALITY_STANDARD:
       return "standard quality";
@@ -188,7 +138,7 @@ const char *qt_get_quality_str(uint8 mode) {
   }
 }
 
-const char *qt_get_flash_str(uint8 mode) {
+const char *cam_get_flash_str(uint8 mode) {
   switch(mode) {
     case FLASH_AUTO:
       return "automatic";

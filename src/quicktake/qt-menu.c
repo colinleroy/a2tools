@@ -42,6 +42,8 @@ char magic[5] = "????";
 static int8 check_file_existence(char *filename, uint8 silent);
 static uint8 print_menu(void);
 
+#pragma code-name(push, "LC")
+
 static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
@@ -50,8 +52,8 @@ static void print_header(void) {
           cam_info.name, cam_info.battery_level, cam_info.charging? " (charging)":"",
           cam_info.date.day, cam_info.date.month, cam_info.date.year,
           cam_info.date.hour, cam_info.date.minute,
-          cam_info.num_pics, cam_info.left_pics, qt_get_quality_str(cam_info.quality_mode),
-          qt_get_flash_str(cam_info.flash_mode));
+          cam_info.num_pics, cam_info.left_pics, cam_get_quality_str(cam_info.quality_mode),
+          cam_get_flash_str(cam_info.flash_mode));
   } else {
     cputs("No camera detected\r\n");
   }
@@ -60,6 +62,8 @@ static void print_header(void) {
 #endif
   chline(scrw);
 }
+
+#pragma code-name(pop)
 
 static int8 save_picture(uint8 n_pic, char *set_filename) {
   char filename[64];
@@ -135,7 +139,7 @@ again:
     goto err_io;
   }
 
-  if (qt_get_picture(n_pic, fd, avail_bytes) == 0) {
+  if (cam_get_picture(n_pic, fd, avail_bytes) == 0) {
     uint16 tmp = n_pic;
     close(fd);
     if (IS_NOT_NULL(set_filename)) {
@@ -210,10 +214,10 @@ static uint8 print_menu(void) {
       cputs(" T. Set camera time\r\n");
     if (cam_features & CAM_CAN_SET_QUALITY)
       cprintf(" Q. Set quality to %s\r\n", 
-              qt_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH));
+              cam_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH));
     if (cam_features & CAM_CAN_SET_FLASH)
       cprintf(" F. Set flash to %s\r\n",
-              qt_get_flash_str((cam_info.flash_mode + 1) % 3));
+              cam_get_flash_str((cam_info.flash_mode + 1) % 3));
   }
   cputs(   "\r\n"
            " A. About this program\r\n"
@@ -368,7 +372,7 @@ static void set_camera_name(const char *name) {
   strncpy(buf, name, 31);
   dget_text_single(buf, 31, NULL);
 
-  qt_set_camera_name(buf);
+  cam_set_camera_name(buf);
 }
 
 static void set_camera_time(void) {
@@ -390,7 +394,7 @@ static void set_camera_time(void) {
     vals[i] = (uint8)(atoi(buf) % 100);
   }
 
-  qt_set_camera_time(vals[0], vals[1], vals[2], vals[3], vals[4], 0);
+  cam_set_camera_time(vals[0], vals[1], vals[2], vals[3], vals[4], 0);
 }
 
 #pragma code-name(pop)
@@ -404,7 +408,7 @@ static void delete_pictures(void) {
 
   if (tolower(cgetc()) == 'y') {
     cputs("Deleting pictures, please wait...\r\n");
-    qt_delete_pictures();
+    cam_delete_pictures();
   }
   cputs("Done!...\r\n");
 }
@@ -412,7 +416,7 @@ static void delete_pictures(void) {
 static void take_picture(void) {
   clrscr();
   cputs("Taking a picture...\r\n\r\n");
-  qt_take_picture();
+  cam_take_picture();
   cputs("Done!...\r\n");
 }
 
@@ -448,7 +452,7 @@ static void show_thumbnails(uint8 num_pics) {
     clrscr();
     gotoxy(0,20);
 
-    c = qt_get_thumbnail(i, fd, &info);
+    c = cam_get_thumbnail(i, fd, &info);
     close(fd);
 
     if (c != 0) {
@@ -469,7 +473,7 @@ err_thumb_io:
 
     cprintf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
-           thumb_buf, qt_get_quality_str(info.quality_mode),
+           thumb_buf, cam_get_quality_str(info.quality_mode),
            info.flash_mode ? "on":"off", info.date.day, info.date.month,
            info.date.year, info.date.hour, info.date.minute);
 
@@ -592,7 +596,7 @@ static uint8 setup(int argc, char *argv[]) {
   /* Remove temporary files */
   unlink(TMP_NAME);
 
-  while (qt_serial_connect(target_speed) != 0) {
+  while (cam_serial_connect(target_speed) != 0) {
     char c;
 
     cprintf("Please turn the Quicktake off and on. Try again?\r\n");
@@ -657,7 +661,7 @@ menu:
   if (camera_connected) {
     free(cam_info.name);
     cam_info.name = NULL;
-    if (qt_get_information(&cam_info) != 0) {
+    if (cam_get_information(&cam_info) != 0) {
       camera_connected = 0;
     }
   }
@@ -719,11 +723,11 @@ menu:
         break;
       case 'q':
         if (cam_features & CAM_CAN_SET_QUALITY)
-          qt_set_quality((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
+          cam_set_quality((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
         break;
       case 'f':
         if (cam_features & CAM_CAN_SET_FLASH)
-          qt_set_flash((cam_info.flash_mode + 1) % 3);
+          cam_set_flash((cam_info.flash_mode + 1) % 3);
         break;
       default:
         break;

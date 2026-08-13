@@ -38,20 +38,31 @@ static uint8 qt200_get_information(camera_info *info);
 /* Camera pictures functions */
 static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
 
+/* Other functions, that this driver doesn't implement
+ * but must exist and return -1
+ */
+static uint8 qt200_set_camera_name(const char *name);
+static uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+static uint8 qt200_set_quality(uint8 quality);
+static uint8 qt200_set_flash(uint8 mode);
+static uint8 qt200_take_picture(void);
+static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 qt200_delete_pictures(void);
+
 /* Camera callbacks */
 void *qt200_callbacks[] = {
   /* FEATURES */        (void *)qt200_features,
   /* WAKEUP */          qt200_wakeup,
   /* SET_SPEED */       qt200_set_speed,
-  /* SET_CAMERA_NAME */ NULL,
-  /* SET_CAMERA_TIME */ NULL,
+  /* SET_CAMERA_NAME */ qt200_set_camera_name,
+  /* SET_CAMERA_TIME */ qt200_set_camera_time,
   /* GET_INFORMATION */ qt200_get_information,
-  /* SET_QUALITY */     NULL,
-  /* SET_FLASH */       NULL,
-  /* TAKE_PICTURE */    NULL,
+  /* SET_QUALITY */     qt200_set_quality,
+  /* SET_FLASH */       qt200_set_flash,
+  /* TAKE_PICTURE */    qt200_take_picture,
   /* GET_PICTURE */     qt200_get_picture,
-  /* GET_THUMBNAIL */   NULL,
-  /* DELETE_PICTURES */ NULL,
+  /* GET_THUMBNAIL */   qt200_get_thumbnail,
+  /* DELETE_PICTURES */ qt200_delete_pictures,
 };
 
 extern uint8 scrw, scrh;
@@ -84,6 +95,7 @@ static uint8 response_continues;
 static uint8 qt200_send_ping(uint8 wait);
 static void end_session(void);
 
+#pragma warn(unused-param, push, off)
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
@@ -109,6 +121,7 @@ again:
     return QT_MODEL_UNKNOWN;
   }
 }
+#pragma warn(unused-param, pop)
 
 /* End of session */
 static void end_session(void) {
@@ -476,3 +489,33 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   return err;
 }
+
+#pragma warn(unused-param, push, off)
+static uint8 qt200_set_camera_name(const char *name) {
+  return -1;
+}
+
+static uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+  return -1;
+}
+
+static uint8 qt200_set_quality(uint8 quality) {
+  return -1;
+}
+
+static uint8 qt200_set_flash(uint8 mode) {
+  return -1;
+}
+
+static uint8 qt200_take_picture(void) {
+  return -1;
+}
+
+static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+  return -1;
+}
+
+static uint8 qt200_delete_pictures(void) {
+  return -1;
+}
+#pragma warn(unused-param, pop)

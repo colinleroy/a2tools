@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   printf("cam features: %0b\n", cam_features);
 
   printf("Connecting...\n");
-  if (qt_serial_connect(SER_BAUD_115200) != 0) {
+  if (cam_serial_connect(SER_BAUD_115200) != 0) {
     printf("Failed.\n");
     exit(1);
   }
@@ -104,7 +104,7 @@ uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 
   return impl_set_camera_time(day, month, year, hour, minute, second);
 }
 
-uint8 qt_get_information(camera_info *info) {
+uint8 cam_get_information(camera_info *info) {
   return impl_get_information(info);
 }
 
@@ -120,7 +120,7 @@ uint8 cam_take_picture(void) {
   return impl_take_picture();
 }
 
-uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail) {
+uint8 cam_get_picture(uint8 n_pic, int fd, off_t avail) {
   return impl_get_picture(n_pic, fd, avail);
 }
 
