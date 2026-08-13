@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
+#include <fcntl.h>
+#include <errno.h>
+
 #include "platform.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
@@ -64,10 +67,14 @@ static void setup_pointers(void *callbacks[]) {
 int main(int argc, char *argv[]) {
   char filename[64];
 
-  if (argc < 4) {
-    printf("Usage: %s [camera_model] [tty_path] [tty_speed]\n"
+  do_debug = getenv("DEBUG") != NULL;
+
+  if (argc < 3) {
+    printf("Usage: %s camera_model tty_path [command] [command parameter]\n"
            "\n"
-           "       camera_models: qt1x0, qt200\n\n",
+           "       camera_models: qt1x0, qt200\n"
+           "       tty_path:      /dev/ttyUSB0 for example\n"
+           "       command:       get (parameter: picture number)\n\n",
            argv[0]);
     exit(1);
   }
@@ -112,6 +119,27 @@ int main(int argc, char *argv[]) {
          info.date.day, info.date.month, info.date.year,
          info.date.hour, info.date.minute);
 
+  if (argc > 3) {
+    /* handle command */
+    if (!strcmp(argv[3], "get") && argc > 4) {
+      char filename[64];
+      uint8 n_pic = atoi(argv[4]);
+      int fd;
+
+      cam_get_filename(n_pic, NULL, filename);
+      printf("Saving picture %d to %s\n", n_pic, filename);
+
+      fd = open(filename, O_WRONLY|O_CREAT, 00644);
+      if (fd < 0) {
+        printf("Can not open %s: %s\n", filename, strerror(errno));
+      } else {
+        if (cam_get_picture(n_pic, fd, (off_t)1024*1024*1024UL) != 0) {
+          printf("Can not get picture: %s\n", strerror(errno));
+        }
+        close(fd);
+      }
+    }
+  }
   return 0;
 }
 

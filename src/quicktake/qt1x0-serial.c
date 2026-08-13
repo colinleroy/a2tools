@@ -68,6 +68,21 @@ void *qt1x0_callbacks[] = {
 };
 
 extern uint8 scrw, scrh;
+extern uint8 do_debug;
+
+#ifdef __CC65__
+#define PC_DEBUG(op, str, len)
+#else
+void PC_DEBUG(char *op, const char *str, int len) {
+  if (do_debug) {
+    printf("%s:", op);
+    for (int i = 0; i < len; i++) {
+      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
+    }
+    printf("\n");
+  }
+}
+#endif
 
 static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
   sprintf(filename, "%s%sIMAGE%d.QTK",
@@ -77,17 +92,20 @@ static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
-  char c;
+  char c = 0xFF;
   while (wait--) {
     if (simple_serial_read_no_irq(&c, 1) == 0x00 && c == 0x00) {
+      PC_DEBUG("ack", &c, 1);
       return 0;
     }
+    PC_DEBUG("ack", &c, 1);
   }
   return -1;
 }
 
 /* Send an ack to the camera */
 static void send_ack() {
+  PC_DEBUG("sack", NULL, 0);
   simple_serial_putc(0x06);
 }
 
@@ -95,6 +113,7 @@ static void send_ack() {
 static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, uint8 wait) {
   char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
   if (ping) {
+    PC_DEBUG("ping", ping_str, sizeof ping_str);
     simple_serial_write(ping_str, sizeof ping_str);
     if (get_ack(5) != 0)
       return -1;
@@ -103,6 +122,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, u
     return 0;
   }
 
+  PC_DEBUG("write", cmd, len);
   simple_serial_write(cmd, len);
   if (get_ack(wait) != 0)
     return -1;
@@ -120,15 +140,12 @@ static uint8 get_hello(void) {
     cputs("Timeout. ");
     return QT_MODEL_UNKNOWN;
   }
+  PC_DEBUG("read hello", buffer, 7);
 
   if (buffer[0] != 0xA5) {
     cprintf("Unexpected $%04X. ", buffer[0]);
     return QT_MODEL_UNKNOWN;
   }
-
-  DUMP_START("qt_hello");
-  DUMP_DATA(buffer, 7);
-  DUMP_END();
 
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
@@ -155,24 +172,18 @@ static uint8 send_hello(CamSpeed speed) {
   }
   str_hello[CHKSUM_IDX] = chk;
 
-  DUMP_START("qt_speed");
-  DUMP_DATA(str_hello, CHKSUM_IDX+1);
-  DUMP_END();
-
-  simple_serial_write(str_hello, sizeof(str_hello));
+  PC_DEBUG("send hello", str_hello, sizeof str_hello);
+  simple_serial_write(str_hello, sizeof str_hello);
   if (simple_serial_read_no_irq((char *)buffer, 10) == EOF) {
     cputs("Timeout. ");
     return -1;
   }
+  PC_DEBUG("read hello reply", buffer, 10);
 
   if (buffer[0] != 0x00) {
     cprintf("Error ($%02X).\r\n", c);
     return -1;
   }
-
-  DUMP_START("qt_hello_reply");
-  DUMP_DATA(buffer, 10);
-  DUMP_END();
 
   return 0;
 }
@@ -249,6 +260,7 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
   }
 
   cprintf("Negociating speed...\r\n");
+  PC_DEBUG("write speed", str_speed, sizeof str_speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
   /* get ack */
@@ -263,7 +275,6 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
 
   /* We don't care about the bytes we receive here */
   while(simple_serial_read_no_irq((char *)buffer, 256) != EOF);
-  
 
   send_ack();
   return get_ack(5);
@@ -374,8 +385,6 @@ static uint8 receive_data(uint8 n_pic, uint8 type, uint32 size, int fd) {
   uint16 blocks = (uint16)(size / BLOCK_SIZE);
   uint16 rem    = (uint16)(size % BLOCK_SIZE);
 
-  DUMP_START("data");
-
   cputs("  Getting data...\r\n");
 
   progress_bar(2, y, scrw - 2, 0, blocks);
@@ -396,8 +405,6 @@ static uint8 receive_data(uint8 n_pic, uint8 type, uint32 size, int fd) {
       /* Write error. But keep reading from serial,
        * otherwise we'll crash the camera. */
     }
-    DUMP_DATA(buffer, BLOCK_SIZE);
-
     progress_bar(-1, -1, scrw - 2, i, blocks);
 
     send_ack();
@@ -412,11 +419,8 @@ static uint8 receive_data(uint8 n_pic, uint8 type, uint32 size, int fd) {
     errno = EIO;
   }
 
-  DUMP_DATA(buffer, rem);
-
   progress_bar(-1, -1, scrw - 2, 100, 100);
 
-  DUMP_END();
   return err;
 }
 
@@ -443,8 +447,6 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   status_line = wherey();
   cputs("  Getting header...\r\n");
 
-  DUMP_START("header");
-
   if (send_photo_header_command(n_pic) != 0) {
     errno = EIO;
     return -1;
@@ -455,14 +457,17 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  DUMP_DATA(buffer, 64);
-  DUMP_END();
-
+#ifndef __CC65__
+  pic_size_int = buffer[IMG_SIZE_IDX+2] 
+               + (buffer[IMG_SIZE_IDX+1] << 8)
+               + (buffer[IMG_SIZE_IDX+0] << 16);
+#else
   /* Get size (24 bits big endian)*/
   ((unsigned char *)&pic_size_int)[0] = buffer[IMG_SIZE_IDX+2];
   ((unsigned char *)&pic_size_int)[1] = buffer[IMG_SIZE_IDX+1];
   ((unsigned char *)&pic_size_int)[2] = buffer[IMG_SIZE_IDX+0];
   ((unsigned char *)&pic_size_int)[3] = 0;
+#endif
 
   if (pic_size_int > avail) {
     errno = ENOSPC;
@@ -516,8 +521,6 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   status_line = wherey();
   cputs("  Getting header...\r\n");
 
-  DUMP_START("header");
-
   if (send_photo_header_command(n_pic) != 0) {
     errno = EIO;
     return -1;
@@ -528,10 +531,6 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     return -1;
   }
 
-
-  DUMP_DATA(buffer, 64);
-  DUMP_END();
-
   info->quality_mode = buffer[IMG_QUALITY_IDX];
   info->flash_mode   = buffer[IMG_FLASH_IDX];
   info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
@@ -539,8 +538,6 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   info->date.day     = buffer[IMG_DAY_IDX];
   info->date.hour    = buffer[IMG_HOUR_IDX];
   info->date.minute  = buffer[IMG_MINUTE_IDX];
-
-  DUMP_START("data");
 
   cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
          THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
@@ -598,8 +595,6 @@ static uint8 qt1x0_get_information(camera_info *info) {
 
   cputs("Getting information...\r\n");
 
-  DUMP_START("summary");
-
   if (send_get_information_command() != 0) {
     errno = EIO;
     return -1;
@@ -609,10 +604,7 @@ static uint8 qt1x0_get_information(camera_info *info) {
     errno = EBUSY;
     return -1;
   }
-
-  DUMP_DATA(buffer, 128);
-  DUMP_END();
-
+  PC_DEBUG("read information", buffer, 128);
 
   info->num_pics     = buffer[NUM_PICS_IDX];
   info->left_pics    = buffer[LEFT_PICS_IDX];
