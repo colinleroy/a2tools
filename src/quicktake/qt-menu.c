@@ -85,13 +85,10 @@ again:
       return -1;
     }
     gotox(0);
-    cputs("Enter filename: ");
-    sprintf(filename, "%s/IMAGE%d%s",
-            dirname, n_pic,
-            serial_model == QT_MODEL_200 ? ".JPG":".QTK");
 
+    cam_get_filename(n_pic, dirname, filename);
     free(dirname);
-
+    cputs("Enter filename: ");
     dget_text_single(filename, 60, NULL);
 
     if (filename[0] == '\0' || filename[strlen(filename) - 1] == '/') {

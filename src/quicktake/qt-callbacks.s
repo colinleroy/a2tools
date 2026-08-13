@@ -9,6 +9,7 @@
         .export _cam_get_picture
         .export _cam_get_thumbnail
         .export _cam_delete_pictures
+        .export _cam_get_filename
         .export _cam_features
 
 CAM_FEATURES        = 0
@@ -23,6 +24,7 @@ CAM_TAKE_PICTURE    = 8
 CAM_GET_PICTURE     = 9
 CAM_GET_THUMBNAIL   = 10
 CAM_DELETE_PICTURES = 11
+CAM_GET_FILENAME    = 12
 
 _cam_features = $0C00
 
@@ -58,3 +60,6 @@ _cam_get_thumbnail:
 
 _cam_delete_pictures:
         jmp     ($0C00 + CAM_DELETE_PICTURES*2)
+
+_cam_get_filename:
+        jmp     ($0C00 + CAM_GET_FILENAME*2)

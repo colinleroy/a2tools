@@ -21,6 +21,7 @@ typedef uint8 (*impl_take_picture_func)(void);
 typedef uint8 (*impl_get_picture_func)(uint8 n_pic, int fd, off_t avail);
 typedef uint8 (*impl_get_thumbnail_func)(uint8 n_pic, int fd, thumb_info *info);
 typedef uint8 (*impl_delete_pictures_func)(void);
+typedef void  (*impl_get_filename_func)(uint8 n_pic, char *dirname, char *filename);
 
 uint8                     camera_connected;
 uint16                    cam_features;
@@ -35,6 +36,7 @@ impl_take_picture_func    impl_take_picture;
 impl_get_picture_func     impl_get_picture;
 impl_get_thumbnail_func   impl_get_thumbnail;
 impl_delete_pictures_func impl_delete_pictures;
+impl_get_filename_func    impl_get_filename;
 
 camera_info info;
 
@@ -56,9 +58,12 @@ static void setup_pointers(void *callbacks[]) {
   impl_get_picture      = callbacks[CAM_GET_PICTURE];
   impl_get_thumbnail    = callbacks[CAM_GET_THUMBNAIL];
   impl_delete_pictures  = callbacks[CAM_DELETE_PICTURES];
+  impl_get_filename     = callbacks[CAM_GET_FILENAME];
 }
 
 int main(int argc, char *argv[]) {
+  char filename[64];
+
   if (argc < 4) {
     printf("Usage: %s [camera_model] [tty_path] [tty_speed]\n"
            "\n"
@@ -106,6 +111,7 @@ int main(int argc, char *argv[]) {
          info.name,
          info.date.day, info.date.month, info.date.year,
          info.date.hour, info.date.minute);
+
   return 0;
 }
 
@@ -151,4 +157,8 @@ uint8 cam_delete_pictures(void) {
 
 uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   return impl_get_thumbnail(n_pic, fd, info);
+}
+
+void cam_get_filename(uint8 n_pic, char *dirname, char *filename) {
+  return impl_get_filename(n_pic, dirname, filename);
 }

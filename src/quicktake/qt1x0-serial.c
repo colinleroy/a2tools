@@ -48,6 +48,7 @@ static uint8 qt1x0_take_picture(void);
 static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail);
 static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
 static uint8 qt1x0_delete_pictures(void);
+static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
@@ -63,10 +64,16 @@ void *qt1x0_callbacks[] = {
   /* GET_PICTURE */     qt1x0_get_picture,
   /* GET_THUMBNAIL */   qt1x0_get_thumbnail,
   /* DELETE_PICTURES */ qt1x0_delete_pictures,
+  /* GET_FILENAME */    qt1x0_get_filename,
 };
 
 extern uint8 scrw, scrh;
 
+static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
+  sprintf(filename, "%s%sIMAGE%d.QTK",
+          IS_NOT_NULL(dirname)?dirname:"",
+          IS_NOT_NULL(dirname)?"/":"", n_pic);
+}
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
