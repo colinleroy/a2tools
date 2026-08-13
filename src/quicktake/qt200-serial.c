@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
 #include "progress_bar.h"
@@ -91,6 +92,8 @@ static uint8 qt200_wakeup(CamSpeed speed) {
   cputs("Pinging QuickTake 200... ");
 
   simple_serial_set_parity(SER_PAR_EVEN);
+
+  /* Speed unused there */
 
 again:
   end_session();
@@ -257,6 +260,11 @@ static uint8 qt200_set_speed(CamSpeed speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
+
+  if (speed == SER_BAUD_115200) {
+    /* Use max possible speed */
+    speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
+  }
 
   switch(speed) {
     case SER_BAUD_9600:

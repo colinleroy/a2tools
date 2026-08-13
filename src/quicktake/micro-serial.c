@@ -39,6 +39,7 @@ impl_delete_pictures_func impl_delete_pictures;
 unsigned char buffer[BUFFER_SIZE];
 int scrw, scrh;
 uint8 do_debug = 0;
+int is_iigs = 1;
 
 static void setup_pointers(void *callbacks[]) {
   cam_features          = (unsigned long)callbacks[CAM_FEATURES];
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
   printf("cam features: %0b\n", cam_features);
 
   printf("Connecting...\n");
-  if (qt_serial_connect(SER_BAUD_9600) != 0) {
+  if (qt_serial_connect(SER_BAUD_115200) != 0) {
     printf("Failed.\n");
     exit(1);
   }

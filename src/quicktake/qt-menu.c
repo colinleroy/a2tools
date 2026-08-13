@@ -536,16 +536,16 @@ static uint8 setup(int argc, char *argv[]) {
   uint16 is_reedit = 0;
   char *reedit_name;
 
-  uint8 target_speed = SER_BAUD_19200;
+  /* We want the fastest speed possible, let driver figure out
+   * what it can do */
+  uint8 target_speed = SER_BAUD_115200;
 
   register_start_device();
 
 #ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
 #endif
-if (is_iigs) {
-  target_speed = SER_BAUD_57600;
-}
+
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD
   if (argc == 1) {

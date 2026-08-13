@@ -198,6 +198,11 @@ static uint8 qt1x0_wakeup(CamSpeed speed) {
     }
     return QT_MODEL_UNKNOWN;
   }
+
+  if (speed == SER_BAUD_115200) {
+    /* Use max possible speed */
+    speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
+  }
   if (send_hello(speed) != 0) {
     return QT_MODEL_UNKNOWN;
   }
@@ -215,6 +220,11 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
+
+  if (speed == SER_BAUD_115200) {
+    /* Use max possible speed */
+    speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
+  }
 
   switch(speed) {
     case SER_BAUD_19200:
