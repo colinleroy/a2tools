@@ -36,6 +36,8 @@ impl_get_picture_func     impl_get_picture;
 impl_get_thumbnail_func   impl_get_thumbnail;
 impl_delete_pictures_func impl_delete_pictures;
 
+camera_info info;
+
 unsigned char buffer[BUFFER_SIZE];
 int scrw, scrh;
 uint8 do_debug = 0;
@@ -83,8 +85,27 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  printf("Connected.\n");
-
+  printf("Connected. Getting information...\n");
+  if (cam_get_information(&info) != 0) {
+    printf("Failure.\n");
+  }
+  printf("  Pictures taken: %d\n"
+         "  Pictures left:  %d\n"
+         "  Quality mode:   %d (%s)\n"
+         "  Flash mode:     %d (%s)\n"
+         "  Battery level:  %d%%\n"
+         "  Is charging:    %d\n"
+         "  Name:           %s\n"
+         "  Date:           %02d/%02d/%04d %02d:%02d\n",
+         info.num_pics,
+         info.left_pics,
+         info.quality_mode, cam_get_quality_str(info.quality_mode),
+         info.flash_mode, cam_get_flash_str(info.flash_mode),
+         info.battery_level,
+         info.charging,
+         info.name,
+         info.date.day, info.date.month, info.date.year,
+         info.date.hour, info.date.minute);
   return 0;
 }
 
