@@ -20,7 +20,7 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
 void main(int argc, char *argv[]) {
   FILE *fp = NULL;
   FILE *fp2 = NULL;
-  int w, h, qt150;
+  int w, h, qtmodel;
   SDL_Surface *screen = NULL;
   int video_inited = 0;
   int blink = 1;
@@ -73,7 +73,8 @@ display:
   } else {
     w = atoi(argv[2]);
     h = atoi(argv[3]);
-    qt150 = atoi(argv[4]);
+    qtmodel = atoi(argv[4]);
+    printf("qtmodel %d\n", qtmodel);
   }
 
   if (!video_inited) {
@@ -131,8 +132,16 @@ display:
     int i, a, b, c, x, y;
 
     rewind(fp);
+    if (qtmodel == 2) {
+      unsigned int data_offset;
+      fseek(fp, 0, SEEK_END);
+      data_offset = ftell(fp);
+      data_offset -= 160*60;
+      printf("data_offset = %04X\n", data_offset);
+      fseek(fp, data_offset, SEEK_SET);
+    }
     for (y = 0; y < 60*2; y+=2) {
-      if (qt150) {
+      if (qtmodel == 1) {
         fread(line, 1, 80, fp);
         cur_in = line;
         cur_out = out;
@@ -162,7 +171,7 @@ display:
             i++;
           }
         }
-      } else {
+      } else if (qtmodel == 0) {
         fread(line, 1, 40, fp);
         cur_in = line;
         cur_out = out;
@@ -189,6 +198,20 @@ display:
           sdl_set_pixel(screen, x, y+1, b, b, b);
           sdl_set_pixel(screen, x+1, y+1, b, b, b);
           x+=2;
+        }
+      } else if (qtmodel == 2) {
+        int j;
+        fread(line, 1, 160, fp);
+        for (x = 0, j = 0; x < 160; x += 4, j += 4) {
+          sdl_set_pixel(screen, x, y, line[j], line[j], line[j]);
+          sdl_set_pixel(screen, x+1, y, line[j], line[j], line[j]);
+          sdl_set_pixel(screen, x, y+1, line[j], line[j], line[j]);
+          sdl_set_pixel(screen, x+1, y+1, line[j], line[j], line[j]);
+
+          sdl_set_pixel(screen, x+2, y, line[j+1], line[j+1], line[j+1]);
+          sdl_set_pixel(screen, x+3, y, line[j+1], line[j+1], line[j+1]);
+          sdl_set_pixel(screen, x+2, y+1, line[j+1], line[j+1], line[j+1]);
+          sdl_set_pixel(screen, x+3, y+1, line[j+1], line[j+1], line[j+1]);
         }
       }
     }
