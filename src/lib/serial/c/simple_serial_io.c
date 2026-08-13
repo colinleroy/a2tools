@@ -112,7 +112,7 @@ try_again:
   } else if (!timeout) {
     goto try_again;
   }
-
+  errno = r == 1 ? 0 : EBUSY;
   return r == 1 ? c : EOF;
 }
 
