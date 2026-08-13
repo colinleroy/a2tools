@@ -187,12 +187,12 @@ display:
         cur_out = out;
         for (i = 0; i < 40; i++) {
           a = *cur_out++;
-          b = *cur_out++;
           sdl_set_pixel(screen, x, y, a, a, a);
           sdl_set_pixel(screen, x+1, y, a, a, a);
           sdl_set_pixel(screen, x, y+1, a, a, a);
           sdl_set_pixel(screen, x+1, y+1, a, a, a);
           x+=2;
+          b = *cur_out++;
           sdl_set_pixel(screen, x, y, b, b, b);
           sdl_set_pixel(screen, x+1, y, b, b, b);
           sdl_set_pixel(screen, x, y+1, b, b, b);
@@ -200,18 +200,22 @@ display:
           x+=2;
         }
       } else if (qtmodel == 2) {
-        int j;
-        fread(line, 1, 160, fp);
-        for (x = 0, j = 0; x < 160; x += 4, j += 4) {
+        int i, j;
+        if (y % 2 == 0) {
+          fread(line, 1, 160, fp);
+          for (x = 0; x < 78; x+=2) {
+            char next;
+            j = x << 1;
+            next = line[j+1];
+            line[x]= line[j];
+            line[x+1] = next;
+          }
+        }
+        for (x = 0, j = 0; j < 80; x +=2, j++) {
           sdl_set_pixel(screen, x, y, line[j], line[j], line[j]);
           sdl_set_pixel(screen, x+1, y, line[j], line[j], line[j]);
           sdl_set_pixel(screen, x, y+1, line[j], line[j], line[j]);
           sdl_set_pixel(screen, x+1, y+1, line[j], line[j], line[j]);
-
-          sdl_set_pixel(screen, x+2, y, line[j+1], line[j+1], line[j+1]);
-          sdl_set_pixel(screen, x+3, y, line[j+1], line[j+1], line[j+1]);
-          sdl_set_pixel(screen, x+2, y+1, line[j+1], line[j+1], line[j+1]);
-          sdl_set_pixel(screen, x+3, y+1, line[j+1], line[j+1], line[j+1]);
         }
       }
     }
