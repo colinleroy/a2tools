@@ -121,19 +121,30 @@ int main(int argc, char *argv[]) {
 
   if (argc > 3) {
     /* handle command */
-    if (!strcmp(argv[3], "get") && argc > 4) {
+    if ((!strcmp(argv[3], "get") || !strcmp(argv[3], "thumb")) && argc > 4) {
       char filename[64];
       uint8 n_pic = atoi(argv[4]);
       int fd;
+      int thumb = !strcmp(argv[3], "thumb");
 
       cam_get_filename(n_pic, NULL, filename);
+      if (thumb) {
+        strcat(filename, ".thumb");
+      }
+
       printf("Saving picture %d to %s\n", n_pic, filename);
 
       fd = open(filename, O_WRONLY|O_CREAT, 00644);
       if (fd < 0) {
         printf("Can not open %s: %s\n", filename, strerror(errno));
       } else {
-        if (cam_get_picture(n_pic, fd, (off_t)1024*1024*1024UL) != 0) {
+        int r;
+        if (thumb) {
+          r = cam_get_thumbnail(n_pic, fd, NULL);
+        } else {
+          r = cam_get_picture(n_pic, fd, (off_t)1024*1024*1024UL);
+        }
+        if (r != 0) {
           printf("Can not get picture: %s\n", strerror(errno));
         }
         close(fd);

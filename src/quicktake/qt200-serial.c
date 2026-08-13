@@ -95,6 +95,21 @@ extern uint8 do_debug;
 #define STD_WAIT 20
 #define SHORT_WAIT 5
 
+
+#ifdef __CC65__
+#define PC_DEBUG(op, str, len)
+#else
+static void PC_DEBUG(char *op, const char *str, int len) {
+  if (do_debug) {
+    printf("%s:", op);
+    for (int i = 0; i < len; i++) {
+      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
+    }
+    printf("\n");
+  }
+}
+#endif
+
 static uint16 response_len;
 static uint8 response_continues;
 
@@ -283,7 +298,6 @@ static uint8 qt200_set_speed(CamSpeed speed) {
   if (do_debug) {
     cputs("Negociating speed...\r\n");
   }
-  DUMP_START("set_speed");
   if (send_command(str_speed, sizeof str_speed, 1) != 0) {
     cputs("Speed set command failed.\r\n");
     if (do_debug) {
@@ -291,7 +305,6 @@ static uint8 qt200_set_speed(CamSpeed speed) {
     }
     return -1;
   }
-  DUMP_END();
   /* End session */
   end_session();
 
@@ -332,25 +345,18 @@ static uint8 qt200_stop(void) {
 /* Get information from the camera */
 static uint8 qt200_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
-  uint16 i;
 
   qt200_start();
 
-  DUMP_START("num_pics");
   if (send_command(cmd, sizeof cmd, 1) != 0) {
-    DUMP_END();
     return -1;
   }
-  DUMP_END();
   info->num_pics = (buffer[1] << 8) + buffer[0];
 
   cmd[1] = FUJI_CMD_GET_INFO;
-  DUMP_START("info");
   if (send_command(cmd, sizeof cmd, 1) != 0) {
-    DUMP_END();
     return -1;
   }
-  DUMP_END();
   
   buffer[response_len] = '\0';
   info->name = malloc (response_len - 4);
@@ -392,17 +398,58 @@ static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename) {
   }
 }
 
-
-static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
-  #define TYPE_IDX 1
+static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 cmd) {
   char data_cmd[] = {0x00,FUJI_CMD_PIC_GET_DATA,0x02,0x00,0x00,0x00};
-  char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
-
-  uint8 err = 0;
-  unsigned long picture_size;
   uint16 blocks_read;
   uint16 num_blocks;
   uint8 y;
+  uint8 err = 0;
+
+  data_cmd[1] = cmd;
+  data_cmd[NUM_PIC_IDX] = n_pic;
+
+  blocks_read = 0;
+  num_blocks = (uint16)(picture_size / BLOCK_SIZE);
+
+  y = wherey();
+  progress_bar(2, y, scrw - 2, 0, num_blocks);
+
+  PC_DEBUG("cmd", data_cmd, sizeof data_cmd);
+  if (send_command(data_cmd, sizeof data_cmd, 1) != 0) {
+    errno = EIO;
+    return -1;
+  }
+  if (write(fd, buffer,response_len) < response_len) {
+    errno = EIO;
+    err = -1;
+  }
+  while (response_continues) {
+    printf("block %d, response continues %d\n", blocks_read, response_continues);
+    blocks_read++;
+    progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
+
+    simple_serial_putc(ACK);
+    if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
+      errno = EIO;
+      err = -1;
+      break;
+    }
+    if (write(fd, buffer, response_len) < response_len) {
+      errno = EIO;
+      err = -1;
+    }
+  }
+
+  progress_bar(-1, -1, scrw - 2, num_blocks, num_blocks);
+
+  qt200_stop();
+
+  return err;
+}
+
+static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
+  char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
+  unsigned long picture_size;
 
   if (qt200_start() != 0) {
     errno = EIO;
@@ -411,18 +458,13 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   bzero(buffer, BLOCK_SIZE);
 
-  data_cmd[NUM_PIC_IDX] = n_pic;
-
   cputs("  Getting size...");
   size_cmd[NUM_PIC_IDX] = n_pic;
 
-  DUMP_START("pic_size");
   if (send_command(size_cmd, sizeof size_cmd, 1) != 0) {
-    DUMP_END();
     errno = EIO;
     return -1;
   }
-  DUMP_END();
 
 #ifndef __CC65__
   picture_size = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16) + (buffer[3] << 24);
@@ -443,43 +485,12 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   cprintf("  Width 640, height 480, %lu bytes (jpg)\r\n",
          picture_size);
 
-  DUMP_START("data");
+  return qt200_get_image_data(n_pic, fd, picture_size, FUJI_CMD_PIC_GET_DATA);
+}
 
-  blocks_read = 0;
-  num_blocks = (uint16)(picture_size / BLOCK_SIZE);
-
-  y = wherey();
-  progress_bar(2, y, scrw - 2, 0, num_blocks);
-
-  if (send_command(data_cmd, sizeof data_cmd, 1) != 0) {
-    errno = EIO;
-    return -1;
-  }
-  if (write(fd, buffer,response_len) < response_len) {
-    errno = EIO;
-    err = -1;
-  }
-  while (response_continues) {
-    blocks_read++;
-    progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
-
-    simple_serial_putc(ACK);
-    if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
-      errno = EIO;
-      err = -1;
-      break;
-    }
-    if (write(fd, buffer, response_len) < response_len) {
-      errno = EIO;
-      err = -1;
-    }
-  }
-  DUMP_END();
-  progress_bar(-1, -1, scrw - 2, num_blocks, num_blocks);
-
-  qt200_stop();
-
-  return err;
+static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+  /* FIXME get info */
+  return qt200_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
 
 #pragma warn(unused-param, push, off)
@@ -500,10 +511,6 @@ static uint8 qt200_set_flash(uint8 mode) {
 }
 
 static uint8 qt200_take_picture(void) {
-  return -1;
-}
-
-static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   return -1;
 }
 

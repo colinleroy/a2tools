@@ -73,7 +73,7 @@ extern uint8 do_debug;
 #ifdef __CC65__
 #define PC_DEBUG(op, str, len)
 #else
-void PC_DEBUG(char *op, const char *str, int len) {
+static void PC_DEBUG(char *op, const char *str, int len) {
   if (do_debug) {
     printf("%s:", op);
     for (int i = 0; i < len; i++) {
@@ -531,13 +531,15 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     return -1;
   }
 
-  info->quality_mode = buffer[IMG_QUALITY_IDX];
-  info->flash_mode   = buffer[IMG_FLASH_IDX];
-  info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
-  info->date.month   = buffer[IMG_MONTH_IDX];
-  info->date.day     = buffer[IMG_DAY_IDX];
-  info->date.hour    = buffer[IMG_HOUR_IDX];
-  info->date.minute  = buffer[IMG_MINUTE_IDX];
+  if (info) {
+    info->quality_mode = buffer[IMG_QUALITY_IDX];
+    info->flash_mode   = buffer[IMG_FLASH_IDX];
+    info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
+    info->date.month   = buffer[IMG_MONTH_IDX];
+    info->date.day     = buffer[IMG_DAY_IDX];
+    info->date.hour    = buffer[IMG_HOUR_IDX];
+    info->date.minute  = buffer[IMG_MINUTE_IDX];
+  }
 
   cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
          THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
