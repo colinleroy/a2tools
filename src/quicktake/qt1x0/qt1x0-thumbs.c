@@ -12,6 +12,9 @@ extern int ifd;
 uint8 *cur_thumb_data;
 #endif
 
+/* FIXME this should be in QT1X0 segment */
+#pragma code-name(push, "QT1X0")
+
 void thumb_histogram_qt1x0(void) {
   uint8 r_bytes;
   uint16 curr_hist = 0;
@@ -104,7 +107,7 @@ next:
 }
 
 /* FIXME this should be in QT1X0 segment */
-// #pragma code-name(push, "QT1X0")
+#pragma code-name(pop)
 void load_thumbnail_data_qt1x0(uint8 line) {
 #ifndef __CC65__
   uint8 a, b, c, d, dx, i;

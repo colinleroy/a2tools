@@ -344,7 +344,6 @@ static uint8 qt200_get_information(camera_info *info) {
   }
   
   buffer[response_len] = '\0';
-  info->name = malloc (response_len - 4);
 
   strncpy(info->name, (char *)buffer + 6, response_len - 4);
   info->name[response_len - 5] = '\0';

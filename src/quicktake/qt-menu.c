@@ -659,8 +659,6 @@ menu:
   clrscr();
 
   if (camera_connected) {
-    free(cam_info.name);
-    cam_info.name = NULL;
     if (cam_get_information(&cam_info) != 0) {
       camera_connected = 0;
     }
@@ -740,8 +738,6 @@ menu:
   goto menu;
 
 out:
-  free(cam_info.name);
-  cam_info.name = NULL;
   state_unlink();
   return 0;
 }

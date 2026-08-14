@@ -67,7 +67,7 @@ typedef struct _camera_info {
   uint8 flash_mode;
   uint8 battery_level;
   uint8 charging;
-  char *name;
+  char name[32];
   camera_date date;
 } camera_info;
 

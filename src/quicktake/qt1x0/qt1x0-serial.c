@@ -112,7 +112,7 @@ static void send_ack(void) {
 
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, uint8 wait) {
-  char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
+  static char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
   if (ping) {
     PC_DEBUG("ping", ping_str, sizeof ping_str);
     simple_serial_write(ping_str, sizeof ping_str);
@@ -158,13 +158,13 @@ static uint8 get_hello(void) {
 static uint8 send_hello(CamSpeed speed) {
   #define SPD_IDX 0x06
   #define CHKSUM_IDX 0x0C
-  char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
+  static char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
   unsigned char chk, c;
 
   if (speed == SER_BAUD_19200) {
     str_hello[SPD_IDX]   = 0x4B;
     str_hello[SPD_IDX+1] = 0x00;
-  } else if (speed == SER_BAUD_57600) {
+  } else { /* if (speed == SER_BAUD_57600) */
     str_hello[SPD_IDX]   = 0xE1;
     str_hello[SPD_IDX+1] = 0x00;
   }
@@ -236,7 +236,7 @@ static uint8 qt1x0_wakeup(CamSpeed speed) {
 /* Send the speed upgrade command */
 static uint8 qt1x0_set_speed(CamSpeed speed) {
 #define SPD_CMD_IDX 0x0D
-  char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
+  static char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
@@ -285,38 +285,41 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
 #define PNUM_IDX       0x06
 #define PSIZE_IDX      0x07
 #define FMT_IDX        0x03
+
+#define HEADER_SIZE    0x40
+#define INFO_SIZE      0x80
 #define THUMBNAIL_SIZE 0x0960UL
 
+#define INFORMATION    0x30
+#define PHOTO_HEADER   0x21
+#define PHOTO_FULL     0x10
+#define PHOTO_THUMB    0x00
+
+/* Responses indexes */
+#define IMG_NUM_IDX     0x03
+#define IMG_SIZE_IDX    0x05
+#define IMG_WIDTH_IDX   0x08
+#define IMG_HEIGHT_IDX  0x0A
+#define IMG_MONTH_IDX   0x0D
+#define IMG_DAY_IDX     0x0E
+#define IMG_YEAR_IDX    0x0F
+#define IMG_HOUR_IDX    0x10
+#define IMG_MINUTE_IDX  0x11
+#define IMG_SECOND_IDX  0x12
+#define IMG_FLASH_IDX   0x13
+#define IMG_QUALITY_IDX 0x18 /* (?) */
+
 /* Gets photo header */
-static uint8 send_photo_header_command(uint8 pnum) {
-  //           {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
-  char str[] = {0x16,0x28,0x00,0x21,0x00,0x00,0x01,0x00,0x00,0x40,0x00};
-  /* Interesting bytes from the header */
-  #define IMG_NUM_IDX     0x03
-  #define IMG_SIZE_IDX    0x05
-  #define IMG_WIDTH_IDX   0x08
-  #define IMG_HEIGHT_IDX  0x0A
-  #define IMG_MONTH_IDX   0x0D
-  #define IMG_DAY_IDX     0x0E
-  #define IMG_YEAR_IDX    0x0F
-  #define IMG_HOUR_IDX    0x10
-  #define IMG_MINUTE_IDX  0x11
-  #define IMG_SECOND_IDX  0x12
-  #define IMG_FLASH_IDX   0x13
-  #define IMG_QUALITY_IDX 0x18 /* (?) */
+#define send_photo_header_command(pnum) \
+        send_photo_data_command(pnum, PHOTO_HEADER, HEADER_SIZE)
 
-  str[PNUM_IDX] = pnum;
-
-  return send_command(str, sizeof str, 1, 1, 5);
-}
-
-#define PHOTO_FULL  0x10
-#define PHOTO_THUMB 0x00
+#define send_get_information_command() \
+        send_photo_data_command(0, INFORMATION, INFO_SIZE)
 
 /* Gets photo data */
 static uint8 send_photo_data_command(uint8 pnum, uint8 format, uint32 picture_size) {
-  //           {????,????,????,FMT ,????,????,PNUM,RESPONSE__SIZE,????}
-  char str[] = {0x16,0x28,0x00,0x10,0x00,0x00,0x01,0x00,0x70,0x80,0x00};
+  //                  {????,????,????,FMT ,????,????,PNUM,RESPONSE__SIZE,????}
+  static char str[] = {0x16,0x28,0x00,0x10,0x00,0x00,0x01,0x00,0x70,0x80,0x00};
 
   str[PNUM_IDX]    = pnum;
   str[FMT_IDX]     = format;
@@ -327,17 +330,9 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 format, uint32 picture_si
   return send_command(str, sizeof str, 1, 1, 5);
 }
 
-/* Get the camera information summary */
-static uint8 send_get_information_command(void) {
-  //           {????,????,????,????,????,????,????,RESPONSE__SIZE,????}
-  char str[] = {0x16,0x28,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x80,0x00};
-
-  return send_command(str, sizeof str, 1, 1, 5);
-}
-
 /* Take a picture */
 static uint8 qt1x0_take_picture(void) {
-  char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
+  static char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
 
   return send_command(str, sizeof str, 1, 0, 20);
 }
@@ -345,6 +340,7 @@ static uint8 qt1x0_take_picture(void) {
 /* Set the camera name */
 static uint8 qt1x0_set_camera_name(const char *name) {
   #define NAME_SET_IDX 0x0D
+  /* Not static so shorter names get spaces after them */
   char str[] = {0x16,0x2a,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x22,0x00,0x02,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20};
@@ -355,27 +351,6 @@ static uint8 qt1x0_set_camera_name(const char *name) {
     len = 31;
 
   memcpy(str + NAME_SET_IDX, name, len);
-
-  return send_command(str, sizeof str, 1, 0, 5);
-}
-
-/* Set the camera time */
-static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  #define SET_MONTH_IDX 0x0D
-  #define SET_DAY_IDX   0x0E
-  #define SET_YEAR_IDX  0x0F
-  #define SET_HOUR_IDX  0x10
-  #define SET_MIN_IDX   0x11
-  #define SET_SEC_IDX   0x12
-  //           {                                                                  mon  day year hour  min  sec
-  char str[] = {0x16,0x2A,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x08,0x00,0x01,0x06,0x00,0x00,0x00,0x00,0x00,0x00};
-
-  str[SET_DAY_IDX]   = day;
-  str[SET_MONTH_IDX] = month;
-  str[SET_YEAR_IDX]  = year;
-  str[SET_HOUR_IDX]  = hour;
-  str[SET_MIN_IDX]   = minute;
-  str[SET_SEC_IDX]   = second;
 
   return send_command(str, sizeof str, 1, 0, 5);
 }
@@ -439,7 +414,7 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   unsigned long pic_size_int;
   uint8 status_line;
   const char *format;
-  char hdr[] = {0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
+  static char hdr[] = {0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
@@ -551,16 +526,37 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 
 /* Delete all pictures from the camera */
 static uint8 qt1x0_delete_pictures(void) {
-  char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  static char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
   return send_command(str, sizeof str, 1, 0, 60);
+}
+
+/* Set the camera time */
+static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+  #define SET_MONTH_IDX 0x0D
+  #define SET_DAY_IDX   0x0E
+  #define SET_YEAR_IDX  0x0F
+  #define SET_HOUR_IDX  0x10
+  #define SET_MIN_IDX   0x11
+  #define SET_SEC_IDX   0x12
+  //                  {                                                                  mon  day year hour  min  sec
+  static char str[] = {0x16,0x2A,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x08,0x00,0x01,0x06,0x00,0x00,0x00,0x00,0x00,0x00};
+
+  str[SET_DAY_IDX]   = day;
+  str[SET_MONTH_IDX] = month;
+  str[SET_YEAR_IDX]  = year;
+  str[SET_HOUR_IDX]  = hour;
+  str[SET_MIN_IDX]   = minute;
+  str[SET_SEC_IDX]   = second;
+
+  return send_command(str, sizeof str, 1, 0, 5);
 }
 
 /* Set quality */
 static uint8 qt1x0_set_quality(uint8 quality) {
   #define SET_QUALITY_IDX 0x0D
-  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
-  char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
+  //                  {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
+  static char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
 
   str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
 
@@ -570,8 +566,8 @@ static uint8 qt1x0_set_quality(uint8 quality) {
 /* Set flash mode */
 static uint8 qt1x0_set_flash(uint8 mode) {
   #define SET_FLASH_IDX 0x0D
-  //           {????,????,????,????,????,????,????,????,????,????,????,????,FLSH,????}
-  char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
+  //                  {????,????,????,????,????,????,????,????,????,????,????,????,FLSH,????}
+  static char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
 
   str[SET_FLASH_IDX] = mode;
 
@@ -580,6 +576,7 @@ static uint8 qt1x0_set_flash(uint8 mode) {
 
 /* Get information from the camera */
 static uint8 qt1x0_get_information(camera_info *info) {
+  static char c;
   #define BATTERY_IDX    0x02 /* ?? 0xA7 = charging, full ; 0x63 = not charging, full */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
@@ -625,6 +622,12 @@ static uint8 qt1x0_get_information(camera_info *info) {
   info->date.hour   = buffer[HOUR_IDX];
   info->date.minute = buffer[MIN_IDX];
 
-  info->name = trim((char *)buffer + NAME_IDX);
+  for (c = 31; c ; c--) {
+    if ((buffer+NAME_IDX)[c] != 0x20) {
+      (buffer+NAME_IDX)[++c] = 0x00;
+      break;
+    }
+  }
+  strcpy(info->name, (char *)(buffer + NAME_IDX));
   return 0;
 }

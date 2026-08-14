@@ -42,7 +42,6 @@ slowtake_SOURCES := \
 	qt-edit-image.c \
 	qt-state.c \
 	../lib/dget_text_single.c \
-	../lib/strtrim.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
 
