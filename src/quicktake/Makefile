@@ -22,8 +22,8 @@ VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"'
 microserial_SOURCES := \
 	micro-serial.c \
 	qt-serial.c \
-	qt1x0-serial.c \
-	qt200-serial.c \
+	qt1x0/qt1x0-serial.c \
+	qt200/qt200-serial.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/simple_serial_read_no_irq.c \
@@ -36,8 +36,10 @@ slowtake_SOURCES := \
 	qt-menu.c \
 	qt-serial.c \
 	qt-callbacks.s \
-	qt1x0-serial.c \
-	qt200-serial.c \
+	qt1x0/qt1x0-serial.c \
+	qt1x0/qt1x0-thumbs.c \
+	qt200/qt200-serial.c \
+	qt200/qt200-thumbs.c \
 	qt-edit-image.c \
 	qt-state.c \
 	../lib/dget_text_single.c \
