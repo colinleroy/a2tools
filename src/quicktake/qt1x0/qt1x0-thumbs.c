@@ -71,9 +71,9 @@ void thumb_histogram_qt1x0(void) {
 
   /* Now equalize */
   do {
+#ifndef __CC65__
     uint32 tmp_large;
     uint16 tmp;
-#ifndef __CC65__
     curr_hist += histogram[x];
     tmp_large = ((uint32)curr_hist * 0xF0);
     tmp = tmp_large >> 6; /* /64 */
@@ -89,9 +89,7 @@ void thumb_histogram_qt1x0(void) {
     __asm__("lda %v+256,x", err_buf);
     __asm__("adc %v+1", curr_hist);
     __asm__("sta %v+1", curr_hist);
-    tmp_large = ((uint32)curr_hist * 0xF0);
-    tmp = tmp_large >> 6; /* /64 */
-    __A__ = tmp / 75;            /* /64/75 = /80/60 */
+    __A__ = curr_hist / 20;
     // opt_histogram[x] = tmp;
     __asm__("ldx %v", x);
     __asm__("sta %v,x", opt_histogram);
