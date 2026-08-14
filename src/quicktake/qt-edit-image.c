@@ -849,30 +849,78 @@ next_expand_x:
 #endif
 
       /* Reorder bytes from buffer back to thumb_buf */
-      cur_in = THUMBNAIL_BUF_START;
+#ifndef __CC65__
+      cur_in = buffer+THUMBNAIL_BUFFER_OFFSET;
       cur_out = thumb_buf;
-      for (i = 0; i < THUMB_WIDTH * 2; ) {
-        if (i < THUMB_WIDTH*3/2) {
-          a = *cur_in++;
-          b = *cur_in++;
-          c = *cur_in++;
+      for (i = 0; i < THUMB_WIDTH*3/2; ) {
+        a = *cur_in++;
+        i++;
 
-          *(cur_out) = a;
-          *(cur_out + THUMB_WIDTH) = c;
-          cur_out++;
-          *(cur_out) = b;
-          cur_out++;
-          i+=3;
-        } else {
-          i++;
-          cur_out++;
-          d = *cur_in++;
-          *(cur_out) = d;
-          cur_out++;
-        }
+        *(cur_out) = a;
+        cur_out++;
+
+        b = *cur_in++;
+        *(cur_out) = b;
+        i++;
+
+        c = *cur_in++;
+        *(cur_out + THUMB_WIDTH-1) = c;
+        i++;
+
+        cur_out++;
       }
+
+      for (; i < THUMB_WIDTH * 2; ) {
+        cur_out++;
+        d = *cur_in++;
+        *(cur_out) = d;
+        cur_out++;
+
+        i++;
+      }
+#else
+      __asm__("lda #>%v", thumb_buf);
+      __asm__("sta %g+2", out_high_page);
+
+      __asm__("ldx #0");  /* in */
+      __asm__("ldy #0");  /* out */
+next_three_quarters_x:
+      __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("sta %v,y", thumb_buf);
+
+      __asm__("inx");
+      __asm__("iny");
+      __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("sta %v,y", thumb_buf);
+
+      __asm__("inx");
+      __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("sta %v+%b,y", thumb_buf, THUMB_WIDTH-1);
+
+      __asm__("iny");
+      __asm__("inx");
+
+      __asm__("cpx #%b", THUMB_WIDTH*3/2);
+      __asm__("bcc %g", next_three_quarters_x);
+
+last_quarter_x:
+      __asm__("iny");
+      __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+out_high_page:
+      __asm__("sta %v,y", thumb_buf);
+      __asm__("iny");
+      __asm__("inx");
+      __asm__("bne %g", check_bound);
+      __asm__("inc %g+2", out_high_page);
+check_bound:
+      __asm__("cpx #<%w", (THUMB_WIDTH*2));
+      __asm__("bcc %g", last_quarter_x);
+
+#endif
+
       /* Finally copy the first line of thumb_buf to buffer for display,
        * upscaling horizontally */
+#ifndef __CC65__
       cur_in = thumb_buf;
       cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
@@ -882,9 +930,24 @@ next_expand_x:
         cur_out++;
         cur_in++;
       }
+#else
+      __asm__("ldx #0");
+      __asm__("ldy #0");
+next_copy_x:
+      __asm__("lda %v,x", thumb_buf);
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+      __asm__("inx");
+      __asm__("cpx #%b", THUMB_WIDTH);
+      __asm__("bcc %g", next_copy_x);
+#endif
+
     } else if (!(line % 2)) {
       /* Copy the second line of thumb_buf to buffer for display,
        * upscaling horizontally */
+#ifndef __CC65__
       cur_in = thumb_buf + THUMB_WIDTH;
       cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
@@ -894,6 +957,19 @@ next_expand_x:
         cur_out++;
         cur_in++;
       }
+#else
+      __asm__("ldx #0");
+      __asm__("ldy #0");
+next_copy_x2:
+      __asm__("lda %v+%b,x", thumb_buf, THUMB_WIDTH);
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+      __asm__("inx");
+      __asm__("cpx #%b", THUMB_WIDTH);
+      __asm__("bcc %g", next_copy_x2);
+#endif
     } else {
       /* Reuse the previous buffer line once for upscaling */
     }
