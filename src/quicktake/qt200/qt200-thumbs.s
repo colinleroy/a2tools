@@ -35,7 +35,7 @@
         ldx     #0
         jsr     _lseek
 
-next:
+next:                         ; Don't really do the histogram.
         txa
         sta     _opt_histogram,x
         inx
