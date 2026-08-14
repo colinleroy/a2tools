@@ -13,8 +13,9 @@ uint8 *cur_thumb_data;
 #endif
 
 void thumb_histogram_qt1x0(void) {
-  uint8 x = 0, r_bytes;
+  uint8 r_bytes;
   uint16 curr_hist = 0;
+  register uint8 x;
 
 #ifndef __CC65__
   bzero(histogram, sizeof(histogram));
@@ -24,21 +25,19 @@ void thumb_histogram_qt1x0(void) {
 
   /* First count values */
   while ((r_bytes = read(ifd, buffer, 255)) != 0) {
-    cur_thumb_data = buffer;
 #ifndef __CC65__
+    cur_thumb_data = buffer;
     do {
       uint8 v = *cur_thumb_data;
       histogram[((v&0x0F) << 4)]++;
       histogram[((v&0xF0))]++;
       cur_thumb_data++;
-      x++;
-    } while (x != r_bytes);
+    } while (r_bytes--);
 #else
-    __asm__("ldy #0");
+    __asm__("ldy %v", r_bytes);
     next_byte:
-    __asm__("sty %v", x);
-    __asm__("lda (%v),y", cur_thumb_data); /* read byte */
-    __asm__("tay"); /* backup it */
+    __asm__("lda %v-%b,y", buffer, 1); /* read byte - offset -1 to go to zero */
+    __asm__("sta tmp1"); /* backup it */
     __asm__("asl"); /* << 4 low nibble */
     __asm__("asl");
     __asm__("asl");
@@ -50,7 +49,7 @@ void thumb_histogram_qt1x0(void) {
     __asm__("inc %v+256,x", err_buf);
     noof22:
 
-    __asm__("tya");
+    __asm__("lda tmp1");
     __asm__("and #$F0");
     __asm__("tax");
     __asm__("inc %v,x", err_buf);
@@ -58,9 +57,7 @@ void thumb_histogram_qt1x0(void) {
     __asm__("inc %v+256,x", err_buf);
     noof23:
 
-    __asm__("ldy %v", x);
-    __asm__("iny");
-    __asm__("cpy %v", r_bytes);
+    __asm__("dey");
     __asm__("bne %g", next_byte);
 #endif
   }
@@ -70,18 +67,24 @@ void thumb_histogram_qt1x0(void) {
   x = 0;
 
   /* Now equalize */
-  do {
 #ifndef __CC65__
+  do {
     uint32 tmp_large;
     uint16 tmp;
     curr_hist += histogram[x];
-    tmp_large = ((uint32)curr_hist * 0xF0);
-    tmp = tmp_large >> 6; /* /64 */
-    tmp /= 75;            /* /64/75 = /80/60 */
-    opt_histogram[x] = tmp;
+    // tmp_large = ((uint32)curr_hist * 0xF0);
+    // tmp = tmp_large >> 6; /* /64 */
+    // tmp /= 75;            /* /64/75 = /80/60 */
+    // opt_histogram[x] = tmp;
+    opt_histogram[x] = curr_hist/20;
+    x += 0x10;
+  } while (x);
 #else
     // curr_hist += histogram_low[x]|(histogram_high[x]<<8);
-    __asm__("ldx %v", x);
+    __asm__("lda #$00");
+next:
+    __asm__("sta %v", x);
+    __asm__("tax");
     __asm__("clc");
     __asm__("lda %v,x", err_buf);
     __asm__("adc %v", curr_hist);
@@ -93,8 +96,11 @@ void thumb_histogram_qt1x0(void) {
     // opt_histogram[x] = tmp;
     __asm__("ldx %v", x);
     __asm__("sta %v,x", opt_histogram);
+    __asm__("txa");
+    __asm__("clc");
+    __asm__("adc #$10");
+    __asm__("bne %g", next);
 #endif
-  } while (x++ < 0xF0);
 }
 
 /* FIXME this should be in QT1X0 segment */
@@ -148,7 +154,7 @@ next_thumb_x:
       __asm__("bpl %g", next_thumb_x);
 #endif
     }
-  } else {
+  } else { /* QT150 */
 #ifndef __CC65__
     unsigned char *cur_in, *cur_out;
 #endif
