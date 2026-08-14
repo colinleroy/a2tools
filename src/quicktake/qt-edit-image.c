@@ -230,7 +230,26 @@ fallback_std:
 uint8 *cur_thumb_data;
 #endif
 
-static void thumb_histogram(void) {
+/* No histogram on QT200 thumbs, too expensive */
+static void thumb_histogram_qt200(void) {
+  uint8 x = 0;
+#ifndef __CC65__
+  do {
+    x--;
+    histogram[x] = x;
+  } while (x);
+#else
+  __asm__("ldx #0");
+next:
+  __asm__("txa");
+  __asm__("sta %v,x", opt_histogram);
+  __asm__("inx");
+  __asm__("bne %g", next);
+#endif
+
+}
+
+static void thumb_histogram_qt1x0(void) {
   uint8 x = 0, r_bytes;
   uint16 curr_hist = 0;
 
@@ -741,7 +760,7 @@ void load_normal_data(void);
 #define THUMBNAIL_BUFFER_OFFSET ((256-160)/2)
 #define THUMBNAIL_BUF_START (buffer+THUMBNAIL_BUFFER_OFFSET)
 
-void load_thumbnail_data(uint8 line) {
+void load_thumbnail_data_qt1x0(uint8 line) {
   uint8 a, b, c, d, dx, i;
   /* assume thumbnail at 4bpp and zoom it */
   if (is_qt100) {
@@ -865,6 +884,18 @@ void load_thumbnail_data(uint8 line) {
       }
     } else {
       /* Reuse the previous buffer line once for upscaling */
+    }
+  }
+}
+
+void load_thumbnail_data_qt200(uint8 line) {
+  if (!(line & 1)) {
+    uint8 i;
+    read(ifd, THUMBNAIL_BUF_START, THUMB_WIDTH*2);
+
+    for (i = 0; i < 160; i+=4) {
+      THUMBNAIL_BUF_START[i+2] = THUMBNAIL_BUF_START[i+3] = THUMBNAIL_BUF_START[i+1];
+      THUMBNAIL_BUF_START[i+1] = THUMBNAIL_BUF_START[i];
     }
   }
 }
@@ -1163,7 +1194,9 @@ void do_dither_vert(void);
 #endif
 
 void dither_to_hgr(const char *ofname) {
-  lseek(ifd, is_thumb ? 0 : PNM_HEADER_SIZE, SEEK_SET);
+  if (!is_thumb) {
+    lseek(ifd, PNM_HEADER_SIZE, SEEK_SET);
+  }
   clrscr();
 
   cprintf("Converting %s (Esc to stop)...\r\n", ofname);
@@ -1199,7 +1232,26 @@ void dither_to_hgr(const char *ofname) {
 #pragma allow-eager-inline(pop)
 #pragma inline-stdfuncs(pop)
 
-void qt_edit_image(const char *ofname, uint16 src_width, uint8 serial_model) {
+extern uint8 serial_model;
+
+static void dither_prepare(void) {
+  if (is_thumb) {
+    if (serial_model == QT_MODEL_200) {
+      off_t data_offset;
+      data_offset = lseek(ifd, 0, SEEK_END) - 160*60;
+      lseek(ifd, data_offset, SEEK_SET);
+      thumb_histogram_qt200();
+    } else {
+      thumb_histogram_qt1x0();
+      lseek(ifd, 0, SEEK_SET);
+    }
+    dither_alg = DITHER_BAYER;
+  } else {
+    histogram_equalize();
+  }
+}
+
+void qt_edit_image(const char *ofname, uint16 src_width) {
   init_data();
   set_scrollwindow(20, scrh);
   clear_dhgr();
@@ -1217,12 +1269,7 @@ void qt_edit_image(const char *ofname, uint16 src_width, uint8 serial_model) {
     return;
   }
 
-  if (is_thumb) {
-    thumb_histogram();
-    dither_alg = DITHER_BAYER;
-  } else {
-    histogram_equalize();
-  }
+  dither_prepare();
 
   do {
     if (angle >= 360)

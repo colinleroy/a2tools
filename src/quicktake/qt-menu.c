@@ -463,7 +463,7 @@ err_thumb_io:
     state_set(STATE_PREVIEW, tmp, NULL);
     sprintf(thumb_buf, "Thumbnail %d", i);
     clear_dhgr();
-    qt_edit_image(thumb_buf, THUMB_WIDTH*2, serial_model);
+    qt_edit_image(thumb_buf, THUMB_WIDTH*2);
 
     clrscr();
     gotoxy(0,20);
@@ -581,13 +581,15 @@ static uint8 setup(int argc, char *argv[]) {
   screensize(&scrw, &scrh);
   print_welcome();
 
+  serial_model = QT_MODEL_UNKNOWN;
   if (state_load(STATE_EDIT, &is_reedit, &reedit_name) == 0) {
-      qt_edit_image(reedit_name, is_reedit, QT_MODEL_UNKNOWN);
+      qt_edit_image(reedit_name, is_reedit);
       state_set(STATE_EDIT, 0, NULL);
   } else if (argc == 3) {
     is_reedit = atoi(argv[2]);
-    if (is_reedit)
-      qt_edit_image(argv[1], is_reedit, QT_MODEL_UNKNOWN);
+    if (is_reedit) {
+      qt_edit_image(argv[1], is_reedit);
+    }
   }
 
   /* Remove temporary files */

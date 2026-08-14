@@ -18,7 +18,7 @@
 #pragma data-name(push, "QT200")
 
 /* Camera features */
-#define qt200_features 0b0000000010000000
+#define qt200_features 0b0000000010100000
 //                               ||||||||_ SET_CAMERA_NAME
 //                               |||||||__ SET_CAMERA_TIME
 //                               ||||||___ SET_QUALITY,
@@ -164,13 +164,6 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
     }
 
     if (buf[0] != ESC || buf[1] != STX) {
-      if (do_debug) {
-        for (i = 0; i < 6; i++) {
-          cprintf("%02X ", buf[i]);
-        }
-        cputs(": Unexpected header.\r\n");
-        cgetc();
-      }
       return -1;
     }
 
@@ -196,14 +189,6 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   }
   /* Read footer */
   simple_serial_read_no_irq((char *)eot_buf, 3);
-
-  // if (do_debug) {
-  //   cprintf("read %d bytes: ", i);
-  //   for (i = 0; i < response_len; i++) {
-  //     cprintf("%02x ", buf[i]);
-  //   }
-  //   cprintf(", footer: %02x %02x %02x\r\n", eot_buf[0], eot_buf[1], eot_buf[2]);
-  // }
 
   /* If cur_buf[1] == ETB, there will be more to read */
   response_continues = (eot_buf[1] == ETB);
@@ -424,7 +409,6 @@ static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8
     err = -1;
   }
   while (response_continues) {
-    printf("block %d, response continues %d\n", blocks_read, response_continues);
     blocks_read++;
     progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
 

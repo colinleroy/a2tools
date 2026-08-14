@@ -10,16 +10,18 @@
         .import         _end_bayer_map_x, _end_bayer_map_y
         .import         _err_buf
         .import         _opt_histogram
-        .import         _is_thumb, _load_thumbnail_data
+        .import         _is_thumb, _load_thumbnail_data_qt1x0, _load_thumbnail_data_qt200
         .import         _angle
         .import         _brighten, _dither_alg
+        .import         _serial_model
         .import         _kbhit, _cgetc
         .import         _cur_buf_page, _buffer, _line_buf
 
-        .importzp       img_y, c_sp, ptr3
+        .importzp       img_y, c_sp
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12
 
-        .include "apple2.inc"
+        .include        "apple2.inc"
+        .include        "qt-serial.inc"
 
         .segment "LC"
 
@@ -217,10 +219,18 @@ finish_patches:
         sec                       ; Once done,
         sbc     _file_width       ; Patch X bound check for thumbs
 
-        ldy     #<load_thumbnail
+        ldy     #<load_thumbnail  ; Patch load function to thumbnail
         sty     load_data+1
         ldy     #>load_thumbnail
         sty     load_data+2
+
+        ldy     _serial_model     ; Patch thumbnail load format
+        cpy     #QT_MODEL_200
+        bne     x_init
+        ldy     #<_load_thumbnail_data_qt200
+        sty     thumbnail_loader_function
+        ldy     #>_load_thumbnail_data_qt200
+        sty     thumbnail_loader_function+1
 
 x_init:
         sta     img_x_init
@@ -232,7 +242,8 @@ first_dither_handler:
 ;------- Inlined to avoid branching
 load_thumbnail:
         lda     img_y
-        jmp     _load_thumbnail_data
+thumbnail_loader_function = *+1
+        jmp     _load_thumbnail_data_qt1x0
 ;-------
 
 ; Line loop start

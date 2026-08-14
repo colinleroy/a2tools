@@ -203,19 +203,14 @@ display:
         int i, j;
         if (y % 2 == 0) {
           fread(line, 1, 160, fp);
-          for (x = 0; x < 78; x+=2) {
-            char next;
-            j = x << 1;
-            next = line[j+1];
-            line[x]= line[j];
-            line[x+1] = next;
+          for (x = 0; x < 160; x+=4) {
+            line[x+2] = line [x+3] = line[x+1];
+            line[x+1] = line[x];
           }
         }
-        for (x = 0, j = 0; j < 80; x +=2, j++) {
-          sdl_set_pixel(screen, x, y, line[j], line[j], line[j]);
-          sdl_set_pixel(screen, x+1, y, line[j], line[j], line[j]);
-          sdl_set_pixel(screen, x, y+1, line[j], line[j], line[j]);
-          sdl_set_pixel(screen, x+1, y+1, line[j], line[j], line[j]);
+        for (x = 0; x < 160; x ++) {
+          sdl_set_pixel(screen, x, y, line[x], line[x], line[x]);
+          sdl_set_pixel(screen, x, y+1, line[x], line[x], line[x]);
         }
       }
     }

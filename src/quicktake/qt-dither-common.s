@@ -15,7 +15,7 @@
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
         .import         _cur_hgr_row
-        .import         _is_thumb, _load_thumbnail_data
+        .import         _is_thumb
         .import         _prev_scaled_dx, _prev_scaled_dy, _angle
         .import         _brighten, _dither_alg
         .import         _kbhit, _cgetc
@@ -25,7 +25,7 @@
 
         .import         pushax, pusha0, _read, _ifd, subysp
 
-        .importzp       ptr1, tmp1, tmp2, c_sp, sreg, ptr2
+        .importzp       c_sp, sreg
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
 
         .include "apple2.inc"

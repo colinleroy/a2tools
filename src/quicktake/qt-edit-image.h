@@ -9,7 +9,7 @@ uint8 qt_view_image(const char *filename, const char *cmd);
 void finish_img_view(void);
 void get_program_disk(void);
 
-void qt_edit_image(const char *ofname, uint16 p_width, uint8 serial_model);
+void qt_edit_image(const char *ofname, uint16 p_width);
 
 void hgr_print(void);
 #endif

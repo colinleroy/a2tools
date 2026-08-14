@@ -22,3 +22,5 @@ Camera models to investigate:
  - Casio QV-10/11/100/300? 
    proto: https://github.com/gphoto/libgphoto2/blob/master/camlibs/casio/casio-qv.c
    maybe: https://www.asahi-net.or.jp/~XG2K-HYS/index-e.html
+ - Sony DSC-F1
+ - Nikon Coolpix 300
