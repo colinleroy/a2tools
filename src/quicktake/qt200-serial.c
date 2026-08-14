@@ -473,6 +473,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 }
 
 static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+  cprintf("  Getting thumbnail %d...\r\n", n_pic);
   /* FIXME get info */
   return qt200_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }

@@ -760,6 +760,8 @@ void load_normal_data(void);
 #define THUMBNAIL_BUFFER_OFFSET ((256-160)/2)
 #define THUMBNAIL_BUF_START (buffer+THUMBNAIL_BUFFER_OFFSET)
 
+/* FIXME this should be in QT1X0 segment */
+// #pragma code-name(push, "QT1X0")
 void load_thumbnail_data_qt1x0(uint8 line) {
   uint8 a, b, c, d, dx, i;
   /* assume thumbnail at 4bpp and zoom it */
@@ -888,6 +890,7 @@ void load_thumbnail_data_qt1x0(uint8 line) {
   }
 }
 
+#pragma code-name(push, "QT200")
 void load_thumbnail_data_qt200(uint8 line) {
   if (!(line & 1)) {
     uint8 i;
@@ -914,6 +917,7 @@ next:
 #endif
   }
 }
+#pragma code-name(pop)
 
 #ifndef __CC65__
 void setup_angle_0(void) {
