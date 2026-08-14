@@ -786,7 +786,7 @@ void load_thumbnail_data_qt1x0(uint8 line) {
       __asm__("ldy #39");
       __asm__("ldx #156");
 
-      next_thumb_x:
+next_thumb_x:
       __asm__("lda %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET); /* Load byte at index Y */
       __asm__("sta tmp2");  /* backup value */
       __asm__("asl");       /* low nibble, << 4 */
@@ -811,24 +811,46 @@ void load_thumbnail_data_qt1x0(uint8 line) {
     }
   } else {
     unsigned char *cur_in, *cur_out;
-    unsigned char *orig_in, *orig_out;
     /* Whyyyyyy do they do that */
     if (!(line % 4)) {
       /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
       read(ifd, thumb_buf, THUMB_WIDTH);
-      orig_in = cur_in = thumb_buf;
-      orig_out = cur_out = THUMBNAIL_BUF_START;
+#ifndef __CC65__
+      cur_in = thumb_buf;
+      cur_out = buffer+THUMBNAIL_BUFFER_OFFSET;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         c = *cur_in++;
         a   = (c & 0xF0);
-        b   = ((c & 0x0F) << 4);
         *cur_out++ = a;
+        b   = ((c & 0x0F) << 4);
         *cur_out++ = b;
       }
+#else
+      __asm__("ldx #0");
+      __asm__("ldy #0");
+next_expand_x:
+      __asm__("lda %v,x", thumb_buf);
+      __asm__("sta tmp1");
+      __asm__("and #$F0"); /* high nibble */
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+
+      __asm__("lda tmp1");  /* low nibble, << 4 */
+      __asm__("asl");
+      __asm__("asl");
+      __asm__("asl");
+      __asm__("asl");
+      __asm__("sta %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("iny");
+
+      __asm__("inx");
+      __asm__("cpx #%b", THUMB_WIDTH);
+      __asm__("bcc %g", next_expand_x);
+#endif
 
       /* Reorder bytes from buffer back to thumb_buf */
-      orig_in = cur_in = THUMBNAIL_BUF_START;
-      orig_out = cur_out = thumb_buf;
+      cur_in = THUMBNAIL_BUF_START;
+      cur_out = thumb_buf;
       for (i = 0; i < THUMB_WIDTH * 2; ) {
         if (i < THUMB_WIDTH*3/2) {
           a = *cur_in++;
@@ -851,8 +873,8 @@ void load_thumbnail_data_qt1x0(uint8 line) {
       }
       /* Finally copy the first line of thumb_buf to buffer for display,
        * upscaling horizontally */
-      orig_in = cur_in = thumb_buf;
-      orig_out = cur_out = THUMBNAIL_BUF_START;
+      cur_in = thumb_buf;
+      cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         *cur_out = *cur_in;
         cur_out++;
@@ -863,8 +885,8 @@ void load_thumbnail_data_qt1x0(uint8 line) {
     } else if (!(line % 2)) {
       /* Copy the second line of thumb_buf to buffer for display,
        * upscaling horizontally */
-      orig_in = cur_in = thumb_buf + THUMB_WIDTH;
-      orig_out = cur_out = THUMBNAIL_BUF_START;
+      cur_in = thumb_buf + THUMB_WIDTH;
+      cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         *cur_out = *cur_in;
         cur_out++;
