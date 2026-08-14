@@ -203,10 +203,13 @@ display:
         int i, j;
         if (y % 2 == 0) {
           fread(line, 1, 160, fp);
-          for (x = 0; x < 160; x+=4) {
+          i = 39;
+          do {
+            x = i<<2;
             line[x+2] = line [x+3] = line[x+1];
             line[x+1] = line[x];
-          }
+            i--;
+          } while (i >= 0);
         }
         for (x = 0; x < 160; x ++) {
           sdl_set_pixel(screen, x, y, line[x], line[x], line[x]);

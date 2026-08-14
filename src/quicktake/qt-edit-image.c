@@ -892,11 +892,26 @@ void load_thumbnail_data_qt200(uint8 line) {
   if (!(line & 1)) {
     uint8 i;
     read(ifd, THUMBNAIL_BUF_START, THUMB_WIDTH*2);
-
+#ifndef __CC65__
     for (i = 0; i < 160; i+=4) {
       THUMBNAIL_BUF_START[i+2] = THUMBNAIL_BUF_START[i+3] = THUMBNAIL_BUF_START[i+1];
       THUMBNAIL_BUF_START[i+1] = THUMBNAIL_BUF_START[i];
     }
+#else
+    __asm__("ldy #39");
+next:
+    __asm__("tya");
+    __asm__("asl");
+    __asm__("asl");
+    __asm__("tax");
+    __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET+1);
+    __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET+2);
+    __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET+3);
+    __asm__("lda %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+    __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET+1);
+    __asm__("dey");
+    __asm__("bpl %g", next);
+#endif
   }
 }
 

@@ -8,6 +8,8 @@
 *.jpg
 *.dump
 *.log
+*.thumb
+*.swp
 loader
 *GREY*
 HIST
