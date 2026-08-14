@@ -92,7 +92,7 @@ static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
-  char c = 0xFF;
+  char c;
   while (wait--) {
     if (simple_serial_read_no_irq(&c, 1) == 0x00 && c == 0x00) {
       PC_DEBUG("ack", &c, 1);
@@ -104,7 +104,7 @@ static uint8 get_ack(uint8 wait) {
 }
 
 /* Send an ack to the camera */
-static void send_ack() {
+static void send_ack(void) {
   PC_DEBUG("sack", NULL, 0);
   simple_serial_putc(0x06);
 }
@@ -118,6 +118,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, u
     if (get_ack(5) != 0)
       return -1;
   }
+
   if (len == 0) {
     return 0;
   }

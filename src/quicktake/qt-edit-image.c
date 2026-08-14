@@ -783,40 +783,28 @@ void load_thumbnail_data_qt1x0(uint8 line) {
         THUMBNAIL_BUF_START[off] = b;
       } while (i--);
 #else
-      thumb_buf_ptr = THUMBNAIL_BUF_START;
       __asm__("ldy #39");
+      __asm__("ldx #156");
+
       next_thumb_x:
-      __asm__("lda (%v),y", thumb_buf_ptr); /* Load byte at index Y */
-      __asm__("tax");       /* backup value */
+      __asm__("lda %v+%b,y", buffer, THUMBNAIL_BUFFER_OFFSET); /* Load byte at index Y */
+      __asm__("sta tmp2");  /* backup value */
       __asm__("asl");       /* low nibble, << 4 */
       __asm__("asl");
       __asm__("asl");
       __asm__("asl");
-      __asm__("sta tmp1"); /* Store low nibble */
-      __asm__("txa");      /* Restore value */
+      __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("dex");
+      __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
 
+      __asm__("lda tmp2");  /* restore value */
       __asm__("and #$F0"); /* high nibble */
-      __asm__("tax");      /* Store high nibble */
+      __asm__("dex");
+      __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("dex");
+      __asm__("sta %v+%b,x", buffer, THUMBNAIL_BUFFER_OFFSET);
+      __asm__("dex");
 
-      __asm__("tya");      /* *4 offset */
-      __asm__("sty tmp2"); /* Backup index */
-
-      __asm__("asl");
-      __asm__("asl");
-      __asm__("tay");
-
-      __asm__("txa");      /* Store high nibble twice */
-      __asm__("sta (%v),y", thumb_buf_ptr);
-      __asm__("iny");
-      __asm__("sta (%v),y", thumb_buf_ptr);
-
-      __asm__("lda tmp1");/* Store low nibble twice */
-      __asm__("iny");
-      __asm__("sta (%v),y", thumb_buf_ptr);
-      __asm__("iny");
-      __asm__("sta (%v),y", thumb_buf_ptr);
-
-      __asm__("ldy tmp2");  /* Restore index */
       __asm__("dey");
       __asm__("bpl %g", next_thumb_x);
 #endif
