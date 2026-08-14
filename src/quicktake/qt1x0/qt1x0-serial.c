@@ -543,12 +543,8 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     info->date.minute  = buffer[IMG_MINUTE_IDX];
   }
 
-  cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
-         THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
-
   gotoxy(0, status_line);
   cprintf("  Getting thumbnail %d...\r\n", n_pic);
-  gotoy(status_line+2);
 
   return receive_data(n_pic, PHOTO_THUMB, THUMBNAIL_SIZE, fd);
 }
