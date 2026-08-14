@@ -9,8 +9,6 @@
 #include "strsplit.h"
 #include "surl.h"
 
-#pragma code-name(push, "LC")
-
 extern char monochrome;
 
 char *lines[MAX_LINES_NUM];
@@ -41,6 +39,8 @@ static const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   strcat(gen_buf, endpoint);
   return surl_start_request(hdrs, h_num, gen_buf, method);
 }
+
+#pragma code-name(push, "LC")
 
 char api_login(char *saved_creds) {
   unsigned int post_len;
@@ -143,7 +143,7 @@ post_t *api_get_post_by_id(unsigned long post_id) {
                       translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE);
 
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, NUM_POST_FIELDS);
-    if (r > 0 && n_lines == NUM_POST_FIELDS) {
+    if (r > 0 && n_lines >= NUM_POST_FIELDS-1) {
       post_t *p;
       char *ret;
       p = malloc0(sizeof(post_t));
@@ -153,13 +153,15 @@ post_t *api_get_post_by_id(unsigned long post_id) {
       p->date           = strdup(lines[3]);
       p->comment_count  = atoi(lines[4]);
       p->camera_id      = atoi(lines[5]);
-      p->description    = strdup(lines[6]);
       /* Fixup date for readability */
       p->date[10]       = ' ';
       p->date[19]       = '\0';
-      /* Cut description for layout */
-      if ((ret = strchr(p->description, '\n'))) {
-        *ret = '\0';
+      if (n_lines >= NUM_POST_FIELDS) {
+        p->description    = strdup(lines[6]);
+        /* Cut description for layout */
+        if ((ret = strchr(p->description, '\n'))) {
+          *ret = '\0';
+        }
       }
       return p;
     }
