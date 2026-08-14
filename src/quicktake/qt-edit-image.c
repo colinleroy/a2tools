@@ -974,9 +974,6 @@ extern uint8 serial_model;
 static void dither_prepare(void) {
   if (is_thumb) {
     if (serial_model == QT_MODEL_200) {
-      off_t data_offset;
-      data_offset = lseek(ifd, 0, SEEK_END) - 160*60;
-      lseek(ifd, data_offset, SEEK_SET);
       thumb_histogram_qt200();
     } else {
       thumb_histogram_qt1x0();

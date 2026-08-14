@@ -34,8 +34,6 @@ extern uint8 *cur_cache_ptr;
 
 
 #define FILE_HEIGHT HGR_HEIGHT
-#define THUMB_WIDTH 80
-#define THUMB_HEIGHT 60
 
 #ifdef __CC65__
 

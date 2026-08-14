@@ -21,6 +21,7 @@
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 #include "qt-state.h"
+#include "qt-thumbs.h"
 #include "runtime_once_clean.h"
 #include "a2_features.h"
 #include "zx02_decompress_in_place.h"

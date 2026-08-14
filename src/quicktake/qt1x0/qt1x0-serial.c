@@ -15,6 +15,7 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt-conv.h"
+#include "qt-thumbs.h"
 #include "a2_features.h"
 
 #pragma code-name(push, "QT1X0")

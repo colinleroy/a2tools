@@ -37,9 +37,8 @@ slowtake_SOURCES := \
 	qt-serial.c \
 	qt-callbacks.s \
 	qt1x0/qt1x0-serial.c \
-	qt1x0/qt1x0-thumbs.c \
 	qt200/qt200-serial.c \
-	qt200/qt200-thumbs.c \
+	qt1x0/qt1x0-thumbs.c \
 	qt-edit-image.c \
 	qt-state.c \
 	../lib/dget_text_single.c \
@@ -51,6 +50,7 @@ slowtake_CC65SOURCES := \
 	qt-dither-common.s \
 	qt-dither-horiz.s \
 	qt-dither-vert.s \
+	qt200/qt200-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -79,6 +79,7 @@ slowtake_CC65SOURCES := \
 	../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
+	qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \
@@ -303,7 +304,7 @@ splash.hgr: splash.png
 splash.h: splash.hgr
 	../../bin/make-splash.sh splash.png
 
-slowtake.bin: $(slowtake_CC65SOURCES) $(slowtake_SOURCES)
+slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES) 
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 microserial.x86_64: $(microserial_SOURCES) $(GCCSOURCES)

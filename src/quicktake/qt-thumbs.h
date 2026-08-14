@@ -1,6 +1,9 @@
 #ifndef qt_thumbs_h
 #define qt_thumbs_h
 
+#define THUMB_WIDTH 80
+#define THUMB_HEIGHT 60
+
 /* The fastest way to iterate when dithering is by dey for full-size pictures.
  * This means X for thumbnails start at 256-160. Reflect that when loading
  * thumbnail data to the buffer. */
@@ -26,7 +29,7 @@ extern uint8 thumb_buf[THUMB_WIDTH * 2];
 
 #endif
 
-void thumb_histogram_qt1x0(void);
-void thumb_histogram_qt200(void);
+void __fastcall__ thumb_histogram_qt1x0(void);
+void __fastcall__ thumb_histogram_qt200(void);
 
 #endif
