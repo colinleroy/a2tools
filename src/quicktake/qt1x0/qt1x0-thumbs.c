@@ -64,6 +64,9 @@ void thumb_histogram_qt1x0(void) {
     __asm__("bne %g", next_byte);
 #endif
   }
+  /* Rewind for later load */
+  lseek(ifd, 0, SEEK_SET);
+
   x = 0;
 
   /* Now equalize */
@@ -94,8 +97,6 @@ void thumb_histogram_qt1x0(void) {
     __asm__("sta %v,x", opt_histogram);
 #endif
   } while (x++ < 0xF0);
-
-  return;
 }
 
 /* FIXME this should be in QT1X0 segment */

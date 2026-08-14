@@ -261,7 +261,7 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
       return send_command(NULL, 0, 1, 0, 0);
   }
 
-  cprintf("Negociating speed...\r\n");
+  cprintf("Negotiating speed...\r\n");
   PC_DEBUG("write speed", str_speed, sizeof str_speed);
   simple_serial_write(str_speed, sizeof str_speed);
 

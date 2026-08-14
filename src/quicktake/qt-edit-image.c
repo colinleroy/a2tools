@@ -973,11 +973,14 @@ extern uint8 serial_model;
 
 static void dither_prepare(void) {
   if (is_thumb) {
-    if (serial_model == QT_MODEL_200) {
-      thumb_histogram_qt200();
-    } else {
-      thumb_histogram_qt1x0();
-      lseek(ifd, 0, SEEK_SET);
+    switch (serial_model) {
+      case QT_MODEL_200:
+        thumb_histogram_qt200();
+        break;
+      case QT_MODEL_100:
+      case QT_MODEL_150:
+        thumb_histogram_qt1x0();
+        break;
     }
     dither_alg = DITHER_BAYER;
   } else {
