@@ -105,6 +105,11 @@ setting_offset:   .byte 0
 cur_setting:      .byte 0
 modified:         .byte 0
 
+DATA_SLOT_UI_LINE    = 2
+DATA_BAUD_UI_LINE    = 3
+PRINTER_SLOT_UI_LINE = 5
+PRINTER_BAUD_UI_LINE = 6
+
 ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
                   .byte "Data slot:      ",$0D,$0A
                   .byte "Baud rate:      ",$0D,$0A
@@ -114,6 +119,8 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
                   .byte $0D,$0A
                   .byte "Up/down/left/right to configure,",$0D,$0A
                   .asciiz "Enter to validate."
+
+auto_str:         .asciiz "Auto"
 
 ;Fixme put that where it belongs
 ;void _switch_text(void)
@@ -186,7 +193,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         ; Print settings - data slot
         lda     #15
         jsr     pusha
-        lda     #2
+        lda     #DATA_SLOT_UI_LINE
         jsr     _gotoxy
         lda     cur_setting
         cmp     #0
@@ -201,22 +208,27 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         ; Print settings - data baudrate
         lda     #15
         jsr     pusha
-        lda     #3
+        lda     #DATA_BAUD_UI_LINE
         jsr     _gotoxy
         lda     cur_setting
         cmp     #1
         jsr     booleq
         jsr     _revers
+.ifdef SERIAL_AUTO_DATA_BAUDRATE
+        lda     #<auto_str
+        ldx     #>auto_str
+.else
         ldy     speed_idx
         lda     baud_strs_high,y
         tax
         lda     baud_strs_low,y
+.endif
         jsr     _cputs
 
         ; Print settings - printer slot
         lda     #15
         jsr     pusha
-        lda     #5
+        lda     #PRINTER_SLOT_UI_LINE
         jsr     _gotoxy
         lda     cur_setting
         cmp     #2
@@ -231,7 +243,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         ; Print settings - printer baudrate
         lda     #15
         jsr     pusha
-        lda     #6
+        lda     #PRINTER_BAUD_UI_LINE
         jsr     _gotoxy
         lda     cur_setting
         cmp     #3
@@ -355,6 +367,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         jmp     @update_ui
 
 @update_data_baudrate:
+.ifndef SERIAL_AUTO_DATA_BAUDRATE
         lda     speed_idx
         clc
         adc     setting_offset
@@ -365,6 +378,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         beq     :++
 :       lda     #MAX_SPEED_IDX
 :       sta     speed_idx
+.endif
         jmp     @update_ui
 
 @update_printer_slot:
