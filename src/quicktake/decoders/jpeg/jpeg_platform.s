@@ -29,10 +29,10 @@
         .export     _outputIdx
         .export     _numNormalMCUBlocks, _gMaxBlocksPerMCU
 
-        .include    "../lib/mult8x8x16_macro.inc"
-        .include    "../lib/mult16xcommon.inc"
-        .include    "../lib/mult16x8x16_macro.inc"
-        .include    "../lib/mult16x16x16_macro.inc"
+        .include    "../../../lib/mult8x8x16_macro.inc"
+        .include    "../../../lib/mult16xcommon.inc"
+        .include    "../../../lib/mult16x8x16_macro.inc"
+        .include    "../../../lib/mult16x16x16_macro.inc"
 
 ; ZP vars. Mind that qt-conv uses some too
 bbHigh         = _zp4       ; byte, used in huffDecode

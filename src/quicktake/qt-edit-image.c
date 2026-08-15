@@ -15,7 +15,7 @@
 #include "scrollwindow.h"
 #include "simple_serial.h"
 #include "clrzone.h"
-#include "qt-conv.h"
+#include "decoders/qt-conv.h"
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 #include "qt-state.h"

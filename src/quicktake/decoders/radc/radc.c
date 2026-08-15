@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "qt-conv.h"
+#include "../qt-conv.h"
 #include "radc_bithuff.h"
 #include "radc_platform.h"
 #include "approxdiv16x8.h"

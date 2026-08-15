@@ -1,5 +1,5 @@
 #include "jpeg_platform.h"
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 uint8 gMaxBlocksPerMCU;
 

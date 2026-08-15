@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "platform.h"
-#include "qt-conv.h"
+#include "../decoders/qt-conv.h"
 #include "qt-serial.h"
 #include "qt-thumbs.h"
 

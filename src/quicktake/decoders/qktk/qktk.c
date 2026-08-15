@@ -23,7 +23,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "progress_bar.h"
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 /* Shared with qt-conv.c */
 char magic[5] = QKTK_MAGIC;

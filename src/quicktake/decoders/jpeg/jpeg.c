@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "platform.h"
-#include "qt-conv.h"
+#include "../qt-conv.h"
 #include "picojpeg.h"
 #include "extrazp.h"
 #include "jpeg_platform.h"

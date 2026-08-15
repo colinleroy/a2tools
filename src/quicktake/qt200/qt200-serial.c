@@ -11,7 +11,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
-#include "qt-conv.h"
+#include "../decoders/qt-conv.h"
 
 #pragma code-name(push, "QT200")
 #pragma rodata-name(push, "QT200")

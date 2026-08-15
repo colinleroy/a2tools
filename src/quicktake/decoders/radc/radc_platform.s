@@ -42,7 +42,7 @@
         .importzp     _zp2, _zp3, _zp4, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
 
         .include      "radc_huffgetters.inc"
-        .include      "../lib/mult8x8x16_macro.inc"
+        .include      "../../../lib/mult8x8x16_macro.inc"
 
 USEFUL_DATABUF_SIZE = RAW_WIDTH+2
 DATA_INIT           = 8

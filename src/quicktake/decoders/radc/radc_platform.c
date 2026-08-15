@@ -1,6 +1,6 @@
 #include "radc_platform.h"
 #include "radc_bithuff.h"
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 static uint8 *dest;
 extern uint8 *row_idx;

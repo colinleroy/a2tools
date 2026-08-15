@@ -1,7 +1,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 #define WH_OFFSET 544
 

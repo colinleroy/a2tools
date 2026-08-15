@@ -3,7 +3,7 @@
 #include <fcntl.h>
 
 #include "radc_bithuff.h"
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 static uint16 tmp;
 static uint8 shift;

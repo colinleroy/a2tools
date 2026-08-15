@@ -6,7 +6,7 @@
 #include <math.h>
 #include <SDL.h>
 #include "../lib/extended_conio.h"
-#include "qt-conv.h"
+#include "decoders/qt-conv.h"
 
 static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
   if (x < surface->w && y < surface->h)

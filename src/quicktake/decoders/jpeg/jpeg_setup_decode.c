@@ -1,5 +1,5 @@
 #include <string.h>
-#include "qt-conv.h"
+#include "../qt-conv.h"
 
 #define WH_OFFSET 544
 

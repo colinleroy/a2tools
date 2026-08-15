@@ -93,13 +93,13 @@ slowtake_GCCSOURCES := \
 	../lib/tgi_fastline.c
 
 qktkconv_SOURCES := \
-	qt-conv.c \
-	qktk_setup_decode.c \
+	decoders/qt-conv.c \
+	decoders/qktk/qktk_setup_decode.c \
 	../lib/progress_bar.c
 
 qktkconv_CC65SOURCES := \
-	qktk.s \
-	scaler.s \
+	decoders/qktk/qktk.s \
+	decoders/scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -109,20 +109,20 @@ qktkconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 qktkconv_GCCSOURCES := \
-	qktk.c \
-	scaler.c
+	decoders/qktk/qktk.c \
+	decoders/scaler.c
 
 radcconv_SOURCES := \
-	qt-conv.c \
-	radc_setup_decode.c \
-	radc.c \
+	decoders/qt-conv.c \
+	decoders/radc/radc_setup_decode.c \
+	decoders/radc/radc.c \
 	../lib/progress_bar.c
 
 radcconv_CC65SOURCES := \
 	../lib/square_table.s \
-	radc_bithuff.s \
-	radc_platform.s \
-	scaler.s \
+	decoders/radc/radc_bithuff.s \
+	decoders/radc/radc_platform.s \
+	decoders/scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -134,21 +134,21 @@ radcconv_CC65SOURCES := \
 	../lib/check_floppy.s
 	
 radcconv_GCCSOURCES := \
-	radc_bithuff.c \
-	radc_platform.c \
-	scaler.c
+	decoders/radc/radc_bithuff.c \
+	decoders/radc/radc_platform.c \
+	decoders/scaler.c
 
 jpegconv_SOURCES := \
-	qt-conv.c \
-	jpeg_setup_decode.c \
-	jpeg.c \
+	decoders/qt-conv.c \
+	decoders/jpeg/jpeg_setup_decode.c \
+	decoders/jpeg/jpeg.c \
 	../lib/progress_bar.c
 
 jpegconv_CC65SOURCES := \
 	../lib/square_table.s \
-	jpeg_arrays.s \
-	jpeg_platform.s \
-	scaler.s \
+	decoders/jpeg/jpeg_arrays.s \
+	decoders/jpeg/jpeg_platform.s \
+	decoders/scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
@@ -158,8 +158,8 @@ jpegconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 jpegconv_GCCSOURCES := \
-	jpeg_platform.c \
-	scaler.c
+	decoders/jpeg/jpeg_platform.c \
+	decoders/scaler.c
 
 GCCSOURCES := \
 	../lib/extended_conio.c \

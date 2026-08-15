@@ -15,7 +15,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
-#include "qt-conv.h"
+#include "decoders/qt-conv.h"
 #include "zx02_decompress_in_place.h"
 
 #define DEBUG_TIMING 0
