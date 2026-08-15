@@ -21,7 +21,7 @@ endif
 VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"' -f2)
 
 microserial_SOURCES := \
-	micro-serial.c \
+	tools/micro-serial.c \
 	serial/qt-serial.c \
 	serial/qt1x0/qt1x0-serial.c \
 	serial/qt1x0/qt1x0-thumbs.c \
@@ -36,22 +36,22 @@ microserial_SOURCES := \
 	../lib/strtrim.c \
 
 slowtake_SOURCES := \
-	qt-menu.c \
+	ui/qt-menu.c \
+	ui/qt-edit-image.c \
+	ui/qt-state.c \
 	serial/qt-serial.c \
 	serial/qt-callbacks.s \
 	serial/qt1x0/qt1x0-serial.c \
 	serial/qt200/qt200-serial.c \
 	serial/qt1x0/qt1x0-thumbs.c \
-	qt-edit-image.c \
-	qt-state.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
 
 slowtake_CC65SOURCES := \
-	qt-dither-common.s \
-	qt-dither-horiz.s \
-	qt-dither-vert.s \
+	ui/qt-dither-common.s \
+	ui/qt-dither-horiz.s \
+	ui/qt-dither-vert.s \
 	serial/qt200/qt200-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -330,7 +330,7 @@ jpegconv.bin: $(jpegconv_CC65SOURCES) $(jpegconv_SOURCES)
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-loader.x86_64: loader.c
+loader.x86_64: tools/loader.c
 	gcc -g -O0 -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
 
 clean:

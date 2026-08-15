@@ -26,7 +26,7 @@
         .importzp       img_y, tmp1, tmp2, c_sp
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12
 
-        .include "apple2.inc"
+        .include        "apple2.inc"
 
 img_x                 = _zp4
 ; img_y               = _zp5, defined in -common.s

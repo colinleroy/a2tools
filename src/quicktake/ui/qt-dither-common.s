@@ -28,7 +28,7 @@
         .importzp       c_sp, sreg
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
 
-        .include "apple2.inc"
+        .include        "apple2.inc"
 
         .segment "LC"
 
