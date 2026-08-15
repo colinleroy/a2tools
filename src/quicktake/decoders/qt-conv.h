@@ -24,6 +24,7 @@ extern uint8 *cur_cache_ptr;
  
 #define QKTK_MAGIC      "qktk"
 #define QKTN_MAGIC      "qktn"
+#define KDC_MAGIC       "MM\0*"
 #define JPEG_EXIF_MAGIC "\377\330\377\340"
 
 #define PNM_HEADER      "P5\n256 192\n255\n"

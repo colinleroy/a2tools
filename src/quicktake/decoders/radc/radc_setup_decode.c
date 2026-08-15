@@ -11,7 +11,7 @@ char qt_setup_decode(void) {
   uint16 v;
   uint16 data_offset;
 
-  if (!memcmp (cache_start, "qktn", 4)) {
+  if (!memcmp (cache_start, QKTN_MAGIC, 4)) {
     width = 640/2;
     height = 480/2;
     ((unsigned char *)&v)[1] = cache[WH_OFFSET + 8];
@@ -20,7 +20,7 @@ char qt_setup_decode(void) {
       data_offset = 738;
     else
       data_offset = 736;
-  } else if (!memcmp (cache_start, "MM\0*", 4)) {
+  } else if (!memcmp (cache_start, KDC_MAGIC, 4)) {
     width = 768/2;
     height = 512/2;
     data_offset = 19712;

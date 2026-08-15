@@ -103,6 +103,8 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
       exec("qktkconv", args);
     } else if (!strcmp(magic, QKTN_MAGIC)) {
       exec("radcconv", args);
+    } else if (!strcmp(magic, KDC_MAGIC)) {
+      exec("radcconv", args);
     } else if ((magic[3] &= 0xF0) && !strcmp(magic, JPEG_EXIF_MAGIC)) {
       exec("jpegconv", args);
     } else {
