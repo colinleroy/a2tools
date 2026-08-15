@@ -300,11 +300,10 @@ hdv:
 	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
 	../../bin/cp2/cp2 copy --recurse quicktake.po $(IMG):$(FLOP_NAME)
 
-splash.hgr: splash.png
+splash.h: ui/splash.png
 	../surl-server/hgr-convert $<
-
-splash.h: splash.hgr
-	../../bin/make-splash.sh splash.png
+	../../bin/make-splash.sh ui/splash.png
+	rm -f ui/splash.png.hgr*
 
 slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES) 
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o

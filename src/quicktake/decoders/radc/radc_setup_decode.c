@@ -21,6 +21,7 @@ char qt_setup_decode(void) {
     else
       data_offset = 736;
   } else if (!memcmp (cache_start, KDC_MAGIC, 4)) {
+    /* Fixme figure out correct width/height */
     width = 768/2;
     height = 512/2;
     data_offset = 19712;
