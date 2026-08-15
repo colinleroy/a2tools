@@ -37,6 +37,8 @@ static uint8 qt200_get_information(camera_info *info);
 
 /* Camera pictures functions */
 static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
+static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
  * but must exist and return -1
@@ -46,9 +48,11 @@ static uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hou
 static uint8 qt200_set_quality(uint8 quality);
 static uint8 qt200_set_flash(uint8 mode);
 static uint8 qt200_take_picture(void);
-static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
 static uint8 qt200_delete_pictures(void);
-static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename);
+
+/* Camera thumbnail functions */
+void qt200_thumb_histogram(void);
+void qt200_load_thumb_data(uint8 line);
 
 /* Camera callbacks */
 void *qt200_callbacks[] = {
@@ -65,6 +69,8 @@ void *qt200_callbacks[] = {
   /* GET_THUMBNAIL */   qt200_get_thumbnail,
   /* DELETE_PICTURES */ qt200_delete_pictures,
   /* GET_FILENAME */    qt200_get_filename,
+  /* THUMB_HISTOGRAM */ qt200_thumb_histogram,
+  /* THUMB_LOAD_DATA */ qt200_load_thumb_data,
 };
 
 extern uint8 scrw, scrh;

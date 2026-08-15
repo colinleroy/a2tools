@@ -10,7 +10,7 @@
         .import         _end_bayer_map_x, _end_bayer_map_y
         .import         _err_buf
         .import         _opt_histogram
-        .import         _is_thumb, _load_thumbnail_data_qt1x0, _load_thumbnail_data_qt200
+        .import         _is_thumb, _cam_thumb_load_data
         .import         _angle
         .import         _brighten, _dither_alg
         .import         _serial_model
@@ -224,14 +224,6 @@ finish_patches:
         ldy     #>load_thumbnail
         sty     load_data+2
 
-        ldy     _serial_model     ; Patch thumbnail load format
-        cpy     #QT_MODEL_200
-        bne     x_init
-        ldy     #<_load_thumbnail_data_qt200
-        sty     thumbnail_loader_function
-        ldy     #>_load_thumbnail_data_qt200
-        sty     thumbnail_loader_function+1
-
 x_init:
         sta     img_x_init
         sta     img_x_reinit
@@ -242,8 +234,7 @@ first_dither_handler:
 ;------- Inlined to avoid branching
 load_thumbnail:
         lda     img_y
-thumbnail_loader_function = *+1
-        jmp     _load_thumbnail_data_qt1x0
+        jmp     _cam_thumb_load_data
 ;-------
 
 ; Line loop start

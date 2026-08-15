@@ -8,7 +8,7 @@ extern int ifd;
 
 #pragma code-name(push, "QT200")
 /* No histogram on QT200 thumbs, too expensive */
-void thumb_histogram_qt200(void) {
+void qt200_thumb_histogram(void) {
   uint8 x = 0;
   off_t data_offset;
   data_offset = lseek(ifd, 0, SEEK_END) - 160*60;
@@ -20,7 +20,7 @@ void thumb_histogram_qt200(void) {
   } while (x);
 }
 
-void load_thumbnail_data_qt200(uint8 line) {
+void qt200_load_thumb_data(uint8 line) {
   if (!(line & 1)) {
     uint8 i;
 

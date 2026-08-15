@@ -51,6 +51,10 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
 static uint8 qt1x0_delete_pictures(void);
 static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename);
 
+/* Camera thumbnail functions */
+void qt1x0_thumb_histogram(void);
+void qt1x0_load_thumb_data(uint8 line);
+
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
   /* FEATURES */        (void *)qt1x0_features,
@@ -66,6 +70,8 @@ void *qt1x0_callbacks[] = {
   /* GET_THUMBNAIL */   qt1x0_get_thumbnail,
   /* DELETE_PICTURES */ qt1x0_delete_pictures,
   /* GET_FILENAME */    qt1x0_get_filename,
+  /* THUMB_HISTOGRAM */ qt1x0_thumb_histogram,
+  /* THUMB_LOAD_DATA */ qt1x0_load_thumb_data,
 };
 
 extern uint8 scrw, scrh;

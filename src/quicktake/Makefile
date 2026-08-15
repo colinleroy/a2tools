@@ -23,7 +23,9 @@ microserial_SOURCES := \
 	micro-serial.c \
 	qt-serial.c \
 	qt1x0/qt1x0-serial.c \
+	qt1x0/qt1x0-thumbs.c \
 	qt200/qt200-serial.c \
+	qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/simple_serial_read_no_irq.c \

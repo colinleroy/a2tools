@@ -973,14 +973,8 @@ extern uint8 serial_model;
 
 static void dither_prepare(void) {
   if (is_thumb) {
-    switch (serial_model) {
-      case QT_MODEL_200:
-        thumb_histogram_qt200();
-        break;
-      case QT_MODEL_100:
-      case QT_MODEL_150:
-        thumb_histogram_qt1x0();
-        break;
+    if (cam_features & CAM_CAN_GET_THUMBNAIL) {
+      cam_thumb_histogram();
     }
     dither_alg = DITHER_BAYER;
   } else {

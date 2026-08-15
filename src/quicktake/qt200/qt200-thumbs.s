@@ -1,5 +1,5 @@
-        .export           _thumb_histogram_qt200
-        .export           _load_thumbnail_data_qt200
+        .export           _qt200_thumb_histogram
+        .export           _qt200_load_thumb_data
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
         .import           pushax, pusha0, pusheax, tossub0ax
@@ -11,7 +11,7 @@
 
 .segment "QT200"
 
-.proc _thumb_histogram_qt200
+.proc _qt200_thumb_histogram
         ; Seek to start of data
         lda     _ifd          ; Push twice, once for each lseek
         jsr     pusha0
@@ -43,7 +43,7 @@ next:                         ; Don't really do the histogram.
         rts
 .endproc
 
-.proc _load_thumbnail_data_qt200
+.proc _qt200_load_thumb_data
         and     #$01
         beq     :+
         rts

@@ -30,6 +30,8 @@
 #define CAM_GET_THUMBNAIL   10
 #define CAM_DELETE_PICTURES 11
 #define CAM_GET_FILENAME    12
+#define CAM_THUMB_HISTOGRAM 13
+#define CAM_THUMB_LOAD_DATA 14
 
 #define CAM_CAN_SET_CAMERA_NAME 0x01
 #define CAM_CAN_SET_CAMERA_TIME 0x02
@@ -107,6 +109,10 @@ uint8 cam_get_picture(uint8 n_pic, int fd, off_t avail);
 uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
 uint8 cam_delete_pictures(void);
 void cam_get_filename(uint8 n_pic, char *dirname, char *filename);
+
+/* Camera thumbnail functions */
+void cam_thumb_histogram(void);
+void cam_load_thumb_data(uint8 line);
 
 /* Debug helpers */
 #ifndef __CC65__

@@ -7,6 +7,7 @@
 #include "platform.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
+#include "qt-thumbs.h"
 
 extern void *qt1x0_callbacks[];
 extern void *qt200_callbacks[];
@@ -25,6 +26,8 @@ typedef uint8 (*impl_get_picture_func)(uint8 n_pic, int fd, off_t avail);
 typedef uint8 (*impl_get_thumbnail_func)(uint8 n_pic, int fd, thumb_info *info);
 typedef uint8 (*impl_delete_pictures_func)(void);
 typedef void  (*impl_get_filename_func)(uint8 n_pic, char *dirname, char *filename);
+typedef void  (*impl_thumb_histogram_func)(void);
+typedef void  (*impl_thumb_load_data_func)(uint8 line);
 
 uint8                     camera_connected;
 uint16                    cam_features;
@@ -40,6 +43,8 @@ impl_get_picture_func     impl_get_picture;
 impl_get_thumbnail_func   impl_get_thumbnail;
 impl_delete_pictures_func impl_delete_pictures;
 impl_get_filename_func    impl_get_filename;
+impl_thumb_histogram_func impl_thumb_histogram;
+impl_thumb_load_data_func impl_thumb_load_data;
 
 camera_info info;
 
@@ -47,6 +52,12 @@ unsigned char buffer[BUFFER_SIZE];
 int scrw, scrh;
 uint8 do_debug = 0;
 int is_iigs = 1;
+
+uint16 histogram[256];
+uint8 opt_histogram[256];
+uint8 thumb_buf[THUMB_WIDTH * 2];
+int ifd;
+uint8 is_qt100;
 
 static void setup_pointers(void *callbacks[]) {
   cam_features          = (unsigned long)callbacks[CAM_FEATURES];
@@ -200,4 +211,12 @@ uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 
 void cam_get_filename(uint8 n_pic, char *dirname, char *filename) {
   return impl_get_filename(n_pic, dirname, filename);
+}
+
+void cam_thumb_histogram(void) {
+  return impl_thumb_histogram();
+}
+
+void cam_thumb_load_data (uint8 line) {
+  return impl_thumb_load_data(line);
 }
