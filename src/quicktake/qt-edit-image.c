@@ -600,7 +600,6 @@ uint8 thumb_buf[THUMB_WIDTH * 2];
 uint16 file_width;
 uint8 file_height;
 uint8 is_thumb;
-uint8 is_qt100;
 uint8 first_byte_idx;
 uint16 off_y;
 uint8 off_x;
@@ -988,7 +987,6 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
   clear_dhgr();
 
   is_thumb = (src_width == THUMB_WIDTH*2);
-  is_qt100 = (serial_model == QT_MODEL_100);
   file_width = src_width;
   file_height = is_thumb ? THUMB_HEIGHT*2 : HGR_HEIGHT;
   x_offset = ((HGR_WIDTH - file_width) / 2);

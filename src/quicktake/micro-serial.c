@@ -57,7 +57,6 @@ uint16 histogram[256];
 uint8 opt_histogram[256];
 uint8 thumb_buf[THUMB_WIDTH * 2];
 int ifd;
-uint8 is_qt100;
 
 static void setup_pointers(void *callbacks[]) {
   cam_features          = (unsigned long)callbacks[CAM_FEATURES];

@@ -76,6 +76,7 @@ void *qt1x0_callbacks[] = {
 
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
+uint8 is_qt100; /* helper for thumbnailer */
 
 #ifdef __CC65__
 #define PC_DEBUG(op, str, len)
@@ -224,6 +225,8 @@ static uint8 qt1x0_wakeup(CamSpeed speed) {
     }
     return QT_MODEL_UNKNOWN;
   }
+
+  is_qt100 = (model == QT_MODEL_100);
 
   if (speed == SER_BAUD_115200) {
     /* Use max possible speed */

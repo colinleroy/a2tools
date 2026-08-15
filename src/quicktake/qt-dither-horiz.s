@@ -13,7 +13,7 @@
         .import         _is_thumb, _cam_thumb_load_data
         .import         _angle
         .import         _brighten, _dither_alg
-        .import         _serial_model
+
         .import         _kbhit, _cgetc
         .import         _cur_buf_page, _buffer, _line_buf
 
