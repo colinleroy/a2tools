@@ -22,11 +22,11 @@ VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"'
 
 microserial_SOURCES := \
 	micro-serial.c \
-	qt-serial.c \
-	qt1x0/qt1x0-serial.c \
-	qt1x0/qt1x0-thumbs.c \
-	qt200/qt200-serial.c \
-	qt200/qt200-thumbs.c \
+	serial/qt-serial.c \
+	serial/qt1x0/qt1x0-serial.c \
+	serial/qt1x0/qt1x0-thumbs.c \
+	serial/qt200/qt200-serial.c \
+	serial/qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/simple_serial_read_no_irq.c \
@@ -37,11 +37,11 @@ microserial_SOURCES := \
 
 slowtake_SOURCES := \
 	qt-menu.c \
-	qt-serial.c \
-	qt-callbacks.s \
-	qt1x0/qt1x0-serial.c \
-	qt200/qt200-serial.c \
-	qt1x0/qt1x0-thumbs.c \
+	serial/qt-serial.c \
+	serial/qt-callbacks.s \
+	serial/qt1x0/qt1x0-serial.c \
+	serial/qt200/qt200-serial.c \
+	serial/qt1x0/qt1x0-thumbs.c \
 	qt-edit-image.c \
 	qt-state.c \
 	../lib/dget_text_single.c \
@@ -52,7 +52,7 @@ slowtake_CC65SOURCES := \
 	qt-dither-common.s \
 	qt-dither-horiz.s \
 	qt-dither-vert.s \
-	qt200/qt200-thumbs.s \
+	serial/qt200/qt200-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -81,7 +81,7 @@ slowtake_CC65SOURCES := \
 	../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
-	qt200/qt200-thumbs.c \
+	serial/qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \

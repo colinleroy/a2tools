@@ -13,9 +13,9 @@
 #include "strtrim.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
-#include "qt-serial.h"
-#include "../decoders/qt-conv.h"
-#include "qt-thumbs.h"
+#include "../qt-serial.h"
+#include "../qt-thumbs.h"
+#include "../../decoders/qt-conv.h"
 #include "a2_features.h"
 
 #pragma code-name(push, "QT1X0")

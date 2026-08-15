@@ -1,8 +1,8 @@
 #include <unistd.h>
 #include "platform.h"
-#include "qt-serial.h"
-#include "qt-thumbs.h"
-#include "../decoders/qt-conv.h"
+#include "../qt-serial.h"
+#include "../qt-thumbs.h"
+#include "../../decoders/qt-conv.h"
 
 extern int ifd;
 

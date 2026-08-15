@@ -16,10 +16,10 @@
 #include "simple_serial.h"
 #include "clrzone.h"
 #include "decoders/qt-conv.h"
+#include "serial/qt-serial.h"
+#include "serial/qt-thumbs.h"
 #include "qt-edit-image.h"
-#include "qt-serial.h"
 #include "qt-state.h"
-#include "qt-thumbs.h"
 #include "a2_features.h"
 
 #ifndef __CC65__

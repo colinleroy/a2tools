@@ -1,9 +1,9 @@
 #include <unistd.h>
 #include <string.h>
 #include "platform.h"
-#include "../decoders/qt-conv.h"
-#include "qt-serial.h"
-#include "qt-thumbs.h"
+#include "../../decoders/qt-conv.h"
+#include "../qt-serial.h"
+#include "../qt-thumbs.h"
 
 extern uint8 is_qt100;
 extern int ifd;

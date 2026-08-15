@@ -21,7 +21,7 @@
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12
 
         .include        "apple2.inc"
-        .include        "qt-serial.inc"
+        .include        "serial/qt-serial.inc"
 
         .segment "LC"
 
