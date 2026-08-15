@@ -47,7 +47,6 @@ slowtake_SOURCES := \
 	serial/qt-callbacks.s \
 	serial/qt1x0/qt1x0-serial.c \
 	serial/qt200/qt200-serial.c \
-	serial/qt1x0/qt1x0-thumbs.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
@@ -56,6 +55,7 @@ slowtake_CC65SOURCES := \
 	ui/qt-dither-common.s \
 	ui/qt-dither-horiz.s \
 	ui/qt-dither-vert.s \
+	serial/qt1x0/qt1x0-thumbs.s \
 	serial/qt200/qt200-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -85,6 +85,7 @@ slowtake_CC65SOURCES := \
 	../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
+	serial/qt200/qt1x0-thumbs.c \
 	serial/qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \

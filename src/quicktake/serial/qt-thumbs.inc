@@ -1,3 +1,4 @@
+THUMBNAIL_SIZE          = 2400
 THUMB_WIDTH             = 80
 THUMB_HEIGHT            = 60
 THUMBNAIL_BUFFER_OFFSET = ((256-160)/2)
