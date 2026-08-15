@@ -270,8 +270,8 @@ all: quicktake.po microserial.x86_64
 ../image-viewer/imgview.bin:
 	make -C ../image-viewer/ clean all
 
-ABOUT.ZX: about.in
-	sed "s/__VERSION__/v$(VERSION)/" about.in > about.tmp; \
+ABOUT.ZX: ui/about.in
+	sed "s/__VERSION__/v$(VERSION)/" $< > about.tmp; \
 	zx02 -f about.tmp ABOUT.ZX; \
 	rm about.tmp
 
