@@ -18,6 +18,10 @@ ifdef DEBUG_FLOPPY
 debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
 endif
 
+ifdef DEBUG_THUMB
+debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_THUMB=$(DEBUG_THUMB)
+endif
+
 VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"' -f2)
 
 microserial_SOURCES := \

@@ -61,12 +61,14 @@ void default_driver(int mode) {
 }
 
 #ifdef __CC65__
-static uint8 load_driver(char *drv, CamSpeed speed) {
+uint8 load_driver(char *drv, CamSpeed speed) {
   gotox(0); clreol();
   if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x1900) == 0) {
+#ifndef DEBUG_THUMB
     if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
       return 0;
     }
+#endif
   }
   return -1;
 }

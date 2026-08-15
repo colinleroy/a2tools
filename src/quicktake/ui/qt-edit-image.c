@@ -993,7 +993,11 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
   file_height = is_thumb ? THUMB_HEIGHT*2 : HGR_HEIGHT;
   x_offset = ((HGR_WIDTH - file_width) / 2);
 
+#ifndef DEBUG_THUMB
   ifd = open(is_thumb ? THUMBNAIL_NAME : TMP_NAME, O_RDONLY);
+#else
+  ifd = open(ofname, O_RDONLY);
+#endif
   if (ifd <= 0) {
     cprintf("Can't open file\r\n");
     cgetc();

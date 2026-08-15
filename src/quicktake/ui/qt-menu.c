@@ -530,6 +530,10 @@ static void show_about(void) {
   cgetc();
 }
 
+#ifdef DEBUG_THUMB
+uint8 load_driver(char *drv, CamSpeed speed);
+#endif
+
 #pragma code-name(push, "RT_ONCE")
 static uint8 setup(int argc, char *argv[]) {
   uint16 is_reedit = 0;
@@ -545,7 +549,25 @@ static uint8 setup(int argc, char *argv[]) {
   try_videomode(VIDEOMODE_80COL);
 #endif
 
-// Start decoding right away when debugging decoders
+// debug helpers
+#ifdef DEBUG_THUMB
+  #if DEBUG_THUMB==100
+  load_driver("QT1X0.ZX", SER_BAUD_115200);
+  serial_model = QT_MODEL_100;
+  qt_edit_image("/QT100/THUMB", THUMB_WIDTH*2);
+  #endif
+  #if DEBUG_THUMB==150
+  load_driver("QT1X0.ZX", SER_BAUD_115200);
+  serial_model = QT_MODEL_150;
+  qt_edit_image("/QT150/THUMB", THUMB_WIDTH*2);
+  #endif
+  #if DEBUG_THUMB==200
+  load_driver("QT200.ZX", SER_BAUD_115200);
+  serial_model = QT_MODEL_200;
+  qt_edit_image("/QT200/THUMB", THUMB_WIDTH*2);
+  #endif
+  cgetc();
+#endif
 #ifdef DEBUG_HD
   if (argc == 1) {
   #if DEBUG_HD==100
