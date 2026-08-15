@@ -19,11 +19,12 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
   sdl_set_pixel32(surface, x, y, SDL_MapRGB(surface->format, r, g, b));
 }
 
+  // sdl_set_pixel(screen, (x)*2+1, (y)*2, v, v/(1+h), v);   \
+  // sdl_set_pixel(screen, (x)*2, (y)*2+1, v, v/(1+h), v);   \
+  // sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
+
 #define PIXEL_OUTPUT(x, y, v, h) do {                     \
-  sdl_set_pixel(screen, (x)*2, (y)*2, v, v/(1+h), v);     \
-  sdl_set_pixel(screen, (x)*2+1, (y)*2, v, v/(1+h), v);   \
-  sdl_set_pixel(screen, (x)*2, (y)*2+1, v, v/(1+h), v);   \
-  sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
+  sdl_set_pixel(screen, (x), (y), v, v/(1+h), v);     \
 } while (0)
 
 void main(int argc, char *argv[]) {
@@ -142,7 +143,7 @@ display:
       printf("data_offset = %04X\n", data_offset);
       fseek(fp, data_offset, SEEK_SET);
     }
-    for (y = 0; y < 60*2; y++) {
+    for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_150) {
         fread(line, 1, 80, fp);
         cur_in = line;
@@ -170,7 +171,6 @@ display:
           } else {
             d = *cur_out++;
             PIXEL_OUTPUT(1+((i - 120)*2), (y)+1, d, 0);
-            // sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
             i++;
           }
         }
