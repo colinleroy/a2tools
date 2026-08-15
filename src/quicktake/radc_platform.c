@@ -1,5 +1,5 @@
-#include "qtkn_platform.h"
-#include "qtk_bithuff.h"
+#include "radc_platform.h"
+#include "radc_bithuff.h"
 #include "qt-conv.h"
 
 static uint8 *dest;

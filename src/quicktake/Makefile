@@ -112,16 +112,16 @@ qtktconv_GCCSOURCES := \
 	qtkt.c \
 	scaler.c
 
-qtknconv_SOURCES := \
+radcconv_SOURCES := \
 	qt-conv.c \
-	qtkn_setup_decode.c \
-	qtkn.c \
+	radc_setup_decode.c \
+	radc.c \
 	../lib/progress_bar.c
 
-qtknconv_CC65SOURCES := \
+radcconv_CC65SOURCES := \
 	../lib/square_table.s \
-	qtk_bithuff.s \
-	qtkn_platform.s \
+	radc_bithuff.s \
+	radc_platform.s \
 	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
@@ -133,9 +133,9 @@ qtknconv_CC65SOURCES := \
 	../lib/a2_features.s \
 	../lib/check_floppy.s
 	
-qtknconv_GCCSOURCES := \
-	qtk_bithuff.c \
-	qtkn_platform.c \
+radcconv_GCCSOURCES := \
+	radc_bithuff.c \
+	radc_platform.c \
 	scaler.c
 
 jpegconv_SOURCES := \
@@ -204,7 +204,7 @@ qtktconv_GCCCFLAGS = \
 	-DQTKTCONV=1 \
 
 # 3.5 tracks cache
-qtknconv_CLCFLAGS = \
+radcconv_CLCFLAGS = \
 	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
 	-DINITIAL_CACHE_READ=2048 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
@@ -214,11 +214,11 @@ qtknconv_CLCFLAGS = \
 	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-DQTKNCONV=1 \
+	-DRADCCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
 	--start-addr 0x1000  #Two file buffers
 
-qtknconv_GCCCFLAGS = \
+radcconv_GCCCFLAGS = \
 	-DCACHE_SIZE=14336 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
@@ -226,7 +226,7 @@ qtknconv_GCCCFLAGS = \
 	-DBAND_HEIGHT=20 \
 	-DDECODE_WIDTH=320 \
 	-DFILE_WIDTH=256 \
-	-DQTKNCONV=1 \
+	-DRADCCONV=1 \
 
 jpegconv_CLCFLAGS = \
 	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
@@ -291,7 +291,7 @@ add_disk: ABOUT.ZX QT1X0.ZX QT200.ZX
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-quicktake.po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
+quicktake.po: splash.h slowtake.bin qtktconv.bin radcconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
@@ -318,11 +318,11 @@ qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
 qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(qtktconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-qtknconv.bin: $(qtknconv_CC65SOURCES) $(qtknconv_SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
+radcconv.bin: $(radcconv_CC65SOURCES) $(radcconv_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"radcconv.dbg" $(CFLAGS) $(radcconv_CLCFLAGS) -vm -m radcconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
-qtknconv.x86_64: $(qtknconv_SOURCES) $(qtknconv_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $(qtknconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
+radcconv.x86_64: $(radcconv_SOURCES) $(radcconv_GCCSOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $(radcconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 jpegconv.bin: $(jpegconv_CC65SOURCES) $(jpegconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^ $(TARGET)-iobuf-0800.o

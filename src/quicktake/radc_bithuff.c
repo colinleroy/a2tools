@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "qtk_bithuff.h"
+#include "radc_bithuff.h"
 #include "qt-conv.h"
 
 static uint16 tmp;

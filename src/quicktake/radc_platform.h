@@ -1,5 +1,5 @@
-#ifndef __QTKN_PLATFORM_H
-#define __QTKN_PLATFORM_H
+#ifndef __RADC_PLATFORM_H
+#define __RADC_PLATFORM_H
 
 #include "platform.h"
 

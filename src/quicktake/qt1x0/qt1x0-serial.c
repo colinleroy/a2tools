@@ -464,8 +464,7 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
   height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-  format = QTKN_MAGIC; /* Default to QuickTake 150 format */
-
+  format = QTKN_MAGIC;
   if (serial_model == QT_MODEL_100) {
     format = QTKT_MAGIC;
   }

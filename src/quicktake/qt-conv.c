@@ -1,5 +1,5 @@
 /*
-  QTKT/QTKN decoding wrapper
+  decoders wrapper
   Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
   Decoder's core code. Depends on scaler for scaling and an

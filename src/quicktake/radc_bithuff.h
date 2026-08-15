@@ -1,8 +1,8 @@
-#ifndef __QTK_BITHUFF_H
-#define __QTK_BITHUFF_H
+#ifndef __RADC_BITHUFF_H
+#define __RADC_BITHUFF_H
 
 #include "platform.h"
-#include "qtkn_platform.h"
+#include "radc_platform.h"
 
 #define DATA_INIT 8
 

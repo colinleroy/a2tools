@@ -1,5 +1,5 @@
 /*
-   QTKN (QuickTake 150) decoding algorithm
+   Kodak RADC (QuickTake 150, Kodak DC-50 etc) decoding algorithm
    Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
    Heavily based on dcraw.c -- Dave Coffin's raw photo decoder
@@ -21,8 +21,8 @@
 #include <string.h>
 #include <unistd.h>
 #include "qt-conv.h"
-#include "qtk_bithuff.h"
-#include "qtkn_platform.h"
+#include "radc_bithuff.h"
+#include "radc_platform.h"
 #include "approxdiv16x8.h"
 
 

@@ -45,7 +45,7 @@
         .importzp       _zp6, _zp11, _zp12, _zp13
 
         .include        "apple2.inc"
-        .include        "qtkn_huffgetters.inc"
+        .include        "radc_huffgetters.inc"
 
 cur_cache_ptr = _prev_ram_irq_vector
 
