@@ -6,9 +6,9 @@
 #include <sys/types.h>
 
 #define QT_MODEL_UNKNOWN 0
-#define QT_MODEL_100     10
-#define QT_MODEL_150     15
-#define QT_MODEL_200     20
+#define QT_MODEL_100     1
+#define QT_MODEL_150     2
+#define QT_MODEL_200     3
 
 #define QUALITY_STANDARD 0x20
 #define QUALITY_HIGH 0x10
@@ -88,6 +88,7 @@ typedef struct _thumb_info {
 extern unsigned char buffer[BUFFER_SIZE];
 
 extern uint8 serial_model;
+extern char *cam_file_extension[];
 /* Camera interface functions, protocol-agnostic */
 uint8 cam_serial_connect(CamSpeed speed);
 

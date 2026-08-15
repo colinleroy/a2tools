@@ -29,6 +29,13 @@ static char *camera_drivers[] = {
 };
 
 uint8 serial_model = QT_MODEL_UNKNOWN;
+char *cam_file_extension[] = {
+  ".???",
+  ".QTK",
+  ".QTK",
+  ".JPG",
+};
+
 
 #ifndef __CC65__
 FILE *dbgfp = NULL;

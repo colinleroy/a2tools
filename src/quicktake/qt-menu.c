@@ -101,10 +101,7 @@ again:
     cprintf("Saving picture %d to %s...\r\n\r\n", n_pic, filename);
   }
 #else
-  if (serial_model == QT_MODEL_200)
-    sprintf(filename, "image%02d.jpg", n_pic);
-  else
-    sprintf(filename, "image%02d.qtk", n_pic);
+  sprintf(filename, "image%02d%s", n_pic, cam_file_extension[serial_model]);
 #endif
 
   if (check_file_existence(filename, IS_NOT_NULL(set_filename))) {
@@ -302,7 +299,7 @@ try_again:
     sprintf(buf, "%d", fi);
     filename[prefix_len] = '\0';
     strcat(filename, buf);
-    strcat(filename, serial_model == QT_MODEL_200 ? ".JPG":".QTK");
+    strcat(filename, cam_file_extension[serial_model]);
 
     many_pic_header("Downloading pictures...");
     if (save_picture(i, filename) != 0) {
