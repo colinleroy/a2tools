@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <math.h>
 #include <SDL.h>
+#include "platform.h"
 #include "../lib/extended_conio.h"
+#include "../serial/qt-serial.h"
 #include "../decoders/qt-conv.h"
 
 static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
@@ -16,6 +18,13 @@ static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
 static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b) {
   sdl_set_pixel32(surface, x, y, SDL_MapRGB(surface->format, r, g, b));
 }
+
+#define PIXEL_OUTPUT(x, y, v, h) do {                     \
+  sdl_set_pixel(screen, (x)*2, (y)*2, v, v/(1+h), v);     \
+  sdl_set_pixel(screen, (x)*2+1, (y)*2, v, v/(1+h), v);   \
+  sdl_set_pixel(screen, (x)*2, (y)*2+1, v, v/(1+h), v);   \
+  sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
+} while (0)
 
 void main(int argc, char *argv[]) {
   FILE *fp = NULL;
@@ -41,7 +50,7 @@ display:
   if (argc < 4) {
     size_t data_len;
     fseek(fp, 0, SEEK_END);
-    printf("%d\n", ftell(fp));
+    printf("file size: %zu\n", ftell(fp));
     if (ftell(fp) == 2400) {
       /* Raw thumb */
       w = 80;
@@ -61,7 +70,7 @@ display:
         w = 384;
         h = 240;
       } else {
-        printf("Can't guess size from %d.\n", data_len);
+        printf("Can't guess size from %zu.\n", data_len);
         w = 640;
         h = 480;
       }
@@ -110,29 +119,22 @@ display:
           c2 = c;
         }
         if (c == c2) {
-          sdl_set_pixel(screen, x*2, y*2, c, c, c);
-          sdl_set_pixel(screen, x*2+1, y*2, c, c, c);
-          sdl_set_pixel(screen, x*2, y*2+1, c, c, c);
-          sdl_set_pixel(screen, x*2+1, y*2+1, c, c, c);
+          PIXEL_OUTPUT(x, y, c, 0);
         } else {
           off_t offset = y*w + x;
           int color = c2;
           int highlight = blink ? abs(c2-c) : 0;
-          printf("%d,%d: %d (%s) vs %d (%s)\n", x, y, c, argv[1], c2, argv[2]);
-          sdl_set_pixel(screen, x*2, y*2, color, color/(1+highlight), color);
-          sdl_set_pixel(screen, x*2+1, y*2, color, color/(1+highlight), color);
-          sdl_set_pixel(screen, x*2, y*2+1, color, color/(1+highlight), color);
-          sdl_set_pixel(screen, x*2+1, y*2+1, color, color/(1+highlight), color);
+          PIXEL_OUTPUT(x, y, color, highlight);
         }
       }
     }
   } else {
     char line[80], *cur_in;
     char out[160], *cur_out;
-    int i, a, b, c, x, y;
+    int i, a, b, c, d, x, y;
 
     rewind(fp);
-    if (qtmodel == 2) {
+    if (qtmodel == QT_MODEL_200) {
       unsigned int data_offset;
       fseek(fp, 0, SEEK_END);
       data_offset = ftell(fp);
@@ -140,8 +142,8 @@ display:
       printf("data_offset = %04X\n", data_offset);
       fseek(fp, data_offset, SEEK_SET);
     }
-    for (y = 0; y < 60*2; y+=2) {
-      if (qtmodel == 1) {
+    for (y = 0; y < 60*2; y++) {
+      if (qtmodel == QT_MODEL_150) {
         fread(line, 1, 80, fp);
         cur_in = line;
         cur_out = out;
@@ -160,18 +162,20 @@ display:
             a = *cur_out++;
             b = *cur_out++;
             c = *cur_out++;
-            sdl_set_pixel(screen, x, (y), a, a, a);
-            sdl_set_pixel(screen, x+1, (y), b, b, b);
-            sdl_set_pixel(screen, x, (y)+1, c, c, c);
+            PIXEL_OUTPUT(x, y, a, 0);
+            PIXEL_OUTPUT(x+1, y, b, 0);
+            PIXEL_OUTPUT(x, y+1, c, 0);
             x+=2;
             i+=3;
           } else {
-            a = *cur_out++;
-            sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
+            d = *cur_out++;
+            PIXEL_OUTPUT(1+((i - 120)*2), (y)+1, d, 0);
+            // sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
             i++;
           }
         }
-      } else if (qtmodel == 0) {
+        y++;
+      } else if (qtmodel == QT_MODEL_100) {
         fread(line, 1, 40, fp);
         cur_in = line;
         cur_out = out;
@@ -187,19 +191,13 @@ display:
         cur_out = out;
         for (i = 0; i < 40; i++) {
           a = *cur_out++;
-          sdl_set_pixel(screen, x, y, a, a, a);
-          sdl_set_pixel(screen, x+1, y, a, a, a);
-          sdl_set_pixel(screen, x, y+1, a, a, a);
-          sdl_set_pixel(screen, x+1, y+1, a, a, a);
-          x+=2;
+          PIXEL_OUTPUT(x, y, a, 0);
+          x++;
           b = *cur_out++;
-          sdl_set_pixel(screen, x, y, b, b, b);
-          sdl_set_pixel(screen, x+1, y, b, b, b);
-          sdl_set_pixel(screen, x, y+1, b, b, b);
-          sdl_set_pixel(screen, x+1, y+1, b, b, b);
-          x+=2;
+          PIXEL_OUTPUT(x, y, b, 0);
+          x++;
         }
-      } else if (qtmodel == 2) {
+      } else if (qtmodel == QT_MODEL_200) {
         int i, j;
         if (y % 2 == 0) {
           fread(line, 1, 160, fp);
@@ -215,6 +213,7 @@ display:
           sdl_set_pixel(screen, x, y, line[x], line[x], line[x]);
           sdl_set_pixel(screen, x, y+1, line[x], line[x], line[x]);
         }
+        y++;
       }
     }
   }
