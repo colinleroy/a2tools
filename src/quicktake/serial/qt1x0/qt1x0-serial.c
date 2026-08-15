@@ -162,7 +162,6 @@ static uint8 get_hello(void) {
   PC_DEBUG("read hello", buffer, 7);
 
   if (buffer[0] != 0xA5) {
-    cprintf("Unexpected $%04X. ", buffer[0]);
     return QT_MODEL_UNKNOWN;
   }
 
@@ -280,7 +279,7 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
       return send_command(NULL, 0, 1, 0, 0);
   }
 
-  cprintf("Negotiating speed...\r\n");
+  cputs("Upgrading speed...\r\n");
   PC_DEBUG("write speed", str_speed, sizeof str_speed);
   simple_serial_write(str_speed, sizeof str_speed);
 

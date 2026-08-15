@@ -16,9 +16,10 @@ uint8 *cur_thumb_data;
 #pragma code-name(push, "QT1X0")
 
 void qt1x0_thumb_histogram(void) {
-  uint8 r_bytes;
+  register signed char page;
+  register unsigned char x;
   uint16 curr_hist = 0;
-  register uint8 x;
+  uint16 read_len;
 
 #ifndef __CC65__
   bzero(histogram, sizeof(histogram));
@@ -27,8 +28,9 @@ void qt1x0_thumb_histogram(void) {
 #endif
 
   /* First count values */
-  while ((r_bytes = read(ifd, buffer, 255)) != 0) {
 #ifndef __CC65__
+  uint8 r_bytes;
+  while ((r_bytes = read(ifd, buffer, 255)) != 0) {
     cur_thumb_data = buffer;
     do {
       uint8 v = *cur_thumb_data;
@@ -36,10 +38,19 @@ void qt1x0_thumb_histogram(void) {
       histogram[((v&0xF0))]++;
       cur_thumb_data++;
     } while (r_bytes--);
+  }
 #else
-    __asm__("ldy %v", r_bytes);
+  read_len = 2048;
+  page = 8+1;
+  x = 0;
+read_again:
+  read(ifd, buffer, read_len);
+  __asm__("lda #>%v", buffer);
+  __asm__("sta %g+2", next_byte);
+  __asm__("ldy %v", x);
+next_page:
     next_byte:
-    __asm__("lda %v-%b,y", buffer, 1); /* read byte - offset -1 to go to zero */
+    __asm__("lda %v,y", buffer); /* read byte - offset -1 to go to zero */
     __asm__("sta tmp1"); /* backup it */
     __asm__("asl"); /* << 4 low nibble */
     __asm__("asl");
@@ -62,8 +73,18 @@ void qt1x0_thumb_histogram(void) {
 
     __asm__("dey");
     __asm__("bne %g", next_byte);
+    
+    __asm__("inc %g+2", next_byte);
+    __asm__("dec %v", page);
+    __asm__("bmi %g", done);
+    __asm__("bne %g", next_page);
+    
+    //last partial page
+    __asm__("ldy #%b", 2400-256*9);
+    __asm__("sty %v", x);
+    __asm__("bne %g", read_again);
+done:
 #endif
-  }
   /* Rewind for later load */
   lseek(ifd, 0, SEEK_SET);
 
