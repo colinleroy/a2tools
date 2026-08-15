@@ -99,9 +99,9 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 
     snprintf(args, FILENAME_MAX + FOUR_NUM_WIDTH - 1, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 
-    if (!strcmp(magic, QTKT_MAGIC)) {
-      exec("qtktconv", args);
-    } else if (!strcmp(magic, QTKN_MAGIC)) {
+    if (!strcmp(magic, QKTK_MAGIC)) {
+      exec("qktkconv", args);
+    } else if (!strcmp(magic, QKTN_MAGIC)) {
       exec("radcconv", args);
     } else if ((magic[3] &= 0xF0) && !strcmp(magic, JPEG_EXIF_MAGIC)) {
       exec("jpegconv", args);

@@ -33,7 +33,7 @@ hn_val            = _zp13                ; Used across bands
 
 ; Defines
 
-; QTKT algorithm relies on two pixels "borders" around the
+; QKTK algorithm relies on two pixels "borders" around the
 ; image to simplify bound checking.
 SCRATCH_HEIGHT= (BAND_HEIGHT + 1)
 RAW_IMAGE_SIZE= ((SCRATCH_HEIGHT-1) * RAW_WIDTH + 644)
@@ -165,7 +165,7 @@ IDX_BEHIND = (IDX-RAW_WIDTH+1)
         sta     IB7+2
 .endmacro
 
-; QTKT file magic
+; QKTK file magic
 decoder_name_str:
         .asciiz      "QKTK"
 _magic:

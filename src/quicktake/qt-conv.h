@@ -22,8 +22,8 @@ extern uint8 *cur_cache_ptr;
 
 #define RAW_IMAGE_SIZE ((BAND_HEIGHT) * RAW_WIDTH)
  
-#define QTKT_MAGIC      "qktk"
-#define QTKN_MAGIC      "qktn"
+#define QKTK_MAGIC      "qktk"
+#define QKTN_MAGIC      "qktn"
 #define JPEG_EXIF_MAGIC "\377\330\377\340"
 
 #define PNM_HEADER      "P5\n256 192\n255\n"

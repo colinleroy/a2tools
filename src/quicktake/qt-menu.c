@@ -549,7 +549,7 @@ static uint8 setup(int argc, char *argv[]) {
 #ifdef DEBUG_HD
   if (argc == 1) {
   #if DEBUG_HD==100
-  exec("QTKTCONV","/HD/TEST100.QTK 0 0 640 480");
+  exec("QKTKCONV","/HD/TEST100.QTK 0 0 640 480");
   #endif
   #if DEBUG_HD==150
   exec("RADCCONV","/HD/TEST150.QTK 0 0 640 480");
@@ -562,10 +562,10 @@ static uint8 setup(int argc, char *argv[]) {
 #ifdef DEBUG_FLOPPY
   if (argc == 1) {
   #if DEBUG_FLOPPY==100
-  exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
+  exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
   #endif
   #if DEBUG_FLOPPY==98
-  exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
+  exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
   #endif
   #if DEBUG_FLOPPY==150
   exec("RADCCONV","/QT150/TEST150.QTK 0 0 640 480");

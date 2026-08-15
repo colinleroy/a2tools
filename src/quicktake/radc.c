@@ -27,7 +27,7 @@
 
 
 /* Shared with qt-conv.c */
-char magic[5] = QTKN_MAGIC;
+char magic[5] = QKTN_MAGIC;
 char *decoder_name = "Kodac RADC";
 
 extern uint8 cache[CACHE_SIZE];

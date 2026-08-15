@@ -1,5 +1,5 @@
 /*
-   QTKT (QuickTake 100) decoding algorithm
+   QKTK (QuickTake 100) decoding algorithm
    Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
    Heavily based on dcraw.c -- Dave Coffin's raw photo decoder
@@ -26,7 +26,7 @@
 #include "qt-conv.h"
 
 /* Shared with qt-conv.c */
-char magic[5] = QTKT_MAGIC;
+char magic[5] = QKTK_MAGIC;
 char *decoder_name = "QKTK";
 
 uint16 *huff_ptr = NULL; /* unused here, just for linking */

@@ -92,13 +92,13 @@ slowtake_GCCSOURCES := \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c
 
-qtktconv_SOURCES := \
+qktkconv_SOURCES := \
 	qt-conv.c \
-	qtkt_setup_decode.c \
+	qktk_setup_decode.c \
 	../lib/progress_bar.c
 
-qtktconv_CC65SOURCES := \
-	qtkt.s \
+qktkconv_CC65SOURCES := \
+	qktk.s \
 	scaler.s \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
@@ -108,8 +108,8 @@ qtktconv_CC65SOURCES := \
 	../lib/a2_features.s \
 	../lib/check_floppy.s
 
-qtktconv_GCCSOURCES := \
-	qtkt.c \
+qktkconv_GCCSOURCES := \
+	qktk.c \
 	scaler.c
 
 radcconv_SOURCES := \
@@ -183,25 +183,25 @@ slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-C ../../config/apple2enh-slowtake.cfg
 
 # 4 full tracks cache!
-qtktconv_CLCFLAGS = \
+qktkconv_CLCFLAGS = \
 	-DCACHE_SIZE=20480  --asm-define CACHE_SIZE=20480 \
 	-DRAW_X_OFFSET=1    --asm-define RAW_X_OFFSET=1 \
 	-DRAW_Y_OFFSET=1    --asm-define RAW_Y_OFFSET=1 \
 	-DRAW_WIDTH=768     --asm-define RAW_WIDTH=768 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-DQTKTCONV=1 \
+	-DQKTKCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg \
 	--start-addr 0x1000  #Two file buffers
 
-qtktconv_GCCCFLAGS = \
+qktkconv_GCCCFLAGS = \
 	-DCACHE_SIZE=20480 \
 	-DRAW_X_OFFSET=1 \
 	-DRAW_Y_OFFSET=1 \
 	-DRAW_WIDTH=768 \
 	-DBAND_HEIGHT=20 \
 	-DFILE_WIDTH=256 \
-	-DQTKTCONV=1 \
+	-DQKTKCONV=1 \
 
 # 3.5 tracks cache
 radcconv_CLCFLAGS = \
@@ -291,7 +291,7 @@ add_disk: ABOUT.ZX QT1X0.ZX QT200.ZX
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-quicktake.po: splash.h slowtake.bin qtktconv.bin radcconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
+quicktake.po: splash.h slowtake.bin qktkconv.bin radcconv.bin jpegconv.bin loader.x86_64 qktkconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
@@ -312,11 +312,11 @@ slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 microserial.x86_64: $(microserial_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(microserial_GCCCFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
+qktkconv.bin: $(qktkconv_CC65SOURCES) $(qktkconv_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qktkconv.dbg" $(CFLAGS) $(qktkconv_CLCFLAGS) -vm -m qktkconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
-qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $(qtktconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
+qktkconv.x86_64: $(qktkconv_SOURCES) $(qktkconv_GCCSOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $(qktkconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 radcconv.bin: $(radcconv_CC65SOURCES) $(radcconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"radcconv.dbg" $(CFLAGS) $(radcconv_CLCFLAGS) -vm -m radcconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
