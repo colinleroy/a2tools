@@ -87,6 +87,7 @@ void qt1x0_load_thumb_data(uint8 line) {
     unsigned char *cur_in, *cur_out;
     /* Whyyyyyy do they do that */
     if (!(line % 4)) {
+      unsigned char x;
       /* Expand the next two lines from RGGB thumb_buf to 8bpp buffer */
       read(ifd, thumb_buf, THUMB_WIDTH);
 
@@ -101,16 +102,16 @@ void qt1x0_load_thumb_data(uint8 line) {
         unsigned char g;
 
         g = (thumb_buf[i] & 0x0F) | (thumb_buf[i+1] & 0xF0);
-        THUMBNAIL_BUF_START[off]   = g;
-        THUMBNAIL_BUF_START[off+1] = g;
-        THUMBNAIL_BUF_START[off+2] = g;
-        THUMBNAIL_BUF_START[off+3] = g;
+        THUMBNAIL_BUF_START[x]   = g;
+        THUMBNAIL_BUF_START[x+1] = g;
+        THUMBNAIL_BUF_START[x+2] = g;
+        THUMBNAIL_BUF_START[x+3] = g;
 
         g = thumb_buf[i+2];
-        THUMBNAIL_BUF_START[off+4] = g;
-        THUMBNAIL_BUF_START[off+5] = g;
-        THUMBNAIL_BUF_START[off+6] = g;
-        THUMBNAIL_BUF_START[off+7] = g;
+        THUMBNAIL_BUF_START[x+4] = g;
+        THUMBNAIL_BUF_START[x+5] = g;
+        THUMBNAIL_BUF_START[x+6] = g;
+        THUMBNAIL_BUF_START[x+7] = g;
 
         i += 3;
         x += 8;

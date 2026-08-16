@@ -78,9 +78,8 @@ void *qt1x0_callbacks[] = {
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
 
-#ifndef DEBUG_THUMB
 uint8 is_qt100; /* helper for thumbnailer */
-#else
+#ifdef DEBUG_THUMB
   #if DEBUG_THUMB==100
   uint8 is_qt100 = 1;
   #endif
