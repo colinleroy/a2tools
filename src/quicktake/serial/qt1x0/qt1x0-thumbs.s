@@ -21,7 +21,19 @@ curr_hist       = _zp10       ; word
 
 .segment "QT1X0"
 
+.proc _qt150_thumb_histogram
+        ldx     #$00
+next:                         ; Don't really do the histogram.
+        txa
+        sta     _opt_histogram,x
+        inx
+        bne     next
+        rts
+.endproc
+
 .proc _qt1x0_thumb_histogram
+        ldy     _is_qt100
+        beq     _qt150_thumb_histogram
         lda     #0            ; Init values
         sta     rem_bytes     ; 256 bytes
         lda     #(8+1)        ; 8 pages
@@ -159,13 +171,10 @@ next_thumb_x:
         rts
 
 load_qt150_line:
-        and     #$03          ; Load two lines at once, and bump them to 4
-        beq     qt150_first_line
-        and     #$01
-        beq     qt150_second_line
-        rts
+        and     #$03
+        bne     copy_line
 
-qt150_first_line:
+qt150_load_line:
         lda     _ifd          ; Read from thumbnail file
         jsr     pusha0
 
@@ -176,79 +185,37 @@ qt150_first_line:
         ldx     #>THUMB_WIDTH
         jsr     _read
 
+copy_line:
         ldx     #$00
         ldy     #$00
-
-next_expand_x:                ; expand nibbles to bytes
+        clc
+next_quad:
         lda     _thumb_buf,x
+        inx
+        and     #$0F
         sta     tmp1
-        and     #$F0          ; high nibble
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        iny
-
-        lda     tmp1          ; low nibble
-        asl
-        asl
-        asl
-        asl
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        iny
-
-        inx
-        cpx     #THUMB_WIDTH
-        bcc     next_expand_x
-
-        ; Reorder bytes across two rows: x/y, x+1/y,x/y+1 for 120 bytes, then x+1,y+1 for 40 bytes
-        lda     #>_thumb_buf
-        sta     out_high
-
-        ldx     #$00          ; in pointer
-        ldy     #$00          ; out pointer
-
-reorder_120:
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET,x ; X/Y
-        sta     _thumb_buf,y
-
-        inx
-        iny
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET,x ; X+1/Y
-        sta     _thumb_buf,y
-
-        inx
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET,x ; X/Y+1
-        sta     _thumb_buf+THUMB_WIDTH-1,y
-
-        iny
-        inx
-        cpx     #(THUMB_WIDTH*3/2)
-        bcc     reorder_120
-
-reorder_40:
-        iny
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET,x ; X+1/Y
-out_high:
-        sta     _thumb_buf,y
-        iny
-        inx
-        bne     check_reorder_bound
-        inc     out_high                          ; Last pixels are on page 2
-check_reorder_bound:
-        cpx     #<(THUMB_WIDTH*2)
-        bcc     reorder_40
-
-        ; Done! finally, copy first line to second line for upscaling
-qt150_second_line:
-        ldx     #$00
-        ldy     #$00
-next_copy_x:
         lda     _thumb_buf,x
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        iny
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        iny
         inx
-        cpx      #THUMB_WIDTH
-        bcc      next_copy_x
+        and     #$F0
+        ora     tmp1
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
+
+        lda     _thumb_buf,x
+        inx
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
+
+        tya
+        adc     #8
+        tay
+
+        cpx     #60
+        bcc     next_quad
         rts
 
 .endproc

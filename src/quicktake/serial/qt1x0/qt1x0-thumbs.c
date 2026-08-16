@@ -17,6 +17,18 @@ void qt1x0_thumb_histogram(void) {
   uint16 curr_hist = 0;
   uint16 read_len;
 
+  if (!is_qt100) {
+    /* On QT150, thumbnails are 40x30 16bpp (4R/8G/4B). We only keep
+     * the green channel, and those 8bits are hard to reassemble, so
+     * we skip histograming. */
+    x = 0;
+    do {
+      opt_histogram[x] = x;
+      x--;
+    } while(x);
+
+    return;
+  }
   bzero(histogram, sizeof(histogram));
 
   /* First count values */
@@ -75,64 +87,35 @@ void qt1x0_load_thumb_data(uint8 line) {
     unsigned char *cur_in, *cur_out;
     /* Whyyyyyy do they do that */
     if (!(line % 4)) {
-      /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
+      /* Expand the next two lines from RGGB thumb_buf to 8bpp buffer */
       read(ifd, thumb_buf, THUMB_WIDTH);
-      cur_in = thumb_buf;
-      cur_out = buffer+THUMBNAIL_BUFFER_OFFSET;
-      for (dx = 0; dx < THUMB_WIDTH; dx++) {
-        c = *cur_in++;
-        a   = (c & 0xF0);
-        *cur_out++ = a;
-        b   = ((c & 0x0F) << 4);
-        *cur_out++ = b;
+
+      /* Thumbnails are 40*30, 16bit color, with RGGB (4/8/4 bits). they're encoded
+       * in sequence of 40*RGG followed by 40*B. We want to keep G to grayscale at
+       * 8bpp.
+       * This means we need to discard 4 bits/keep 8 bits 40 times, then discard 20 bytes.
+       *
+       * RRRRGGGG GGGGRRRR GGGGGGGG RRRRGGGG GGGGRRRR GGGGGGGG RRRRGGGG GGGGRRRR...
+       */
+      for (i = 0, x = 0; i < 60;) {
+        unsigned char g;
+
+        g = (thumb_buf[i] & 0x0F) | (thumb_buf[i+1] & 0xF0);
+        THUMBNAIL_BUF_START[off]   = g;
+        THUMBNAIL_BUF_START[off+1] = g;
+        THUMBNAIL_BUF_START[off+2] = g;
+        THUMBNAIL_BUF_START[off+3] = g;
+
+        g = thumb_buf[i+2];
+        THUMBNAIL_BUF_START[off+4] = g;
+        THUMBNAIL_BUF_START[off+5] = g;
+        THUMBNAIL_BUF_START[off+6] = g;
+        THUMBNAIL_BUF_START[off+7] = g;
+
+        i += 3;
+        x += 8;
       }
 
-      /* Reorder bytes from buffer back to thumb_buf */
-      cur_in = buffer+THUMBNAIL_BUFFER_OFFSET;
-      cur_out = thumb_buf;
-      for (i = 0; i < THUMB_WIDTH*3/2; ) {
-        a = *cur_in++;
-        i++;
-
-        *(cur_out) = a;
-        cur_out++;
-
-        b = *cur_in++;
-        *(cur_out) = b;
-        i++;
-
-        c = *cur_in++;
-        *(cur_out + THUMB_WIDTH-1) = c;
-        i++;
-
-        cur_out++;
-      }
-
-      for (; i < THUMB_WIDTH * 2; ) {
-        cur_out++;
-        d = *cur_in++;
-        *(cur_out) = d;
-        cur_out++;
-
-        i++;
-      }
-
-qt150_second_line:
-      /* Finally copy the first line of thumb_buf to buffer for display,
-       * upscaling horizontally */
-      cur_in = thumb_buf;
-      cur_out = THUMBNAIL_BUF_START;
-      for (dx = 0; dx < THUMB_WIDTH; dx++) {
-        *cur_out = *cur_in;
-        cur_out++;
-        *cur_out = *cur_in;
-        cur_out++;
-        cur_in++;
-      }
-    } else if (!(line % 2)) {
-      goto qt150_second_line;
-    } else {
-      /* Reuse the previous buffer line once for upscaling */
     }
   }
 }

@@ -145,57 +145,41 @@ display:
     for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_150) {
         fread(line, 1, 80, fp);
-        cur_in = line;
-        cur_out = out;
-        for (i = 0; i < 80; i++) {
-          c = *cur_in++;
-          a   = (((c>>4) & 0b00001111) << 4);
-          b   = (((c)    & 0b00001111) << 4);
-          *cur_out++ = a;
-          *cur_out++ = b;
-        }
-        i = 0;
-        x = 0;
-        cur_out = out;
-        for (i = 0; i < 80 * 2; ) {
-          if (i < 120) {
-            a = *cur_out++;
-            b = *cur_out++;
-            c = *cur_out++;
-            PIXEL_OUTPUT(x, y, a, 0);
-            PIXEL_OUTPUT(x+1, y, b, 0);
-            PIXEL_OUTPUT(x, y+1, c, 0);
-            x+=2;
-            i+=3;
-          } else {
-            d = *cur_out++;
-            PIXEL_OUTPUT(1+((i - 120)*2), (y)+1, d, 0);
-            i++;
-          }
+
+        for (i = 0, x = 0; i < 60;) {
+          unsigned char g;
+
+          g = (line[i] & 0x0F) | (line[i+1] & 0xF0);
+          PIXEL_OUTPUT(x,   y,   g, 0);
+          PIXEL_OUTPUT(x+1, y,   g, 0);
+          PIXEL_OUTPUT(x,   y+1, g, 0);
+          PIXEL_OUTPUT(x+1, y+1, g, 0);
+
+          g = line[i+2];
+          PIXEL_OUTPUT(x+2, y,   g, 0);
+          PIXEL_OUTPUT(x+3, y,   g, 0);
+          PIXEL_OUTPUT(x+2, y+1, g, 0);
+          PIXEL_OUTPUT(x+3, y+1, g, 0);
+          i += 3;
+          x += 4;
         }
         y++;
       } else if (qtmodel == QT_MODEL_100) {
+        uint8 off;
         fread(line, 1, 40, fp);
-        cur_in = line;
-        cur_out = out;
-        for (i = 0; i < 40; i++) {
-          c = *cur_in++;
-          a   = (((c>>4) & 0b00001111) << 4);
-          b   = (((c)    & 0b00001111) << 4);
-          *cur_out++ = a;
-          *cur_out++ = b;
-        }
+
         i = 0;
-        x = 0;
-        cur_out = out;
-        for (i = 0; i < 40; i++) {
-          a = *cur_out++;
+        do {
+          c   = line[i];
+          a   = (c & 0xF0);
+          b   = (c << 4);
+          x = i * 2;
           PIXEL_OUTPUT(x, y, a, 0);
-          x++;
-          b = *cur_out++;
-          PIXEL_OUTPUT(x, y, b, 0);
-          x++;
-        }
+          PIXEL_OUTPUT(x, y+1, a, 0);
+          PIXEL_OUTPUT(x+1, y, b, 0);
+          PIXEL_OUTPUT(x+1, y+1, b, 0);
+        } while (i++ < 40);
+
       } else if (qtmodel == QT_MODEL_200) {
         int i, j;
         if (y % 2 == 0) {
