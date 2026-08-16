@@ -26,11 +26,11 @@ VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"'
 
 microserial_SOURCES := \
 	tools/micro-serial.c \
-	serial/qt-serial.c \
-	serial/qt1x0/qt1x0-serial.c \
-	serial/qt1x0/qt1x0-thumbs.c \
-	serial/qt200/qt200-serial.c \
-	serial/qt200/qt200-thumbs.c \
+	cameras/qt-serial.c \
+	cameras/qt1x0/qt1x0-serial.c \
+	cameras/qt1x0/qt1x0-thumbs.c \
+	cameras/qt200/qt200-serial.c \
+	cameras/qt200/qt200-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -45,10 +45,10 @@ slowtake_SOURCES := \
 	ui/ui.c \
 	ui/qt-edit-image.c \
 	ui/qt-state.c \
-	serial/qt-serial.c \
-	serial/qt-callbacks.s \
-	serial/qt1x0/qt1x0-serial.c \
-	serial/qt200/qt200-serial.c \
+	cameras/qt-serial.c \
+	cameras/qt-callbacks.s \
+	cameras/qt1x0/qt1x0-serial.c \
+	cameras/qt200/qt200-serial.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
@@ -57,8 +57,8 @@ slowtake_CC65SOURCES := \
 	ui/qt-dither-common.s \
 	ui/qt-dither-horiz.s \
 	ui/qt-dither-vert.s \
-	serial/qt1x0/qt1x0-thumbs.s \
-	serial/qt200/qt200-thumbs.s \
+	cameras/qt1x0/qt1x0-thumbs.s \
+	cameras/qt200/qt200-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -87,8 +87,8 @@ slowtake_CC65SOURCES := \
 	../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
-	serial/qt200/qt1x0-thumbs.c \
-	serial/qt200/qt200-thumbs.c \
+	cameras/qt200/qt1x0-thumbs.c \
+	cameras/qt200/qt200-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \
