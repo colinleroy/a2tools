@@ -554,17 +554,29 @@ static uint8 setup(int argc, char *argv[]) {
   #if DEBUG_THUMB==100
   load_driver("QT1X0.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_100;
-  qt_edit_image("/QT100/THUMB", THUMB_WIDTH*2);
+  while (1) {
+    clear_dhgr();
+    qt_edit_image("/QT100/THUMB", THUMB_WIDTH*2);
+    cgetc();
+  }
   #endif
   #if DEBUG_THUMB==150
   load_driver("QT1X0.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_150;
-  qt_edit_image("/QT150/THUMB", THUMB_WIDTH*2);
+  while (1) {
+    clear_dhgr();
+    qt_edit_image("/QT150/THUMB", THUMB_WIDTH*2);
+    cgetc();
+  }
   #endif
   #if DEBUG_THUMB==200
   load_driver("QT200.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_200;
-  qt_edit_image("/QT200/THUMB", THUMB_WIDTH*2);
+  while (1) {
+    clear_dhgr();
+    qt_edit_image("/QT200/THUMB", THUMB_WIDTH*2);
+    cgetc();
+  }
   #endif
   cgetc();
 #endif

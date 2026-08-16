@@ -977,7 +977,7 @@ static void dither_prepare(void) {
     if (cam_features & CAM_CAN_GET_THUMBNAIL) {
       cam_thumb_histogram();
     }
-    dither_alg = DITHER_BAYER;
+    dither_alg = DITHER_SIERRA;
   } else {
     histogram_equalize();
   }

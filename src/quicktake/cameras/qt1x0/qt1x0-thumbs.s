@@ -36,6 +36,13 @@ next:                         ; Don't really do the histogram.
         beq     _qt150_thumb_histogram
         lda     #0            ; Init values
         sta     rem_bytes     ; 256 bytes
+        sta     curr_hist
+        sta     curr_hist+1
+        tay
+:       sta     _err_buf,y    ; reset err_buf
+        sta     _err_buf+256,y
+        iny
+        bne     :-
         lda     #(8+1)        ; 8 pages
         sta     page
 read_data:
