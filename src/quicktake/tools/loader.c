@@ -7,7 +7,7 @@
 #include <SDL.h>
 #include "platform.h"
 #include "../lib/extended_conio.h"
-#include "../serial/qt-serial.h"
+#include "../cameras/qt-serial.h"
 #include "../decoders/qt-conv.h"
 
 static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {

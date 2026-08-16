@@ -16,8 +16,8 @@
 #include "simple_serial.h"
 #include "clrzone.h"
 #include "../decoders/qt-conv.h"
-#include "../serial/qt-serial.h"
-#include "../serial/qt-thumbs.h"
+#include "../cameras/qt-serial.h"
+#include "../cameras/qt-thumbs.h"
 #include "qt-edit-image.h"
 #include "qt-state.h"
 #include "a2_features.h"
@@ -977,7 +977,7 @@ static void dither_prepare(void) {
     if (cam_features & CAM_CAN_GET_THUMBNAIL) {
       cam_thumb_histogram();
     }
-    dither_alg = DITHER_SIERRA;
+    dither_alg = DITHER_BAYER;
   } else {
     histogram_equalize();
   }

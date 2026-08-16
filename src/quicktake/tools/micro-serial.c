@@ -6,8 +6,8 @@
 
 #include "platform.h"
 #include "simple_serial.h"
-#include "serial/qt-serial.h"
-#include "serial/qt-thumbs.h"
+#include "cameras/qt-serial.h"
+#include "cameras/qt-thumbs.h"
 
 extern void *qt1x0_callbacks[];
 extern void *qt200_callbacks[];

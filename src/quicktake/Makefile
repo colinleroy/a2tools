@@ -340,7 +340,7 @@ loader.x86_64: tools/loader.c
 	gcc $(microserial_GCCCFLAGS) -g -O0 -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
 
 clean:
-	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po
+	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po *DRV *ZX
 
 upload: clean all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/ || \

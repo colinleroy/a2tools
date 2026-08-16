@@ -1,7 +1,7 @@
 #ifndef __qt_edit_image_h
 #define __qt_edit_image_h
 
-#include "serial/qt-serial.h"
+#include "cameras/qt-serial.h"
 #include "platform.h"
 
 void qt_convert_image(const char *filename);
