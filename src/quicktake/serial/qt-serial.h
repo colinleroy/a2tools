@@ -10,12 +10,14 @@
 #define QT_MODEL_150     2
 #define QT_MODEL_200     3
 
+#define QUALITY_HIGH     0x10
 #define QUALITY_STANDARD 0x20
-#define QUALITY_HIGH 0x10
+#define QUALITY_UNKNOWN  0xFF
 
-#define FLASH_AUTO 0
-#define FLASH_OFF 1
-#define FLASH_ON 2
+#define FLASH_AUTO       0
+#define FLASH_OFF        1
+#define FLASH_ON         2
+#define FLASH_UNKNOWN    0xFF
 
 #define CAM_FEATURES        0
 #define CAM_WAKEUP          1

@@ -8,6 +8,7 @@
 #ifndef __CC65__
 #include <sys/ioctl.h>
 #endif
+#include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
 #include "strtrim.h"
@@ -16,7 +17,7 @@
 #include "../qt-serial.h"
 #include "../qt-thumbs.h"
 #include "../../decoders/qt-conv.h"
-#include "a2_features.h"
+#include "../../ui/ui.h"
 
 #pragma code-name(push, "QT1X0")
 #pragma rodata-name(push, "QT1X0")
@@ -279,7 +280,6 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
       return send_command(NULL, 0, 1, 0, 0);
   }
 
-  cputs("Upgrading speed...\r\n");
   PC_DEBUG("write speed", str_speed, sizeof str_speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
@@ -374,15 +374,12 @@ static uint8 qt1x0_set_camera_name(const char *name) {
 }
 
 static uint8 receive_data(uint8 n_pic, uint8 type, uint32 size, int fd) {
-  uint8 y = wherey();
   uint16 i;
   uint8 err = 0;
   uint16 blocks = (uint16)(size / BLOCK_SIZE);
   uint16 rem    = (uint16)(size % BLOCK_SIZE);
 
-  cputs("  Getting data...\r\n");
-
-  progress_bar(2, y, scrw - 2, 0, blocks);
+  progress_bar(2, wherey(), scrw - 2, 0, blocks);
 
   send_photo_data_command(n_pic, type, size);
 
@@ -430,8 +427,6 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   uint16 width, height;
   unsigned long pic_size_int;
-  uint8 status_line;
-  const char *format;
   static char hdr[] = {0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
 
   /* Seems useless but needed for IIc+ */
@@ -439,9 +434,7 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   bzero(buffer, BLOCK_SIZE);
 
-  status_line = wherey();
-  cputs("  Getting header...\r\n");
-
+  ui_get_image_header_str();
   if (send_photo_header_command(n_pic) != 0) {
     errno = EIO;
     return -1;
@@ -473,16 +466,12 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
   height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-  format = QKTN_MAGIC;
-  if (serial_model == QT_MODEL_100) {
-    format = QKTK_MAGIC;
-  }
+  memcpy(buffer, serial_model == QT_MODEL_100 ? QKTK_MAGIC : QKTN_MAGIC, 4);
 
   /* Copy the header to 0x0E */
   memcpy(buffer+0x0E, buffer+HDR_SKIP, 64-HDR_SKIP);
 
   /* Write the start of the header */
-  memcpy(buffer, format, 4);
   memcpy(buffer+4, hdr, sizeof(hdr));
 
   /* Set height & width */
@@ -493,28 +482,20 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   write(fd, buffer, BUFFER_SIZE);
   lseek(fd, DATA_OFFSET, SEEK_SET);
 
-  cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
-         ntohs(width), ntohs(height), pic_size_int, format);
-
-  gotoxy(0, status_line);
-  cputs("  Getting picture...\r\n");
-  gotoy(status_line+2);
+  ui_get_image_str(ntohs(width), ntohs(height), pic_size_int);
 
   return receive_data(n_pic, PHOTO_FULL, pic_size_int, fd);
 }
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
 static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  uint8 status_line;
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
 
   bzero(buffer, BLOCK_SIZE);
 
-  status_line = wherey();
-  cputs("  Getting header...\r\n");
-
+  ui_get_image_header_str();
   if (send_photo_header_command(n_pic) != 0) {
     errno = EIO;
     return -1;
@@ -535,8 +516,7 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     info->date.minute  = buffer[IMG_MINUTE_IDX];
   }
 
-  gotoxy(0, status_line);
-  cprintf("  Getting thumbnail %d...\r\n", n_pic);
+  ui_get_thumbnail_str(n_pic);
 
   return receive_data(n_pic, PHOTO_THUMB, THUMBNAIL_SIZE, fd);
 }
@@ -624,7 +604,7 @@ static uint8 qt1x0_get_information(camera_info *info) {
   info->left_pics    = buffer[LEFT_PICS_IDX];
   info->quality_mode = buffer[QUAL_IDX];
   info->flash_mode   = buffer[FLASH_IDX];
-  info->battery_level= buffer[BATTERY_IDX];
+
   if (buffer[BATTERY_IDX] > 100) {
     info->battery_level = buffer[BATTERY_IDX] / 2;
     info->charging = 1;

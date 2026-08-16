@@ -125,7 +125,7 @@ load_done:
     return -1;
   }
 
-  cputs("Initializing...\r\n");
+  cputs("Connected. Upgrading speed...\r\n");
 
   /* Upgrade to target speed */
   return cam_set_speed(speed);
@@ -139,11 +139,11 @@ load_done:
 const char *cam_get_quality_str(uint8 mode) {
   switch(mode) {
     case QUALITY_STANDARD:
-      return "standard quality";
+      return "standard";
     case QUALITY_HIGH:
-      return "high quality";
+      return "high";
     default:
-      return "Unknown";
+      return "unknown";
   }
 }
 
@@ -156,7 +156,7 @@ const char *cam_get_flash_str(uint8 mode) {
     case FLASH_ON:
       return "forced";
     default:
-      return "Unknown";
+      return "unknown";
   }
 }
 #pragma code-name(pop)

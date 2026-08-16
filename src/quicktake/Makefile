@@ -31,6 +31,7 @@ microserial_SOURCES := \
 	serial/qt1x0/qt1x0-thumbs.c \
 	serial/qt200/qt200-serial.c \
 	serial/qt200/qt200-thumbs.c \
+	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/simple_serial_read_no_irq.c \
@@ -41,6 +42,7 @@ microserial_SOURCES := \
 
 slowtake_SOURCES := \
 	ui/qt-menu.c \
+	ui/ui.c \
 	ui/qt-edit-image.c \
 	ui/qt-state.c \
 	serial/qt-serial.c \

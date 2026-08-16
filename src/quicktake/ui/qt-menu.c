@@ -49,7 +49,7 @@ static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
     cprintf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\r\n"
-           "%d photos taken, %d left, %s, %s flash - ",
+           "%d photos taken, %d left, %s quality, %s flash - ",
           cam_info.name, cam_info.battery_level, cam_info.charging? " (charging)":"",
           cam_info.date.day, cam_info.date.month, cam_info.date.year,
           cam_info.date.hour, cam_info.date.minute,
@@ -466,7 +466,7 @@ err_thumb_io:
     clrscr();
     gotoxy(0,20);
 
-    cprintf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
+    cprintf("%s (%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
            thumb_buf, cam_get_quality_str(info.quality_mode),
            info.flash_mode ? "on":"off", info.date.day, info.date.month,

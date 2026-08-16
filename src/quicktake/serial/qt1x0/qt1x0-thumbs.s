@@ -19,8 +19,7 @@ rem_bytes       = _zp8        ; byte
 cur_byte        = _zp9        ; byte
 curr_hist       = _zp10       ; word
 
-; Fixme this should be in QT1X0 segment but there's not enough room
-.segment "CODE"
+.segment "QT1X0"
 
 .proc _qt1x0_thumb_histogram
         lda     #0            ; Init values

@@ -12,6 +12,7 @@
 #include "simple_serial.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
+#include "../../ui/ui.h"
 
 #pragma code-name(push, "QT200")
 #pragma rodata-name(push, "QT200")
@@ -286,9 +287,6 @@ static uint8 qt200_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (do_debug) {
-    cputs("Negociating speed...\r\n");
-  }
   if (send_command(str_speed, sizeof str_speed, 1) != 0) {
     cputs("Speed set command failed.\r\n");
     if (do_debug) {
@@ -355,8 +353,8 @@ static uint8 qt200_get_information(camera_info *info) {
   info->name[response_len - 5] = '\0';
 
   info->left_pics     = 0;
-  info->quality_mode  = QUALITY_STANDARD;
-  info->flash_mode    = FLASH_AUTO;
+  info->quality_mode  = QUALITY_UNKNOWN;
+  info->flash_mode    = FLASH_UNKNOWN;
   info->battery_level = 0;
   info->charging      = 0;
 
@@ -392,7 +390,6 @@ static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8
   char data_cmd[] = {0x00,FUJI_CMD_PIC_GET_DATA,0x02,0x00,0x00,0x00};
   uint16 blocks_read;
   uint16 num_blocks;
-  uint8 y;
   uint8 err = 0;
 
   data_cmd[1] = cmd;
@@ -401,8 +398,7 @@ static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8
   blocks_read = 0;
   num_blocks = (uint16)(picture_size / BLOCK_SIZE);
 
-  y = wherey();
-  progress_bar(2, y, scrw - 2, 0, num_blocks);
+  progress_bar(2, wherey(), scrw - 2, 0, num_blocks);
 
   PC_DEBUG("cmd", data_cmd, sizeof data_cmd);
   if (send_command(data_cmd, sizeof data_cmd, 1) != 0) {
@@ -447,7 +443,7 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   bzero(buffer, BLOCK_SIZE);
 
-  cputs("  Getting size...");
+  ui_get_image_header_str();
   size_cmd[NUM_PIC_IDX] = n_pic;
 
   if (send_command(size_cmd, sizeof size_cmd, 1) != 0) {
@@ -469,16 +465,13 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  gotox(0);
-  cputs("  Getting image...\r\n");
-  cprintf("  Width 640, height 480, %lu bytes (jpg)\r\n",
-         picture_size);
+  ui_get_image_str(640, 480, picture_size);
 
   return qt200_get_image_data(n_pic, fd, picture_size, FUJI_CMD_PIC_GET_DATA);
 }
 
 static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  cprintf("  Getting thumbnail %d...\r\n", n_pic);
+  ui_get_thumbnail_str(n_pic);
   /* FIXME get info */
   return qt200_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
