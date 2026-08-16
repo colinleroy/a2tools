@@ -19,12 +19,11 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
   sdl_set_pixel32(surface, x, y, SDL_MapRGB(surface->format, r, g, b));
 }
 
-  // sdl_set_pixel(screen, (x)*2+1, (y)*2, v, v/(1+h), v);   \
-  // sdl_set_pixel(screen, (x)*2, (y)*2+1, v, v/(1+h), v);   \
-  // sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
-
 #define PIXEL_OUTPUT(x, y, v, h) do {                     \
-  sdl_set_pixel(screen, (x), (y), v, v/(1+h), v);     \
+  sdl_set_pixel(screen, (x)*2, (y)*2, v, v/(1+h), v);     \
+  sdl_set_pixel(screen, (x)*2+1, (y)*2, v, v/(1+h), v);   \
+  sdl_set_pixel(screen, (x)*2, (y)*2+1, v, v/(1+h), v);   \
+  sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
 } while (0)
 
 void main(int argc, char *argv[]) {
