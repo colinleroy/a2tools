@@ -179,9 +179,10 @@ next_thumb_x:
 
 load_qt150_line:
         and     #$03
-        bne     copy_line
+        beq     qt150_expand_line
+        rts
 
-qt150_load_line:
+qt150_expand_line:
         lda     _ifd          ; Read from thumbnail file
         jsr     pusha0
 
