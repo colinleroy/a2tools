@@ -130,7 +130,7 @@ display:
     }
   } else {
     char line[80], *cur_in;
-    char out[160], *cur_out;
+    unsigned char out[160], *cur_out;
     int i, a, b, c, d, x, y;
 
     rewind(fp);
@@ -145,31 +145,36 @@ display:
     for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_150) {
         unsigned char pg;
-        fread(line, 1, 80, fp);
+        if (y % 2 == 0) {
+          fread(line, 1, 80, fp);
 
-        pg = 0;
-        for (i = 0, x = 0; i < 60;) {
-          unsigned char c, g;
+          pg = 0;
+          for (i = 0, x = 0; i < 60;) {
+            unsigned char c, g;
 
-          g = (line[i] & 0x0F) | (line[i+1] & 0xF0);
-          c = (g+pg)/2;
-          PIXEL_OUTPUT(x,   y,   c, 0);
-          PIXEL_OUTPUT(x,   y+1, c, 0);
-          c = pg = g;
-          PIXEL_OUTPUT(x+1, y,   c, 0);
-          PIXEL_OUTPUT(x+1, y+1, c, 0);
+            g = (line[i] & 0x0F) | (line[i+1] & 0xF0);
+            c = (g+pg)/2;
+            PIXEL_OUTPUT(x,   y,   ((c+out[x])/2), 0);
+            out[x] = c;
+            c = pg = g;
+            PIXEL_OUTPUT(x+1, y,   ((c+out[x+1])/2), 0);
+            out[x + 1] = c;
 
-          g = line[i+2];
-          c = (g+pg)/2;
-          PIXEL_OUTPUT(x+2, y,   c, 0);
-          PIXEL_OUTPUT(x+2, y+1, c, 0);
-          c = pg = g;
-          PIXEL_OUTPUT(x+3, y,   c, 0);
-          PIXEL_OUTPUT(x+3, y+1, c, 0);
-          i += 3;
-          x += 4;
+            g = line[i+2];
+            c = (g+pg)/2;
+            PIXEL_OUTPUT(x+2, y,   ((c+out[x+2])/2), 0);
+            out[x + 2] = c;
+            c = pg = g;
+            PIXEL_OUTPUT(x+3, y,   ((c+out[x+3])/2), 0);
+            out[x + 3] = c;
+            i += 3;
+            x += 4;
+          }
+        } else {
+          for (x = 0; x < 160; x++) {
+            PIXEL_OUTPUT(x, y, out[x], 0);
+          }
         }
-        y++;
       } else if (qtmodel == QT_MODEL_100) {
         uint8 off;
         fread(line, 1, 40, fp);

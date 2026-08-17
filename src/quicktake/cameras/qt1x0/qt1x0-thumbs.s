@@ -134,6 +134,21 @@ next_val:
 
 .segment "QT1X0"
 
+; QT150 interpolation macros
+output_line = _buffer+THUMBNAIL_BUFFER_OFFSET
+actual_data = output_line+160
+.macro INTERPOLATE_X
+        sta     cur_x
+        clc
+        adc     prev_x
+        ror
+.endmacro
+.macro INTERPOLATE_Y off
+        clc
+        adc     actual_data+off,y
+        ror
+.endmacro
+
 .proc _qt1x0_load_thumb_data
         ldy     _is_qt100
         beq     load_qt150_line
@@ -178,12 +193,27 @@ next_thumb_x:
         bpl     next_thumb_x
         rts
 
-load_qt150_line:
-        and     #$03
-        beq     qt150_expand_line
+qt150_actual_line:
+        ldx     #158
+:       lda     actual_data,x
+        sta     output_line,x
+        sta     output_line+1,x
+        dex
+        dex
+        bne     :-
+        lda     actual_data   ; First pixel
+        sta     output_line
+        sta     output_line+1
         rts
 
-qt150_expand_line:
+load_qt150_line:
+        and     #$03
+        beq     qt150_interpolate_line
+        and     #$01
+        beq     qt150_actual_line
+        rts
+
+qt150_interpolate_line:
         lda     _ifd          ; Read from thumbnail file
         jsr     pusha0
 
@@ -201,7 +231,7 @@ copy_line:
         lda     #$00
         sta     prev_x
 next_quad:
-        lda     _thumb_buf,x
+        lda     _thumb_buf,x  ; Load 8-bits green value from two half-bytes
         inx
         and     #$0F
         sta     tmp1
@@ -210,29 +240,45 @@ next_quad:
         and     #$F0
         ora     tmp1
 
-        sta     cur_x       ; remember current value,
-        clc                 ; interpolate: c = (c+p)/2
-        adc     prev_x
-        ror
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
-        lda     cur_x       ; get actual value,
-        sta     prev_x      ; remember for interpolation
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
+        INTERPOLATE_X
+        sta     tmp1
+        INTERPOLATE_Y 0
+        sta     output_line,y
+        sta     output_line+1,y
 
-        lda     _thumb_buf,x
+        lda     tmp1          ; Remember actual values for next line
+        sta     actual_data,y
+
+        lda     cur_x         ; get actual value,
+        sta     prev_x        ; remember for interpolation
+        sta     tmp1
+        INTERPOLATE_Y 2
+        sta     output_line+2,y
+        sta     output_line+3,y
+
+        lda     tmp1          ; Remember actual values for next line
+        sta     actual_data+2,y
+
+        lda     _thumb_buf,x  ; 8-bits green value from a full byte
         inx
-        sta     cur_x       ; remember current value,
-        clc                 ; interpolate: c = (c+p)/2
-        adc     prev_x
-        ror
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
+        INTERPOLATE_X
+        sta     tmp1
+        INTERPOLATE_Y 4
+        sta     output_line+4,y
+        sta     output_line+5,y
+
+        lda     tmp1        ; Remember actual values for next line
+        sta     actual_data+4,y
+
         lda     cur_x       ; get actual value,
         sta     prev_x      ; remember for interpolation
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
+        sta     tmp1
+        INTERPOLATE_Y 6
+        sta     output_line+6,y
+        sta     output_line+7,y
+
+        lda     tmp1        ; Remember actual values for next line
+        sta     actual_data+6,y
 
         tya
         clc
@@ -242,5 +288,4 @@ next_quad:
         cpx     #60
         bcc     next_quad
         rts
-
 .endproc

@@ -85,7 +85,8 @@ void qt1x0_load_thumb_data(uint8 line) {
     }
   } else { /* QT150 */
     unsigned char *cur_in, *cur_out;
-    /* Whyyyyyy do they do that */
+    /* Note this is not interpolating. See .s file or
+     * loader.c for an interpolating implementation */
     if (!(line % 4)) {
       unsigned char x;
       /* Expand the next two lines from RGGB thumb_buf to 8bpp buffer */
