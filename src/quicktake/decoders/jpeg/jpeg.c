@@ -480,41 +480,65 @@ static uint8 readSOFMarker(void)
   uint16 gImageXSize;
   uint16 gImageYSize;
 
-   if (getByteNoFF() != 8)
-      return PJPG_BAD_PRECISION;
+  if ((i = getByteNoFF()) != 8) {
+#ifndef __CC65__
+  printf("bad precision %d\n", i);
+#endif
+    return PJPG_BAD_PRECISION;
+  }
 
-   gImageYSize = getLong();
+  gImageYSize = getLong();
 
-   if (gImageYSize != INPUT_HEIGHT)
-      return PJPG_BAD_HEIGHT;
+  if (gImageYSize != INPUT_HEIGHT) {
+#ifndef __CC65__
+  printf("bad height %d\n", gImageYSize);
+#endif
+    return PJPG_BAD_HEIGHT;
+  }
 
-   gImageXSize = getLong();
+  gImageXSize = getLong();
 
-   if (gImageXSize  != INPUT_WIDTH)
-      return PJPG_BAD_WIDTH;
+  if (gImageXSize  != INPUT_WIDTH) {
+#ifndef __CC65__
+  printf("bad width %d\n", gImageXSize);
+#endif
+    return PJPG_BAD_WIDTH;
+  }
 
-   gCompsInFrame = (uint8)getByteNoFF();
+  gCompsInFrame = (uint8)getByteNoFF();
 
-   if (gCompsInFrame > 3)
-      return PJPG_TOO_MANY_COMPONENTS;
+  if (gCompsInFrame > 3) {
+#ifndef __CC65__
+  printf("bad component count %d\n", gCompsInFrame);
+#endif
+    return PJPG_TOO_MANY_COMPONENTS;
+  }
 
-   if (left != (gCompsInFrame + gCompsInFrame + gCompsInFrame + 8))
-      return PJPG_BAD_SOF_LENGTH;
+  if (left != (gCompsInFrame + gCompsInFrame + gCompsInFrame + 8)) {
+#ifndef __CC65__
+  printf("bad SOF length %d/%d\n", left, (gCompsInFrame + gCompsInFrame + gCompsInFrame + 8));
+#endif
+    return PJPG_BAD_SOF_LENGTH;
+  }
 
-   for (i = 0; i < gCompsInFrame; i++)
-   {
-      gCompIdent[i] = (uint8)getByteNoFF();
-      gCompHSamp[i] = (uint8)getByteNoFF();
-      gCompVSamp[i] = gCompHSamp[i] & 0x0F;
-      gCompHSamp[i] = gCompHSamp[i] >> 4;
+  for (i = 0; i < gCompsInFrame; i++)
+  {
+    gCompIdent[i] = (uint8)getByteNoFF();
+    gCompHSamp[i] = (uint8)getByteNoFF();
+    gCompVSamp[i] = gCompHSamp[i] & 0x0F;
+    gCompHSamp[i] = gCompHSamp[i] >> 4;
 
-      gCompQuant[i] = getByteNoFF();
-      if (gCompQuant[i] > 1)
-         return PJPG_UNSUPPORTED_QUANT_TABLE;
-   }
+    gCompQuant[i] = getByteNoFF();
+    if (i == 0 && gCompQuant[i] > 1) {
+#ifndef __CC65__
+      printf("unsupported quant table[%d] %d\n", i, gCompQuant[i]);
+#endif
+      return PJPG_UNSUPPORTED_QUANT_TABLE;
+    }
+  }
 
-   setQuant(gCompQuant[0]);
-   return 0;
+  setQuant(gCompQuant[0]);
+  return 0;
 }
 //------------------------------------------------------------------------------
 // Read a define restart interval (DRI) marker.
@@ -727,10 +751,16 @@ static uint8 locateSOFMarker(void)
    uint8 c;
 
    uint8 status = locateSOIMarker();
+#ifndef __CC65__
+  printf("locateSOIMarker %d\n", status);
+#endif
    if (status)
       return status;
 
    status = processMarkers(&c);
+#ifndef __CC65__
+  printf("processMarkers %d\n", status);
+#endif
    if (status)
       return status;
 
@@ -740,11 +770,17 @@ static uint8 locateSOFMarker(void)
       {
          // Progressive JPEG - not supported by picojpeg (would require too
          // much memory, or too many IDCT's for embedded systems).
+#ifndef __CC65__
+  printf("M_SOF2 unsupported %d\n", status);
+#endif
          return PJPG_UNSUPPORTED_MODE;
       }
       case M_SOF0:  /* baseline DCT */
       {
          status = readSOFMarker();
+#ifndef __CC65__
+         printf("readSOFMarker %d\n", status);
+#endif
          if (status)
             return status;
 
@@ -752,11 +788,17 @@ static uint8 locateSOFMarker(void)
       }
       case M_SOF9:
       {
+#ifndef __CC65__
+  printf("M_SOF9 unsupported %d\n", status);
+#endif
          return PJPG_NO_ARITHMITIC_SUPPORT;
       }
       case M_SOF1:  /* extended sequential DCT */
       default:
       {
+#ifndef __CC65__
+  printf("M_SOF1 unsupported %d\n", status);
+#endif
          return PJPG_UNSUPPORTED_MARKER;
       }
    }
@@ -923,23 +965,35 @@ unsigned char pjpeg_decode_init(void)
 {
    uint8 status;
 
-   status = init();
-   if (status)
-      return status;
+  status = init();
+#ifndef __CC65__
+  printf("init %d\n", status);
+#endif
+  if (status)
+    return status;
 
-   status = locateSOFMarker();
-   if (status)
-      return status;
+  status = locateSOFMarker();
+#ifndef __CC65__
+  printf("locateSOFMarker %d\n", status);
+#endif
+  if (status)
+    return status;
 
-   status = initFrame();
-   if (status)
-      return status;
+  status = initFrame();
+#ifndef __CC65__
+  printf("initFrame %d\n", status);
+#endif
+  if (status)
+    return status;
 
-   status = initScan();
-   if (status)
-      return status;
+  status = initScan();
+#ifndef __CC65__
+  printf("initScan %d\n", status);
+#endif
+  if (status)
+    return status;
 
-   return 0;
+  return 0;
 }
 
 static uint8 mcu_x = 0;
