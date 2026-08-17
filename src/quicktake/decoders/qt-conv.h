@@ -65,6 +65,6 @@ extern char *decoder_name;
 char qt_setup_decode(void);
 
 /* Decode a band of 20px high to pre-scaling buffer */
-void qt_load_raw(uint16 top);
+uint8 qt_load_raw(uint16 top);
 
 #endif

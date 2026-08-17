@@ -1000,7 +1000,7 @@ static uint8 mcu_x = 0;
 static uint8 status;
 static uint8 dst_y;
 
-void qt_load_raw(uint16 top)
+uint8 qt_load_raw(uint16 top)
 {
   static uint8 *pDst_row;
   static uint8 bandStop;
@@ -1014,8 +1014,7 @@ void qt_load_raw(uint16 top)
     status = pjpeg_decode_init();
 
     if (status) {
-      cputs("pjpeg_decode_init() failed\r\n");
-      return;
+      return -1;
     }
 
     bandStop = (BAND_HEIGHT*2)/gMaxMCUYSize;
@@ -1028,8 +1027,7 @@ void qt_load_raw(uint16 top)
 
   for ( ; ; ) {
     if (pjpeg_decode_mcu()) {
-      cputs("pjpeg_decode_mcu() failed\r\n");
-      return;
+      return -1;
     }
 
     if (++mcu_x == gMaxMCUSPerRow) {
@@ -1046,6 +1044,7 @@ setup_output_pointers:
       outputIdx = 0;
     }
   }
+  return 0;
 }
 
 //------------------------------------------------------------------------------

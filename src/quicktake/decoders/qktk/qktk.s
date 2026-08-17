@@ -599,4 +599,5 @@ next_row_handler:
 
         jmp     row_loop
 band_done:
+        lda     #$00
         rts

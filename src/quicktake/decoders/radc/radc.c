@@ -91,7 +91,7 @@ uint8 *row_idx;
 extern uint8 bitbuf;
 
 #pragma code-name(push, "LC")
-void qt_load_raw(uint16 top)
+uint8 qt_load_raw(uint16 top)
 {
   if (top == 0) {
 #ifdef __CC65__
@@ -103,8 +103,7 @@ void qt_load_raw(uint16 top)
     init_top();
 
     if (width != 320 && width != 384) {
-      cputs("Unsupported format\r\n");
-      exit(1);
+      return -1;
     }
 
     /* Skip first 16 lines if 768x512 */
@@ -138,5 +137,6 @@ void qt_load_raw(uint16 top)
       consume_extra();
     }
   }
+  return 0;
 }
 #pragma code-name(pop)

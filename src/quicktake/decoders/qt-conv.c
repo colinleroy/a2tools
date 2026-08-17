@@ -15,7 +15,7 @@
 
   and the decoding functions:
   char qt_setup_decode(void) - check file validity and setup width/height/cache position
-  void qt_load_raw(uint16 top) - decode a 20px band
+  uint8 qt_load_raw(uint16 top) - decode a 20px band
 
   This file provides the actual uint16 height and width to the decoder.
  */
@@ -219,7 +219,10 @@ try_again:
 #endif
     progress_bar(-1, -1, 80, h, crop_end_y);
 
-    qt_load_raw(h);
+    if (qt_load_raw(h) != 0) {
+      cputs("\r\nUnsupported file. Press a key to return.");
+      goto out;
+    }
     if (h >= crop_start_y) {
 #ifdef __CC65__
       cputsxy(0, 7, "Scaling      ");

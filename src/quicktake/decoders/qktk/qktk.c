@@ -60,7 +60,8 @@ int full_reads, last_read;
 uint8 next_ln_val;
 static uint8 *idx = raw_image + (RAW_WIDTH);
 #define idx_behind (idx-RAW_WIDTH+1)
-void qt_load_raw(uint16 top)
+
+uint8 qt_load_raw(uint16 top)
 {
 
   register uint8 at_very_first_col;
@@ -213,4 +214,5 @@ void qt_load_raw(uint16 top)
 
     at_very_first_row = 0;
   }
+  return 0;
 }
