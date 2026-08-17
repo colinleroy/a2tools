@@ -144,22 +144,28 @@ display:
     }
     for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_150) {
+        unsigned char pg;
         fread(line, 1, 80, fp);
 
+        pg = 0;
         for (i = 0, x = 0; i < 60;) {
-          unsigned char g;
+          unsigned char c, g;
 
           g = (line[i] & 0x0F) | (line[i+1] & 0xF0);
-          PIXEL_OUTPUT(x,   y,   g, 0);
-          PIXEL_OUTPUT(x+1, y,   g, 0);
-          PIXEL_OUTPUT(x,   y+1, g, 0);
-          PIXEL_OUTPUT(x+1, y+1, g, 0);
+          c = (g+pg)/2;
+          PIXEL_OUTPUT(x,   y,   c, 0);
+          PIXEL_OUTPUT(x,   y+1, c, 0);
+          c = pg = g;
+          PIXEL_OUTPUT(x+1, y,   c, 0);
+          PIXEL_OUTPUT(x+1, y+1, c, 0);
 
           g = line[i+2];
-          PIXEL_OUTPUT(x+2, y,   g, 0);
-          PIXEL_OUTPUT(x+3, y,   g, 0);
-          PIXEL_OUTPUT(x+2, y+1, g, 0);
-          PIXEL_OUTPUT(x+3, y+1, g, 0);
+          c = (g+pg)/2;
+          PIXEL_OUTPUT(x+2, y,   c, 0);
+          PIXEL_OUTPUT(x+2, y+1, c, 0);
+          c = pg = g;
+          PIXEL_OUTPUT(x+3, y,   c, 0);
+          PIXEL_OUTPUT(x+3, y+1, c, 0);
           i += 3;
           x += 4;
         }

@@ -7,7 +7,7 @@
         .import           pushax, pusha0, push0ax, tossub0ax
         .import           tosudiva0
 
-        .importzp         _zp6, _zp8, _zp9, _zp10, tmp1, tmp2, sreg
+        .importzp         _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, sreg
 
         .include          "../qt-thumbs.inc"
         .include          "stdio.inc"
@@ -18,7 +18,8 @@ page            = _zp6        ; word
 rem_bytes       = _zp8        ; byte
 cur_byte        = _zp9        ; byte
 curr_hist       = _zp10       ; word
-
+prev_x          = _zp12       ; byte
+cur_x           = _zp13       ; byte
 .segment "QT1X0"
 
 .proc _qt150_thumb_histogram
@@ -197,6 +198,8 @@ copy_line:
         ldx     #$00
         ldy     #$00
         clc
+        lda     #$00
+        sta     prev_x
 next_quad:
         lda     _thumb_buf,x
         inx
@@ -206,19 +209,33 @@ next_quad:
         inx
         and     #$F0
         ora     tmp1
+
+        sta     cur_x       ; remember current value,
+        clc                 ; interpolate: c = (c+p)/2
+        adc     prev_x
+        ror
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
+        lda     cur_x       ; get actual value,
+        sta     prev_x      ; remember for interpolation
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
 
         lda     _thumb_buf,x
         inx
+        sta     cur_x       ; remember current value,
+        clc                 ; interpolate: c = (c+p)/2
+        adc     prev_x
+        ror
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
+        lda     cur_x       ; get actual value,
+        sta     prev_x      ; remember for interpolation
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
 
         tya
+        clc
         adc     #8
         tay
 
