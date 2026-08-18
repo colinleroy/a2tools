@@ -213,6 +213,9 @@ static uint8 qt1x0_wakeup(CamSpeed speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
 
   cputs("Pinging QuickTake 1x0... ");
+
+  simple_serial_set_parity(SER_PAR_NONE);
+
   /* The Apple II printer port being closed right now,
    * we have to set DTR before clearing it.
    */

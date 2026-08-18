@@ -74,13 +74,8 @@ uint8 cam_serial_connect(CamSpeed speed) {
 
   /* Set initial settings */
   simple_serial_close();
-#ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
-  simple_serial_set_parity(SER_PAR_NONE);
-#else
-  simple_serial_set_speed(B9600);
-  simple_serial_set_parity(0);
-#endif
+
   camera_connected = 0;
 
   if (simple_serial_open() != 0) {
