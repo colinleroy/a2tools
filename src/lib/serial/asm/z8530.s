@@ -307,63 +307,14 @@ _z8530_open:
         lda     #$00
         jsr     writeSCCReg
 
-        jsr     getClockSource          ; Should we use BRG or RTxC?
-
-        ldy     #SER_STOP_1             ; WR4 setup: clock mult., stop & parity
-        lda     StopTable,y             ; Get value
-
         ldy     #SER_PAR_NONE
-        ora     ParityTable,y           ; Get value
-        bmi     InvParam
-
-        ldy     CurClockSource          ; Clock multiplier
-        ora     ClockMultiplier,y
-
-        ldy     #WR_TX_RX_CTRL
-        jsr     writeSCCReg             ; End of WR4 setup
-
-        ldy     CurClockSource          ; WR11 setup: clock source
-        cpx     #CHANNEL_B
-        beq     SetClock
-        iny                             ; Shift to get correct ClockSource val
-        iny                             ; depending on our channel
-
-SetClock:
-        lda     ClockSource,y
-        ldy     #WR_CLOCK_CTRL
-        jsr     writeSCCReg             ; End of WR11 setup
+        jsr     setClockAndParity
 
         lda     ChanIrqFlags,x          ; Store which IRQ bits we'll check
         sta     CurChanIrqFlags
 
-SetBaud:
         lda     Speed
-        asl
-        tay
-
-        lda     BaudTable,y             ; Get low byte of register value
-        bpl     BaudOK                  ; Verify baudrate is supported
-
-InvParam:
-        lda     #SER_ERR_INIT_FAILED
-        ldy     #$00                    ; Mark port closed
-        jmp     SetupOut
-
-BaudOK:
-        phy                             ; WR12 setup: BRG time constant, low byte
-        ldy     #WR_BAUDL_CTRL          ; Setting WR12 & 13 is useless if we're using
-        jsr     writeSCCReg             ; RTxC, but doing it anyway makes code smaller
-        ply
-
-        iny
-        lda     BaudTable,y             ; WR13 setup: BRG time constant, high byte
-        ldy     #WR_BAUDH_CTRL
-        jsr     writeSCCReg
-
-        ldy     CurClockSource          ; WR14 setup: BRG enabling
-        lda     BrgEnabled,y
-        ldy     #WR_MISC_CTRL           ; Time to turn this thing on
-        jsr     writeSCCReg
+        jsr     setSpeed
 
         ldy     #SER_BITS_8             ; WR3 setup: RX data bits
         lda     RxBitTable,y
@@ -552,6 +503,61 @@ _z8530_set_irq:
         jmp     writeSCCReg
 .endif ; .ifdef SERIAL_ENABLE_IRQ
 
+.proc setSpeed
+        asl
+        tay
+
+        lda     BaudTable,y             ; Get low byte of register value
+
+        phy                             ; WR12 setup: BRG time constant, low byte
+        ldy     #WR_BAUDL_CTRL          ; Setting WR12 & 13 is useless if we're using
+        jsr     writeSCCReg             ; RTxC, but doing it anyway makes code smaller
+        ply
+
+        iny
+        lda     BaudTable,y             ; WR13 setup: BRG time constant, high byte
+        ldy     #WR_BAUDH_CTRL
+        jsr     writeSCCReg
+
+        ldy     CurClockSource          ; WR14 setup: BRG enabling
+        lda     BrgEnabled,y
+        ldy     #WR_MISC_CTRL           ; Time to turn this thing on
+        jsr     writeSCCReg
+        rts
+.endproc
+
+last_parity: .byte SER_PAR_NONE
+
+.proc setClockAndParity
+        phy
+        jsr     getClockSource          ; Should we use BRG or RTxC?
+
+        ldy     #SER_STOP_1             ; WR4 setup: clock mult., stop & parity
+        lda     StopTable,y             ; Get value
+
+        ply
+        sty     last_parity             ; Remember in case we change speed later
+        ora     ParityTable,y           ; Get value
+
+        ldy     CurClockSource          ; Clock multiplier
+        ora     ClockMultiplier,y
+
+        ldy     #WR_TX_RX_CTRL
+        jsr     writeSCCReg             ; End of WR4 setup
+
+        ldy     CurClockSource          ; WR11 setup: clock source
+        cpx     #CHANNEL_B
+        beq     SetClock
+        iny                             ; Shift to get correct ClockSource val
+        iny                             ; depending on our channel
+
+SetClock:
+        lda     ClockSource,y
+        ldy     #WR_CLOCK_CTRL
+        jsr     writeSCCReg             ; End of WR11 setup
+        rts
+.endproc
+
 .ifdef SERIAL_LOW_LEVEL_CONTROL
 ; FIXME does not handle 115200 bps yet. Not a problem as of now, as the
 ; only current user of this function is the Quicktake program, which
@@ -562,21 +568,13 @@ _z8530_set_speed:
         sta     _baudrate
         ldy     Opened            ; Don't write regs if not opened
         beq     sout
-        asl     a                 ; to BaudTable index
-        tay
 
+        sta     Speed
         ldx     Channel
-
-        phy
-        lda     BaudTable,y
-        ldy     #WR_BAUDL_CTRL
-        jsr     writeSCCReg
-
-        ply
-        iny
-        lda     BaudTable,y
-        ldy     #WR_BAUDH_CTRL
-        jsr     writeSCCReg
+        ldy     last_parity
+        jsr     setClockAndParity
+        lda     _baudrate
+        jsr     setSpeed
 sout:   rts
 
 ; Fixme: assumes 8 data bits, TX on, RTS on. Same thing as previously:
@@ -606,15 +604,8 @@ _z8530_set_parity:
         ldy     Opened            ; Don't write regs if not opened
         beq     pout
 
-        tay                       ; Parity
-        lda     ParityTable,y
-        ldy     #SER_STOP_1       ; Stop bits
-        ora     StopTable,y
-        ldy     CurClockSource    ; Clock multiplier
-        ora     ClockMultiplier,y
-
         ldx     Channel
-        ldy     #WR_TX_RX_CTRL
-        jsr     writeSCCReg
+        tay                       ; Parity
+        jsr     setClockAndParity
 pout:   rts
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
