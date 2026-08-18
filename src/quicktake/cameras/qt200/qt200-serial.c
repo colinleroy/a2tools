@@ -131,6 +131,7 @@ static uint8 qt200_wakeup(CamSpeed speed) {
   uint8 tries = 2;
   cputs("Pinging QuickTake 200... ");
 
+  simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_EVEN);
 
   /* Speed unused there */

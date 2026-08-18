@@ -214,6 +214,7 @@ static uint8 qt1x0_wakeup(CamSpeed speed) {
 
   cputs("Pinging QuickTake 1x0... ");
 
+  simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
 
   /* The Apple II printer port being closed right now,

@@ -74,7 +74,6 @@ uint8 cam_serial_connect(CamSpeed speed) {
 
   /* Set initial settings */
   simple_serial_close();
-  simple_serial_set_speed(SER_BAUD_9600);
 
   camera_connected = 0;
 
