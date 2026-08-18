@@ -180,13 +180,14 @@ CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
 microserial_GCCCFLAGS = \
-	-DBUFFER_SIZE=2048
+	-DBUFFER_SIZE=2048 -DEXTRA_SERIAL_CONFIG
 
 slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DPROGRAM_NAME='"SLOWTAKE"' \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
+	-DEXTRA_SERIAL_CONFIG --asm-define EXTRA_SERIAL_CONFIG \
 	-C ../../config/apple2enh-slowtake.cfg
 
 # 4 full tracks cache!

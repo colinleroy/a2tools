@@ -45,21 +45,6 @@ extern unsigned char buffer[BUFFER_SIZE];
 
 #pragma code-name(push, "RT_ONCE")
 
-char last_driver[] = "\0\0\0\0\0\0\0\0\0";
-
-void default_driver(int mode) {
-  int fd = open("LASTDRV", mode);
-  if (fd == -1) {
-    return;
-  }
-  if (mode == O_RDONLY) {
-    read(fd, last_driver, 8);
-  } else {
-    write(fd, last_driver, 8);
-  }
-  close(fd);
-}
-
 #ifdef __CC65__
 uint8 load_driver(char *drv, CamSpeed speed) {
   gotox(0); clreol();
@@ -85,6 +70,8 @@ static uint8 load_driver(char *drv, CamSpeed speed) {
 uint8 cam_serial_connect(CamSpeed speed) {
   uint8 i;
 
+  simple_serial_read_config();
+
   /* Set initial settings */
   simple_serial_close();
 #ifdef __CC65__
@@ -101,18 +88,17 @@ uint8 cam_serial_connect(CamSpeed speed) {
     return -1;
   }
 
-  /* Get last driver used */
-  default_driver(O_RDONLY);
-  if (last_driver[0] && load_driver(last_driver, speed) == 0) {
+  /* Get last driver used, from extra serial parameters */
+  if (ser_params.extra_parameters[0] && load_driver(ser_params.extra_parameters, speed) == 0) {
     goto load_done;
   }
 
   for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
     /* Don't retry the last driver, it just failed. */
-    if (strcmp(last_driver, camera_drivers[i]) && load_driver(camera_drivers[i], speed) == 0) {
+    if (strcmp(ser_params.extra_parameters, camera_drivers[i]) && load_driver(camera_drivers[i], speed) == 0) {
       /* Register new default driver */
-      strcpy(last_driver, camera_drivers[i]);
-      default_driver(O_WRONLY|O_CREAT);
+      strcpy(ser_params.extra_parameters, camera_drivers[i]);
+      simple_serial_write_config();
       break;
     }
   }
