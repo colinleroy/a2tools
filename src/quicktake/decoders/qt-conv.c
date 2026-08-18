@@ -141,6 +141,7 @@ int main (int argc, const char **argv)
   register_start_device();
 
 #ifdef __CC65__
+  reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
   cputsxy(0, 23, decoder_name);
   cputs(" decoder for Apple II - Free memory: ");

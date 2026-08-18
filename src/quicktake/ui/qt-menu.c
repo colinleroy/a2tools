@@ -660,7 +660,6 @@ void unlink_temp_files(void) {
   unlink(THUMBNAIL_NAME);
   if (!exec_pass) {
     state_unlink();
-    unlink("/RAM/AUXHGR");
   }
   /* Don't unlink AUXHGR, as we want *conv to start writing GREY
    * *after* that file. */

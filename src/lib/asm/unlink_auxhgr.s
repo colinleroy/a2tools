@@ -1,7 +1,6 @@
         .export     auxhgr_created
         .import     _unlink, _hgr_auxfile
 
-.ifndef AUXHGR_NO_AUTO_REMOVE
         .destructor unlink_auxhgr_file
 
 .proc unlink_auxhgr_file
@@ -12,7 +11,6 @@
         jmp     _unlink
 out:    rts
 .endproc
-.endif
 
         .bss
 
