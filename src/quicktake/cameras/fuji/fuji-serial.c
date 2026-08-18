@@ -77,6 +77,11 @@ void *fuji_callbacks[] = {
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
 
+#define FUJI_QT200    0x00
+#define FUJI_UNKNOWN  0xFF
+
+uint8 fuji_model;
+
 #define STX 0x02 /* Start of data */
 #define ETX 0x03 /* End of data */
 #define EOT 0x04 /* End of session */
@@ -123,6 +128,13 @@ static uint8 response_continues;
 static uint8 fuji_send_ping(uint8 wait);
 static void end_session(void);
 
+#ifdef __CC65__
+/* Use UI's info struct to spare memory */
+extern camera_info cam_info;
+#else
+camera_info cam_info;
+#endif
+
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Fuji camera
  * Returns 0 if successful, -1 otherwise
@@ -139,9 +151,14 @@ static uint8 fuji_wakeup(CamSpeed speed) {
 again:
   end_session();
 
+  fuji_model = FUJI_UNKNOWN;
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
-    return QT_MODEL_200;
+    fuji_get_information(&cam_info);
+    if (!strcmp(cam_info.name, "QT-200")) {
+      fuji_model = FUJI_QT200;
+    }
+    return QT_MODEL_FUJI;
   } else {
     if (--tries) {
       goto again;
@@ -336,8 +353,6 @@ static uint8 fuji_stop(void) {
 static uint8 fuji_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
 
-  cputs("Getting information... ");
-
   fuji_start();
 
   if (send_command(cmd, sizeof cmd, 1) != 0) {
@@ -349,7 +364,7 @@ static uint8 fuji_get_information(camera_info *info) {
   if (send_command(cmd, sizeof cmd, 1) != 0) {
     return -1;
   }
-  
+  PC_DEBUG("cmd", buffer, response_len);
   buffer[response_len] = '\0';
 
   strncpy(info->name, (char *)buffer + 6, response_len - 4);

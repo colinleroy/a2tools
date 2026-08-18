@@ -571,7 +571,7 @@ static uint8 setup(int argc, char *argv[]) {
   #endif
   #if DEBUG_THUMB==200
   load_driver("FUJI.ZX", SER_BAUD_115200);
-  serial_model = QT_MODEL_200;
+  serial_model = QT_MODEL_FUJI;
   while (1) {
     clear_dhgr();
     qt_edit_image("/QT200/THUMB", THUMB_WIDTH*2);
@@ -698,6 +698,7 @@ menu:
   clrscr();
 
   if (camera_connected) {
+    cputs("Getting information... ");
     if (cam_get_information(&cam_info) != 0) {
       camera_connected = 0;
     }

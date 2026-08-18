@@ -8,7 +8,7 @@
 #define QT_MODEL_UNKNOWN 0
 #define QT_MODEL_100     1
 #define QT_MODEL_150     2
-#define QT_MODEL_200     3
+#define QT_MODEL_FUJI    3
 
 #define QUALITY_HIGH     0x10
 #define QUALITY_STANDARD 0x20

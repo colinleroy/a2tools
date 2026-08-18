@@ -134,7 +134,7 @@ display:
     int i, a, b, c, d, x, y;
 
     rewind(fp);
-    if (qtmodel == QT_MODEL_200) {
+    if (qtmodel == QT_MODEL_FUJI) {
       unsigned int data_offset;
       fseek(fp, 0, SEEK_END);
       data_offset = ftell(fp);
@@ -191,7 +191,7 @@ display:
           PIXEL_OUTPUT(x+1, y+1, b, 0);
         } while (i++ < 40);
 
-      } else if (qtmodel == QT_MODEL_200) {
+      } else if (qtmodel == QT_MODEL_FUJI) {
         int i, j;
         if (y % 2 == 0) {
           fread(line, 1, 160, fp);
