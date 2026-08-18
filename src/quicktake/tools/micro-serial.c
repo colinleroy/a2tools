@@ -10,7 +10,7 @@
 #include "cameras/qt-thumbs.h"
 
 extern void *qt1x0_callbacks[];
-extern void *qt200_callbacks[];
+extern void *fuji_callbacks[];
 extern char *opt_tty_path;
 extern int opt_tty_speed;
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   if (argc < 3) {
     printf("Usage: %s camera_model tty_path [command] [command parameter]\n"
            "\n"
-           "       camera_models: qt1x0, qt200\n"
+           "       camera_models: qt1x0, fuji\n"
            "       tty_path:      /dev/ttyUSB0 for example\n"
            "       command:       get (parameter: picture number)\n\n",
            argv[0]);
@@ -90,8 +90,8 @@ int main(int argc, char *argv[]) {
   }
   if (!strcmp(argv[1], "qt1x0")) {
     setup_pointers(qt1x0_callbacks);
-  } else if (!strcmp(argv[1], "qt200")) {
-    setup_pointers(qt200_callbacks);
+  } else if (!strcmp(argv[1], "fuji")) {
+    setup_pointers(fuji_callbacks);
   } else {
     printf("Unknown model '%s'\n", argv[1]);
     exit(1);

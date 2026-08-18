@@ -24,7 +24,7 @@ extern uint8 scrw, scrh;
 
 static char *camera_drivers[] = {
   "QT1X0.ZX",
-  "QT200.ZX",
+  "FUJI.ZX",
   NULL
 };
 

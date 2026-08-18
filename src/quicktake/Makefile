@@ -29,8 +29,8 @@ microserial_SOURCES := \
 	cameras/qt-serial.c \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/qt1x0/qt1x0-thumbs.c \
-	cameras/qt200/qt200-serial.c \
-	cameras/qt200/qt200-thumbs.c \
+	cameras/fuji/fuji-serial.c \
+	cameras/fuji/fuji-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -48,7 +48,7 @@ slowtake_SOURCES := \
 	cameras/qt-serial.c \
 	cameras/qt-callbacks.s \
 	cameras/qt1x0/qt1x0-serial.c \
-	cameras/qt200/qt200-serial.c \
+	cameras/fuji/fuji-serial.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
@@ -58,7 +58,7 @@ slowtake_CC65SOURCES := \
 	ui/qt-dither-horiz.s \
 	ui/qt-dither-vert.s \
 	cameras/qt1x0/qt1x0-thumbs.s \
-	cameras/qt200/qt200-thumbs.s \
+	cameras/fuji/fuji-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -87,8 +87,8 @@ slowtake_CC65SOURCES := \
 	../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
-	cameras/qt200/qt1x0-thumbs.c \
-	cameras/qt200/qt200-thumbs.c \
+	cameras/qt1x0/qt1x0-thumbs.c \
+	cameras/fuji/fuji-thumbs.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \
@@ -278,15 +278,15 @@ ABOUT.ZX: ui/about.in
 QT1X0.ZX: slowtake.bin
 	zx02 -f QT1X0.DRV QT1X0.ZX
 
-QT200.ZX: slowtake.bin
-	zx02 -f QT200.DRV QT200.ZX
+FUJI.ZX: slowtake.bin
+	zx02 -f FUJI.DRV FUJI.ZX
 
-add_disk: ABOUT.ZX QT1X0.ZX QT200.ZX
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
-	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT200.ZX BIN 0xC00 < QT200.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00 < FUJI.ZX; \
 	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;

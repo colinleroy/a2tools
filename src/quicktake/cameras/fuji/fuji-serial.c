@@ -14,64 +14,64 @@
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
 
-#pragma code-name(push, "QT200")
-#pragma rodata-name(push, "QT200")
-#pragma data-name(push, "QT200")
+#pragma code-name(push, "FUJI")
+#pragma rodata-name(push, "FUJI")
+#pragma data-name(push, "FUJI")
 
 /* Camera features */
-#define qt200_features 0b0000000010100000
-//                               ||||||||_ SET_CAMERA_NAME
-//                               |||||||__ SET_CAMERA_TIME
-//                               ||||||___ SET_QUALITY,
-//                               |||||____ SET_FLASH,
-//                               ||||_____ TAKE_PICTURE,
-//                               |||______ GET_THUMBNAIL,
-//                               ||_______ DELETE_PICTURES,
-//                               |________ RESERVED,
+#define fuji_features 0b0000000010100000
+//                              ||||||||_ SET_CAMERA_NAME
+//                              |||||||__ SET_CAMERA_TIME
+//                              ||||||___ SET_QUALITY,
+//                              |||||____ SET_FLASH,
+//                              ||||_____ TAKE_PICTURE,
+//                              |||______ GET_THUMBNAIL,
+//                              ||_______ DELETE_PICTURES,
+//                              |________ RESERVED,
 
 /* Camera callbacks definitions */
-static uint8 qt200_wakeup(CamSpeed speed);
-static uint8 qt200_set_speed(CamSpeed speed);
+static uint8 fuji_wakeup(CamSpeed speed);
+static uint8 fuji_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
-static uint8 qt200_get_information(camera_info *info);
+static uint8 fuji_get_information(camera_info *info);
 
 /* Camera pictures functions */
-static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
-static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename);
+static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail);
+static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static void fuji_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
  * but must exist and return -1
  */
-static uint8 qt200_set_camera_name(const char *name);
-static uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
-static uint8 qt200_set_quality(uint8 quality);
-static uint8 qt200_set_flash(uint8 mode);
-static uint8 qt200_take_picture(void);
-static uint8 qt200_delete_pictures(void);
+static uint8 fuji_set_camera_name(const char *name);
+static uint8 fuji_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+static uint8 fuji_set_quality(uint8 quality);
+static uint8 fuji_set_flash(uint8 mode);
+static uint8 fuji_take_picture(void);
+static uint8 fuji_delete_pictures(void);
 
 /* Camera thumbnail functions */
-void qt200_thumb_histogram(void);
-void qt200_load_thumb_data(uint8 line);
+void fuji_thumb_histogram(void);
+void fuji_load_thumb_data(uint8 line);
 
 /* Camera callbacks */
-void *qt200_callbacks[] = {
-  /* FEATURES */        (void *)qt200_features,
-  /* WAKEUP */          qt200_wakeup,
-  /* SET_SPEED */       qt200_set_speed,
-  /* SET_CAMERA_NAME */ qt200_set_camera_name,
-  /* SET_CAMERA_TIME */ qt200_set_camera_time,
-  /* GET_INFORMATION */ qt200_get_information,
-  /* SET_QUALITY */     qt200_set_quality,
-  /* SET_FLASH */       qt200_set_flash,
-  /* TAKE_PICTURE */    qt200_take_picture,
-  /* GET_PICTURE */     qt200_get_picture,
-  /* GET_THUMBNAIL */   qt200_get_thumbnail,
-  /* DELETE_PICTURES */ qt200_delete_pictures,
-  /* GET_FILENAME */    qt200_get_filename,
-  /* THUMB_HISTOGRAM */ qt200_thumb_histogram,
-  /* THUMB_LOAD_DATA */ qt200_load_thumb_data,
+void *fuji_callbacks[] = {
+  /* FEATURES */        (void *)fuji_features,
+  /* WAKEUP */          fuji_wakeup,
+  /* SET_SPEED */       fuji_set_speed,
+  /* SET_CAMERA_NAME */ fuji_set_camera_name,
+  /* SET_CAMERA_TIME */ fuji_set_camera_time,
+  /* GET_INFORMATION */ fuji_get_information,
+  /* SET_QUALITY */     fuji_set_quality,
+  /* SET_FLASH */       fuji_set_flash,
+  /* TAKE_PICTURE */    fuji_take_picture,
+  /* GET_PICTURE */     fuji_get_picture,
+  /* GET_THUMBNAIL */   fuji_get_thumbnail,
+  /* DELETE_PICTURES */ fuji_delete_pictures,
+  /* GET_FILENAME */    fuji_get_filename,
+  /* THUMB_HISTOGRAM */ fuji_thumb_histogram,
+  /* THUMB_LOAD_DATA */ fuji_load_thumb_data,
 };
 
 extern uint8 scrw, scrh;
@@ -120,16 +120,16 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 static uint16 response_len;
 static uint8 response_continues;
 
-static uint8 qt200_send_ping(uint8 wait);
+static uint8 fuji_send_ping(uint8 wait);
 static void end_session(void);
 
 #pragma warn(unused-param, push, off)
-/* Wakeup and detect a QuickTake 200
+/* Wakeup and detect a Fuji camera
  * Returns 0 if successful, -1 otherwise
  */
-static uint8 qt200_wakeup(CamSpeed speed) {
+static uint8 fuji_wakeup(CamSpeed speed) {
   uint8 tries = 2;
-  cputs("Pinging QuickTake 200... ");
+  cputs("Pinging Fuji camera... ");
 
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_EVEN);
@@ -139,7 +139,7 @@ static uint8 qt200_wakeup(CamSpeed speed) {
 again:
   end_session();
 
-  if (qt200_send_ping(SHORT_WAIT) == 0) {
+  if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     return QT_MODEL_200;
   } else {
@@ -242,7 +242,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
 static CamSpeed my_speed = SER_BAUD_9600;
 
 /* Ping the camera */
-static uint8 qt200_send_ping(uint8 wait) {
+static uint8 fuji_send_ping(uint8 wait) {
   char c = 0xFF;
   simple_serial_putc(ENQ);
 
@@ -264,7 +264,7 @@ static uint8 qt200_send_ping(uint8 wait) {
 }
 
 /* Send the speed upgrade command */
-static uint8 qt200_set_speed(CamSpeed speed) {
+static uint8 fuji_set_speed(CamSpeed speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
@@ -304,7 +304,7 @@ static uint8 qt200_set_speed(CamSpeed speed) {
   simple_serial_set_speed(speed);
 
   /* ping again */
-  if (qt200_send_ping(STD_WAIT) != 0) {
+  if (fuji_send_ping(STD_WAIT) != 0) {
     if (do_debug) {
       cputs("Communication check failed.\r\n");
       cgetc();
@@ -321,24 +321,24 @@ static uint8 qt200_set_speed(CamSpeed speed) {
   return 0;
 }
 
-static uint8 qt200_start(void) {
-  if (qt200_send_ping(STD_WAIT) == 0) {
-    return qt200_set_speed(my_speed);
+static uint8 fuji_start(void) {
+  if (fuji_send_ping(STD_WAIT) == 0) {
+    return fuji_set_speed(my_speed);
   }
   return -1;
 }
 
-static uint8 qt200_stop(void) {
-  return qt200_set_speed(SER_BAUD_9600);
+static uint8 fuji_stop(void) {
+  return fuji_set_speed(SER_BAUD_9600);
 }
 
 /* Get information from the camera */
-static uint8 qt200_get_information(camera_info *info) {
+static uint8 fuji_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
 
   cputs("Getting information... ");
 
-  qt200_start();
+  fuji_start();
 
   if (send_command(cmd, sizeof cmd, 1) != 0) {
     return -1;
@@ -367,16 +367,16 @@ static uint8 qt200_get_information(camera_info *info) {
   info->date.hour     = 0;
   info->date.minute   = 0;
 
-  qt200_stop();
+  fuji_stop();
   return 0;
 }
 
-static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename) {
+static void fuji_get_filename(uint8 n_pic, char *dirname, char *filename) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_NAME,0x02,0x00,0x00,0x00};
 
   cmd[NUM_PIC_IDX] = n_pic;
 
-  if (qt200_start() != 0 || send_command(cmd, sizeof cmd, 1) != 0) {
+  if (fuji_start() != 0 || send_command(cmd, sizeof cmd, 1) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
@@ -387,10 +387,10 @@ static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename) {
           IS_NOT_NULL(dirname)?"/":"",
           buffer);
   }
-  qt200_stop();
+  fuji_stop();
 }
 
-static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 cmd) {
+static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 cmd) {
   char data_cmd[] = {0x00,FUJI_CMD_PIC_GET_DATA,0x02,0x00,0x00,0x00};
   uint16 blocks_read;
   uint16 num_blocks;
@@ -431,16 +431,16 @@ static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8
 
   progress_bar(-1, -1, scrw - 2, num_blocks, num_blocks);
 
-  qt200_stop();
+  fuji_stop();
 
   return err;
 }
 
-static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
+static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail) {
   char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
   unsigned long picture_size;
 
-  if (qt200_start() != 0) {
+  if (fuji_start() != 0) {
     errno = EIO;
     return -1;
   }
@@ -471,43 +471,43 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   ui_get_image_str(640, 480, picture_size);
 
-  return qt200_get_image_data(n_pic, fd, picture_size, FUJI_CMD_PIC_GET_DATA);
+  return fuji_get_image_data(n_pic, fd, picture_size, FUJI_CMD_PIC_GET_DATA);
 }
 
-static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   ui_get_thumbnail_str(n_pic);
 
-  if (qt200_start() != 0) {
+  if (fuji_start() != 0) {
     errno = EIO;
     return -1;
   }
 
   /* FIXME get info */
-  return qt200_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
+  return fuji_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
 
 #pragma warn(unused-param, push, off)
-static uint8 qt200_set_camera_name(const char *name) {
+static uint8 fuji_set_camera_name(const char *name) {
   return -1;
 }
 
-static uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+static uint8 fuji_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   return -1;
 }
 
-static uint8 qt200_set_quality(uint8 quality) {
+static uint8 fuji_set_quality(uint8 quality) {
   return -1;
 }
 
-static uint8 qt200_set_flash(uint8 mode) {
+static uint8 fuji_set_flash(uint8 mode) {
   return -1;
 }
 
-static uint8 qt200_take_picture(void) {
+static uint8 fuji_take_picture(void) {
   return -1;
 }
 
-static uint8 qt200_delete_pictures(void) {
+static uint8 fuji_delete_pictures(void) {
   return -1;
 }
 #pragma warn(unused-param, pop)

@@ -1,8 +1,8 @@
 Camera models supported:
  - Quicktake 100  (QT1X0.DRV)
  - Quicktake 150  (QT1X0.DRV)
- - Quicktake 200  (QT200.DRV)
- - Fujifilm  DS-7 (QT200.DRV)
+ - Quicktake 200  (FUJI.DRV)
+ - Fujifilm  DS-7 (FUJI.DRV)
 
 Picture formats handled:
  - QKTK       (Quicktake 100)

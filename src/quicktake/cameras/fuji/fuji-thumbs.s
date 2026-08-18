@@ -1,5 +1,5 @@
-        .export           _qt200_thumb_histogram
-        .export           _qt200_load_thumb_data
+        .export           _fuji_thumb_histogram
+        .export           _fuji_load_thumb_data
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
         .import           pushax, pusha0, pusheax, tossub0ax
@@ -9,9 +9,9 @@
         .include          "../qt-thumbs.inc"
         .include          "stdio.inc"
 
-.segment "QT200"
+.segment "FUJI"
 
-.proc _qt200_thumb_histogram
+.proc _fuji_thumb_histogram
         ; Seek to start of data
         lda     _ifd          ; Push twice, once for each lseek
         jsr     pusha0
@@ -43,7 +43,7 @@ next:                         ; Don't really do the histogram.
         rts
 .endproc
 
-.proc _qt200_load_thumb_data
+.proc _fuji_load_thumb_data
         and     #$01
         beq     :+
         rts

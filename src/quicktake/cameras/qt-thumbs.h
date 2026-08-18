@@ -29,7 +29,4 @@ extern uint8 thumb_buf[THUMB_WIDTH * 2];
 
 #endif
 
-void __fastcall__ thumb_histogram_qt1x0(void);
-void __fastcall__ thumb_histogram_qt200(void);
-
 #endif

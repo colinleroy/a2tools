@@ -570,7 +570,7 @@ static uint8 setup(int argc, char *argv[]) {
   }
   #endif
   #if DEBUG_THUMB==200
-  load_driver("QT200.ZX", SER_BAUD_115200);
+  load_driver("FUJI.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_200;
   while (1) {
     clear_dhgr();
