@@ -503,6 +503,7 @@ _z8530_set_irq:
         jmp     writeSCCReg
 .endif ; .ifdef SERIAL_ENABLE_IRQ
 
+; A: new speed, X: channel
 .proc setSpeed
         asl
         tay
@@ -528,6 +529,7 @@ _z8530_set_irq:
 
 last_parity: .byte SER_PAR_NONE
 
+; Y: new parity, X: channel
 .proc setClockAndParity
         phy
         jsr     getClockSource          ; Should we use BRG or RTxC?
@@ -537,7 +539,7 @@ last_parity: .byte SER_PAR_NONE
 
         ply
         sty     last_parity             ; Remember in case we change speed later
-        ora     ParityTable,y           ; Get value
+        ora     ParityTable,y           ; Get reg value
 
         ldy     CurClockSource          ; Clock multiplier
         ora     ClockMultiplier,y
@@ -559,27 +561,21 @@ SetClock:
 .endproc
 
 .ifdef SERIAL_LOW_LEVEL_CONTROL
-; FIXME does not handle 115200 bps yet. Not a problem as of now, as the
-; only current user of this function is the Quicktake program, which
-; doesn't do 115200. The core can open at SER_BAUD_115200 and that's
-; sufficient for the surl-based programs.
-
 _z8530_set_speed:
-        sta     _baudrate
-        ldy     Opened            ; Don't write regs if not opened
+        sta     _baudrate         ; Remember setting, but
+        ldy     Opened            ; don't write regs if not opened
         beq     sout
 
         sta     Speed
         ldx     Channel
-        ldy     last_parity
+        ldy     last_parity       ; Don't drop current parity setting
         jsr     setClockAndParity
-        lda     _baudrate
+        lda     Speed
         jsr     setSpeed
 sout:   rts
 
 ; Fixme: assumes 8 data bits, TX on, RTS on. Same thing as previously:
 ; this is sufficient for surl-based uses.
-
 _z8530_slot_dtr_onoff:
         sta     tmp1              ; DTR to tmp1
         jsr     popa              ; Slot from TOS
@@ -599,7 +595,6 @@ _z8530_slot_dtr_onoff:
 
 ; Fixme: assumes 1 stop bit. Same thing as previously:
 ; this is sufficient for my uses.
-
 _z8530_set_parity:
         ldy     Opened            ; Don't write regs if not opened
         beq     pout
