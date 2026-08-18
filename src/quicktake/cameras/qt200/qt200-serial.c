@@ -335,6 +335,8 @@ static uint8 qt200_stop(void) {
 static uint8 qt200_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
 
+  cputs("Getting information... ");
+
   qt200_start();
 
   if (send_command(cmd, sizeof cmd, 1) != 0) {
@@ -373,7 +375,7 @@ static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
   cmd[NUM_PIC_IDX] = n_pic;
 
-  if (send_command(cmd, sizeof cmd, 1) != 0) {
+  if (qt200_start() != 0 || send_command(cmd, sizeof cmd, 1) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
@@ -384,6 +386,7 @@ static void qt200_get_filename(uint8 n_pic, char *dirname, char *filename) {
           IS_NOT_NULL(dirname)?"/":"",
           buffer);
   }
+  qt200_stop();
 }
 
 static uint8 qt200_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 cmd) {
@@ -472,6 +475,12 @@ static uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
 
 static uint8 qt200_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   ui_get_thumbnail_str(n_pic);
+
+  if (qt200_start() != 0) {
+    errno = EIO;
+    return -1;
+  }
+
   /* FIXME get info */
   return qt200_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }

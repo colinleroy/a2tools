@@ -586,7 +586,7 @@ static uint8 qt1x0_get_information(camera_info *info) {
   #define QUAL_IDX       0x1B
   #define NAME_IDX       0x2F
 
-  cputs("Getting information...\r\n");
+  cputs("Getting information...");
 
   if (send_get_information_command() != 0) {
     errno = EIO;
