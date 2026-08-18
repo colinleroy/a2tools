@@ -582,31 +582,33 @@ static uint8 setup(int argc, char *argv[]) {
 #endif
 #ifdef DEBUG_HD
   if (argc == 1) {
-  #if DEBUG_HD==100
-  exec("QKTKCONV","/HD/TEST100.QTK 0 0 640 480");
-  #endif
-  #if DEBUG_HD==150
-  exec("RADCCONV","/HD/TEST150.QTK 0 0 640 480");
-  #endif
-  #if DEBUG_HD==200
-  exec("JPEGCONV","/HD/TEST200.JPG 0 0 640 480");
-  #endif
+    exec_pass = 1;
+    #if DEBUG_HD==100
+    exec("QKTKCONV","/HD/TEST100.QTK 0 0 640 480");
+    #endif
+    #if DEBUG_HD==150
+    exec("RADCCONV","/HD/TEST150.QTK 0 0 640 480");
+    #endif
+    #if DEBUG_HD==200
+    exec("JPEGCONV","/HD/TEST200.JPG 0 0 640 480");
+    #endif
   }
 #endif
 #ifdef DEBUG_FLOPPY
   if (argc == 1) {
-  #if DEBUG_FLOPPY==100
-  exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
-  #endif
-  #if DEBUG_FLOPPY==98
-  exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
-  #endif
-  #if DEBUG_FLOPPY==150
-  exec("RADCCONV","/QT150/TEST150.QTK 0 0 640 480");
-  #endif
-  #if DEBUG_FLOPPY==200
-  exec("JPEGCONV","/QT200/TEST200.JPG 0 0 640 480");
-  #endif
+    exec_pass = 1;
+    #if DEBUG_FLOPPY==100
+    exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
+    #endif
+    #if DEBUG_FLOPPY==98
+    exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
+    #endif
+    #if DEBUG_FLOPPY==150
+    exec("RADCCONV","/QT150/TEST150.QTK 0 0 640 480");
+    #endif
+    #if DEBUG_FLOPPY==200
+    exec("JPEGCONV","/QT200/TEST200.JPG 0 0 640 480");
+    #endif
   }
 #endif
 
@@ -655,14 +657,20 @@ static uint8 setup(int argc, char *argv[]) {
 
 #pragma code-name(pop)
 
+#ifdef __CC65__
+extern uint8 auxhgr_keep;
+#endif
 void unlink_temp_files(void) {
   unlink(TMP_NAME);
   unlink(THUMBNAIL_NAME);
+
+  /* Don't unlink AUXHGR, if exec'ing decoder, as we want *conv to start
+   * writing GREY *after* that file. */
+  auxhgr_keep = exec_pass;
+
   if (!exec_pass) {
     state_unlink();
   }
-  /* Don't unlink AUXHGR, as we want *conv to start writing GREY
-   * *after* that file. */
 }
 
 int main(int argc, char *argv[])
