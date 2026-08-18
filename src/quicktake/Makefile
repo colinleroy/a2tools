@@ -107,9 +107,6 @@ qktkconv_SOURCES := \
 qktkconv_CC65SOURCES := \
 	decoders/qktk/qktk.s \
 	decoders/scaler.s \
-	../lib/asm/reserve_auxhgr.s \
-	../lib/asm/auxhgr_file.s \
-	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
@@ -130,9 +127,6 @@ radcconv_CC65SOURCES := \
 	decoders/radc/radc_bithuff.s \
 	decoders/radc/radc_platform.s \
 	decoders/scaler.s \
-	../lib/asm/reserve_auxhgr.s \
-	../lib/asm/auxhgr_file.s \
-	../lib/asm/unlink_auxhgr.s \
 	../lib/extrazp.s \
 	../lib/asm/path_helper.s \
 	../lib/mult16x16mid16.s \
@@ -156,9 +150,6 @@ jpegconv_CC65SOURCES := \
 	decoders/jpeg/jpeg_arrays.s \
 	decoders/jpeg/jpeg_platform.s \
 	decoders/scaler.s \
-	../lib/asm/reserve_auxhgr.s \
-	../lib/asm/auxhgr_file.s \
-	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
@@ -188,6 +179,7 @@ slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DEXTRA_SERIAL_CONFIG --asm-define EXTRA_SERIAL_CONFIG \
+	--asm-define AUXHGR_NO_AUTO_REMOVE \
 	-C ../../config/apple2enh-slowtake.cfg
 
 # 4 full tracks cache!
