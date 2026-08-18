@@ -57,6 +57,10 @@ SimpleSerialParams ser_params = {
   0,
   B9600,
   0
+#ifdef EXTRA_SERIAL_CONFIG
+  ,
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#endif
 };
 
 unsigned char data_slot = 0;
@@ -188,7 +192,7 @@ static void simple_serial_write_defaults(void) {
   fclose(fp);
 }
 
-int simple_serial_read_opts(void) {
+int simple_serial_read_config(void) {
   static int opts_read_done = 0;
   FILE *fp = NULL;
   char buf[255];
@@ -366,4 +370,8 @@ int simple_serial_close_printer(void) {
   }
   aux_ttyfd = -1;
   return 0;
+}
+
+void simple_serial_write_config(void) {
+  /* Unimplemented */
 }

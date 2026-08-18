@@ -16,6 +16,7 @@
 ;
 
         .export         _simple_serial_configure
+        .export         _simple_serial_write_config
 
         .import         _ser_params
         .import         _simple_serial_settings_io
@@ -318,21 +319,7 @@ auto_str:         .asciiz "Auto"
         lda     baud_rates,y
         sta     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_BAUDRATE
 
-        ; Save settings to disk
-        lda     #<simple_serial_disk_settings
-        ldx     #>simple_serial_disk_settings
-        jsr     pushax
-        lda     #<(O_WRONLY|O_CREAT)
-        ldx     #>(O_WRONLY|O_CREAT)
-        jsr     _simple_serial_settings_io
-
-        ; And in RAM
-        lda     #<simple_serial_ram_settings
-        ldx     #>simple_serial_ram_settings
-        jsr     pushax
-        lda     #<(O_WRONLY|O_CREAT)
-        ldx     #>(O_WRONLY|O_CREAT)
-        jsr     _simple_serial_settings_io
+        jsr     _simple_serial_write_config
 
 @ssc_return:
         rts
@@ -409,4 +396,22 @@ auto_str:         .asciiz "Auto"
 :       lda     #MAX_SPEED_IDX
 :       sta     printer_speed_idx
         jmp     @update_ui
+.endproc
+
+.proc _simple_serial_write_config
+        ; Save settings to disk
+        lda     #<simple_serial_disk_settings
+        ldx     #>simple_serial_disk_settings
+        jsr     pushax
+        lda     #<(O_WRONLY|O_CREAT)
+        ldx     #>(O_WRONLY|O_CREAT)
+        jsr     _simple_serial_settings_io
+
+        ; And in RAM
+        lda     #<simple_serial_ram_settings
+        ldx     #>simple_serial_ram_settings
+        jsr     pushax
+        lda     #<(O_WRONLY|O_CREAT)
+        ldx     #>(O_WRONLY|O_CREAT)
+        jmp     _simple_serial_settings_io
 .endproc

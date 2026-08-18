@@ -24,6 +24,9 @@ typedef struct {
   unsigned char data_slot;
   unsigned char printer_baudrate;
   unsigned char printer_slot;
+  #ifdef EXTRA_SERIAL_CONFIG
+  char extra_parameters[16];
+  #endif
 } SimpleSerialParams;
 #else
 typedef struct {
@@ -31,6 +34,9 @@ typedef struct {
   unsigned char data_slot;
   unsigned int printer_baudrate;
   unsigned char printer_slot;
+  #ifdef EXTRA_SERIAL_CONFIG
+  char extra_parameters[16];
+  #endif
 } SimpleSerialParams;
 #endif
 
@@ -46,55 +52,58 @@ void __fastcall__ simple_serial_dtr_onoff(unsigned char on);
 void __fastcall__ simple_serial_slot_dtr_onoff(unsigned char slot_num, unsigned char on);
 
 #ifdef __CC65__
-char __fastcall__ simple_serial_open(void);
-char __fastcall__ simple_serial_open_printer(void);
-char __fastcall__ simple_serial_close(void);
-void __fastcall__ simple_serial_flush(void);
-void __fastcall__ simple_serial_set_irq(unsigned char on);
-void __fastcall__ simple_serial_configure(void);
-void __fastcall__ simple_serial_setup_no_irq_regs(void);
+  char __fastcall__ simple_serial_open(void);
+  char __fastcall__ simple_serial_open_printer(void);
+  char __fastcall__ simple_serial_close(void);
+  void __fastcall__ simple_serial_flush(void);
+  void __fastcall__ simple_serial_set_irq(unsigned char on);
+  void __fastcall__ simple_serial_read_config(void);
+  void __fastcall__ simple_serial_write_config(void);
+  void __fastcall__ simple_serial_configure(void);
+  void __fastcall__ simple_serial_setup_no_irq_regs(void);
 
-int simple_serial_read_no_irq(char *buffer, size_t len);
-unsigned char __fastcall__ serial_read_byte_no_irq(void);
+  int simple_serial_read_no_irq(char *buffer, size_t len);
+  unsigned char __fastcall__ serial_read_byte_no_irq(void);
 
-#define simple_serial_putc serial_putc_direct
-void __fastcall__ serial_putc_direct(unsigned char c);
+  #define simple_serial_putc serial_putc_direct
+  void __fastcall__ serial_putc_direct(unsigned char c);
 
-void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
-void __fastcall__ serial_throbber_set(void *addr);
+  void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
+  void __fastcall__ serial_throbber_set(void *addr);
 
-#define tty_speed_to_str(speed)        \
-  ((speed == SER_BAUD_2400) ? "2400":  \
-   (speed == SER_BAUD_4800) ? "4800":  \
-   (speed == SER_BAUD_9600) ? "9600":  \
-   (speed == SER_BAUD_19200)? "19200": \
-   (speed == SER_BAUD_57600)? "57600":"115200")
+  #define tty_speed_to_str(speed)        \
+    ((speed == SER_BAUD_2400) ? "2400":  \
+     (speed == SER_BAUD_4800) ? "4800":  \
+     (speed == SER_BAUD_9600) ? "9600":  \
+     (speed == SER_BAUD_19200)? "19200": \
+     (speed == SER_BAUD_57600)? "57600":"115200")
 
 #else
-int simple_serial_open(void);
-int simple_serial_open_file(char *tty_path, int tty_speed);
-int simple_serial_open_printer(void);
-int simple_serial_close_printer(void);
-int simple_serial_close(void);
-void simple_serial_flush(void);
-void simple_serial_flush_fd(int fd);
-int simple_serial_read_no_irq(char *buffer, size_t len);
-int tty_speed_from_str(char *tmp);
-#define serial_read_byte_no_irq simple_serial_getc
+  int simple_serial_open(void);
+  int simple_serial_open_file(char *tty_path, int tty_speed);
+  int simple_serial_open_printer(void);
+  int simple_serial_close_printer(void);
+  int simple_serial_close(void);
+  void simple_serial_flush(void);
+  void simple_serial_flush_fd(int fd);
+  int simple_serial_read_no_irq(char *buffer, size_t len);
+  int tty_speed_from_str(char *tmp);
+  #define serial_read_byte_no_irq simple_serial_getc
 
-#define simple_serial_configure()
-#define simple_serial_setup_no_irq_regs()
-#define simple_serial_set_irq(i)
-#define serial_throbber_set(i)
+  #define simple_serial_configure()
+  #define simple_serial_setup_no_irq_regs()
+  #define simple_serial_set_irq(i)
+  #define serial_throbber_set(i)
 
-unsigned char __fastcall__ simple_serial_putc(char c);
-char *tty_speed_to_str(int speed);
-void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
-void simple_serial_write_fast(const char *ptr, size_t nmemb);
-void simple_serial_write_fast_fd(int fd, const char *ptr, size_t nmemb);
-int simple_serial_read_opts(void);
-/* Full prototype for reading */
-int __simple_serial_getc_with_tv_timeout(int fd, int timeout, int secs, int msecs);
+  unsigned char __fastcall__ simple_serial_putc(char c);
+  char *tty_speed_to_str(int speed);
+  void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
+  void simple_serial_write_fast(const char *ptr, size_t nmemb);
+  void simple_serial_write_fast_fd(int fd, const char *ptr, size_t nmemb);
+  int simple_serial_read_config(void);
+  void simple_serial_write_config(void);
+  /* Full prototype for reading */
+  int __simple_serial_getc_with_tv_timeout(int fd, int timeout, int secs, int msecs);
 #endif
 
 /* Input */

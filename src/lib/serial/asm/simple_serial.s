@@ -18,6 +18,7 @@
         .export         _baudrate, _flow_control, _open_slot
         .export         _ser_params
 
+        .export         _simple_serial_read_config
         .export         _simple_serial_open
         .export         _simple_serial_open_printer
         .export         _simple_serial_close
@@ -60,13 +61,15 @@
 
         .segment "ONCE"
 
+; Used to fix default serial port (2) to 0 (modem) on IIgs
 setup_serial_defaults:
         bit     ostype
         bpl     :+
         lda     #0
         sta     _ser_params+SIMPLE_SERIAL_PARAMS::DATA_SLOT
-        lda     #1
-        sta     _ser_params+SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
+        ; IIgs printer port: same as default 8-bits printer slot
+        ; lda     #1
+        ; sta     _ser_params+SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
 :       rts
 
         .data
@@ -76,10 +79,13 @@ _flow_control:  .byte SER_HS_HW
 _open_slot:     .byte 0
 
 ; Our own serial parameters
-_ser_params:    .byte SER_BAUD_115200
-                .byte 2
-                .byte SER_BAUD_9600
-                .byte 1
+_ser_params:    .byte SER_BAUD_115200   ; Data speed
+                .byte 2                 ; Data slot
+                .byte SER_BAUD_9600     ; Printer speed
+                .byte 1                 ; Printer slot
+.ifdef EXTRA_SERIAL_CONFIG
+                .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+.endif
 
 ; CC65's serial parameters
 default_params: .byte SER_BAUD_115200
@@ -100,7 +106,7 @@ write_mode_str: .asciiz "w"
 
 ;char __fastcall__ simple_serial_open_printer(void);
 .proc _simple_serial_open_printer: near
-        jsr     simple_serial_read_opts
+        jsr     _simple_serial_read_config
         ldy     #SIMPLE_SERIAL_PARAMS::PRINTER_BAUDRATE
         jmp     simple_serial_open_direct
 .endproc
@@ -108,7 +114,7 @@ write_mode_str: .asciiz "w"
 ;char __fastcall__ simple_serial_open(void);
 .proc _simple_serial_open: near
         ; Get options
-        jsr     simple_serial_read_opts
+        jsr     _simple_serial_read_config
         ; Get speed
         ldy     #SIMPLE_SERIAL_PARAMS::DATA_BAUDRATE
         jmp     simple_serial_open_direct
@@ -145,7 +151,7 @@ write_mode_str: .asciiz "w"
         jmp     _simple_serial_settings_io
 .endproc
 
-.proc simple_serial_read_opts: near
+.proc _simple_serial_read_config: near
         jsr     _register_start_device
 
         lda     #<simple_serial_ram_settings
