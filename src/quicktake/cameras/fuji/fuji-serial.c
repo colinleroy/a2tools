@@ -175,24 +175,24 @@ static void end_session(void) {
 }
 
 /* Read a reply from the camera */
-static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) {
+static uint8 read_response(uint16 len, uint8 expect_header) {
   uint8 *cur_buf, *end_buf;
   uint8 eot_buf[3];
   uint16 i;
   if (expect_header) {
     /* Read the header */
-    if (simple_serial_read_no_irq((char *)buf, 6) == EOF) {
+    if (simple_serial_read_no_irq((char *)buffer, 6) == EOF) {
       if (do_debug) {
         cputs("Timeout reading response.\r\n");
       }
       return -1;
     }
 
-    if (buf[0] != ESC || buf[1] != STX) {
+    if (buffer[0] != ESC || buffer[1] != STX) {
       return -1;
     }
 
-    response_len = (buf[5] << 8) | buf[4];
+    response_len = (buffer[5] << 8) | buffer[4];
     if (response_len > len) {
       /* Buffer overflow awaiting */
       return -1;
@@ -200,7 +200,7 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   } else {
     response_len = BLOCK_SIZE;
   }
-  cur_buf = buf;
+  cur_buf = buffer;
   end_buf = cur_buf + response_len;
   i = 0;
   while (cur_buf != end_buf) {
@@ -250,7 +250,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
   if (get_ack && (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK))
     return -1;
 
-  if (read_response(buffer, BLOCK_SIZE, get_ack) != 0) {
+  if (read_response(BLOCK_SIZE, get_ack) != 0) {
     return -1;
   }
   return 0;
@@ -433,7 +433,7 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
     progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
 
     simple_serial_putc(ACK);
-    if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
+    if (read_response(BLOCK_SIZE, 1) != 0) {
       errno = EIO;
       err = -1;
       break;
