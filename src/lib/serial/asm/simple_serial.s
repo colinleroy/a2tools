@@ -36,7 +36,7 @@
         .import         _simple_serial_setup_no_irq_regs
 
         .import         __filetype, __auxtype
-        .import         _open, _read, _write, _close
+        .import         _open, _read, _write, _close, _unlink
         .import         pusha, pusha0, pushax, return0, returnFFFF
         
         .import         _reopen_start_device
@@ -51,6 +51,7 @@
         .import         _set_iigs_speed, ostype
 
         .constructor    setup_serial_defaults
+        .destructor     unlink_tmpfile
 
         .include        "../../simple_serial.inc"
         .include        "fcntl.inc"
@@ -300,6 +301,12 @@ write_mode_str: .asciiz "w"
 .endproc
 
 .endif
+
+.proc unlink_tmpfile
+        lda     #<simple_serial_ram_settings
+        ldx     #>simple_serial_ram_settings
+        jmp     _unlink
+.endproc
 
         .bss
 
