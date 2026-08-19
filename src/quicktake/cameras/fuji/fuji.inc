@@ -1,0 +1,19 @@
+_STX = $02
+_ETX = $03
+_EOT = $04
+_ENQ = $05
+_ACK = $06
+_ESC = $10
+_ETB = $17
+_NAK = $15
+
+_CMD_ACK = $00
+_CMD_NAK = $01
+
+_FUJI_CMD_PIC_GET_THUMB = $00
+_FUJI_CMD_PIC_GET_DATA  = $02
+_FUJI_CMD_SPEED         = $07
+_FUJI_CMD_GET_INFO      = $09
+_FUJI_CMD_PIC_NAME      = $0A
+_FUJI_CMD_PIC_COUNT     = $0B
+_FUJI_CMD_PIC_SIZE      = $17

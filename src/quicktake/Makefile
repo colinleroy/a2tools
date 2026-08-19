@@ -50,7 +50,7 @@ slowtake_SOURCES := \
 	cameras/qt-callbacks.s \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/fuji/fuji-serial.c \
-	cameras/fuji/fuji-read-response.c \
+	cameras/fuji/fuji-read-response.s \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
