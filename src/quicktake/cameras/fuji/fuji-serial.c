@@ -178,7 +178,7 @@ static void end_session(void) {
 static uint8 read_response(uint16 len, uint8 expect_header) {
   uint8 *cur_buf, *end_buf;
   uint8 eot_buf[3];
-  uint16 i;
+  uint16 i, j;
   if (expect_header) {
     /* Read the header */
     if (simple_serial_read_no_irq((char *)buffer, 6) == EOF) {
@@ -200,17 +200,17 @@ static uint8 read_response(uint16 len, uint8 expect_header) {
   } else {
     response_len = BLOCK_SIZE;
   }
-  cur_buf = buffer;
-  end_buf = cur_buf + response_len;
+
   i = 0;
-  while (cur_buf != end_buf) {
-    *cur_buf = serial_read_byte_no_irq();
-    if (*cur_buf == ESC) {
+  j = response_len; /* Don't change respnse_le, callers use it */
+  while (j) {
+    buffer[i] = serial_read_byte_no_irq();
+    if (buffer[i] == ESC) {
       /* Skip escape */
-      *cur_buf = serial_read_byte_no_irq();
+      buffer[i] = serial_read_byte_no_irq();
     }
-    cur_buf++;
     i++;
+    j--;
   }
   /* Read footer */
   simple_serial_read_no_irq((char *)eot_buf, 3);
