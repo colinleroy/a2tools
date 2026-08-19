@@ -30,6 +30,7 @@ microserial_SOURCES := \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/qt1x0/qt1x0-thumbs.c \
 	cameras/fuji/fuji-serial.c \
+	cameras/fuji/fuji-read-response.c \
 	cameras/fuji/fuji-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
@@ -49,6 +50,7 @@ slowtake_SOURCES := \
 	cameras/qt-callbacks.s \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/fuji/fuji-serial.c \
+	cameras/fuji/fuji-read-response.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c

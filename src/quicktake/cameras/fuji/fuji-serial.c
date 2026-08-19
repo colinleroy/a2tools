@@ -10,6 +10,8 @@
 #include "extended_conio.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
+#include "fuji.h"
+#include "fuji-read-response.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -74,33 +76,10 @@ void *fuji_callbacks[] = {
   /* THUMB_LOAD_DATA */ fuji_load_thumb_data,
 };
 
-extern uint8 scrw, scrh;
-extern uint8 do_debug;
-
 #define FUJI_QT200    0x00
 #define FUJI_UNKNOWN  0xFF
 
 uint8 fuji_model;
-
-#define STX 0x02 /* Start of data */
-#define ETX 0x03 /* End of data */
-#define EOT 0x04 /* End of session */
-#define ENQ 0x05 /* Enquiry */
-#define ACK 0x06
-#define ESC 0x10
-#define ETB 0x17 /* End of transmission block */
-#define NAK 0x15
-
-#define CMD_ACK 0x00
-#define CMD_NAK 0x01
-
-#define FUJI_CMD_PIC_GET_THUMB 0x00
-#define FUJI_CMD_PIC_GET_DATA  0x02
-#define FUJI_CMD_SPEED         0x07
-#define FUJI_CMD_GET_INFO      0x09
-#define FUJI_CMD_PIC_NAME      0x0A
-#define FUJI_CMD_PIC_COUNT     0x0B
-#define FUJI_CMD_PIC_SIZE      0x17
 
 #define NUM_PIC_IDX 4
 
@@ -122,8 +101,8 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 }
 #endif
 
-static uint16 response_len;
-static uint8 response_continues;
+uint16 response_len;
+uint8 response_continues;
 
 static uint8 fuji_send_ping(uint8 wait);
 static void end_session(void);
@@ -174,45 +153,6 @@ static void end_session(void) {
   simple_serial_putc(EOT);
 }
 
-/* Read a reply from the camera */
-static uint8 read_response(void) {
-  uint8 eot_buf[3];
-  uint16 i, j;
-
-  /* Read the header */
-  if (simple_serial_read_no_irq((char *)buffer, 6) == EOF) {
-    if (do_debug) {
-      cputs("Timeout reading response.\r\n");
-    }
-    return -1;
-  }
-
-  if (buffer[0] != ESC || buffer[1] != STX) {
-    return -1;
-  }
-
-  response_len = (buffer[5] << 8) | buffer[4];
-
-  i = 0;
-  j = response_len; /* Don't change respnse_le, callers use it */
-  while (j) {
-    buffer[i] = serial_read_byte_no_irq();
-    if (buffer[i] == ESC) {
-      /* Skip escape */
-      buffer[i] = serial_read_byte_no_irq();
-    }
-    i++;
-    j--;
-  }
-  /* Read footer */
-  simple_serial_read_no_irq((char *)eot_buf, 3);
-
-  /* If cur_buf[1] == ETB, there will be more to read */
-  response_continues = (eot_buf[1] == ETB);
-  return 0;
-}
-
-
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len) {
   uint8 header[] = {ESC, STX};
@@ -243,7 +183,7 @@ static uint8 send_command(const char *cmd, uint8 len) {
     return -1;
   }
 
-  if (read_response() != 0) {
+  if (fuji_read_response() != 0) {
     return -1;
   }
   return 0;
@@ -421,12 +361,13 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
     errno = EIO;
     err = -1;
   }
+
   while (response_continues) {
     blocks_read++;
     progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
 
     simple_serial_putc(ACK);
-    if (read_response() != 0) {
+    if (fuji_read_response() != 0) {
       errno = EIO;
       err = -1;
       break;
