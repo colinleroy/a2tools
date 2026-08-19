@@ -265,7 +265,7 @@ int main(int argc, char **argv)
   install_sig_handler();
 
   /* Get options */
-  simple_serial_read_opts();
+  simple_serial_read_config();
   vsdrive_read_config();
   install_printer_thread();
 

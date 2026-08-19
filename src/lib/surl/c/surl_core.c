@@ -44,7 +44,7 @@ char surl_connect_proxy(void) {
     return 0;
   }
   #ifndef __CC65__
-  simple_serial_read_opts();
+  simple_serial_read_config();
   #endif
   r = simple_serial_open();
   //DEBUG("connected proxy: %d\n", r);
