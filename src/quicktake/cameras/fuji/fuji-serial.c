@@ -175,8 +175,7 @@ static void end_session(void) {
 }
 
 /* Read a reply from the camera */
-static uint8 read_response(uint16 len, uint8 expect_header) {
-  uint8 *cur_buf, *end_buf;
+static uint8 read_response(uint8 expect_header) {
   uint8 eot_buf[3];
   uint16 i, j;
   if (expect_header) {
@@ -193,10 +192,6 @@ static uint8 read_response(uint16 len, uint8 expect_header) {
     }
 
     response_len = (buffer[5] << 8) | buffer[4];
-    if (response_len > len) {
-      /* Buffer overflow awaiting */
-      return -1;
-    }
   } else {
     response_len = BLOCK_SIZE;
   }
@@ -222,7 +217,7 @@ static uint8 read_response(uint16 len, uint8 expect_header) {
 
 
 /* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
+static uint8 send_command(const char *cmd, uint8 len) {
   uint8 header[] = {ESC, STX};
   uint8 cmd_buffer[32];
   uint8 i, checksum = 0x00;
@@ -247,10 +242,11 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack) {
   simple_serial_write((char *)cmd_buffer, len);
 
   response_len = 0;
-  if (get_ack && (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK))
+  if (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK) {
     return -1;
+  }
 
-  if (read_response(BLOCK_SIZE, get_ack) != 0) {
+  if (read_response(1) != 0) {
     return -1;
   }
   return 0;
@@ -305,7 +301,7 @@ static uint8 fuji_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (send_command(str_speed, sizeof str_speed, 1) != 0) {
+  if (send_command(str_speed, sizeof str_speed) != 0) {
     cputs("Speed set command failed.\r\n");
     if (do_debug) {
       cgetc();
@@ -355,13 +351,13 @@ static uint8 fuji_get_information(camera_info *info) {
 
   fuji_start();
 
-  if (send_command(cmd, sizeof cmd, 1) != 0) {
+  if (send_command(cmd, sizeof cmd) != 0) {
     return -1;
   }
   info->num_pics = (buffer[1] << 8) + buffer[0];
 
   cmd[1] = FUJI_CMD_GET_INFO;
-  if (send_command(cmd, sizeof cmd, 1) != 0) {
+  if (send_command(cmd, sizeof cmd) != 0) {
     return -1;
   }
   PC_DEBUG("cmd", buffer, response_len);
@@ -391,7 +387,7 @@ static void fuji_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
   cmd[NUM_PIC_IDX] = n_pic;
 
-  if (fuji_start() != 0 || send_command(cmd, sizeof cmd, 1) != 0) {
+  if (fuji_start() != 0 || send_command(cmd, sizeof cmd) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
@@ -420,7 +416,7 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
   progress_bar(2, wherey(), scrw - 2, 0, num_blocks);
 
   PC_DEBUG("cmd", data_cmd, sizeof data_cmd);
-  if (send_command(data_cmd, sizeof data_cmd, 1) != 0) {
+  if (send_command(data_cmd, sizeof data_cmd) != 0) {
     errno = EIO;
     return -1;
   }
@@ -433,7 +429,7 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
     progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
 
     simple_serial_putc(ACK);
-    if (read_response(BLOCK_SIZE, 1) != 0) {
+    if (read_response(1) != 0) {
       errno = EIO;
       err = -1;
       break;
@@ -465,7 +461,7 @@ static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail) {
   ui_get_image_header_str();
   size_cmd[NUM_PIC_IDX] = n_pic;
 
-  if (send_command(size_cmd, sizeof size_cmd, 1) != 0) {
+  if (send_command(size_cmd, sizeof size_cmd) != 0) {
     errno = EIO;
     return -1;
   }
