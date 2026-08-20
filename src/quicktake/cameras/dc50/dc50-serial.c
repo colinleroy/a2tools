@@ -124,7 +124,7 @@ static uint8 dc50_wakeup(CamSpeed speed) {
 #pragma warn(unused-param, pop)
 
 static CamSpeed my_speed = SER_BAUD_9600;
-
+static uint8 using_ram_card;
 #ifdef __CC65__
 /* Use UI's info struct to spare memory */
 extern camera_info cam_info;
@@ -220,8 +220,9 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 
 #define BATTERY_STATUS_IDX    8
 #define AC_STATUS_IDX         9
-#define NUM_INTERNAL_PIC_IDX  36
-#define NUM_CARD_PIC_IDX      56
+#define FLASH_MODE_IDX        20
+#define NUM_INTERNAL_PIC_IDX  36 // big-endian, 16 bits
+#define NUM_CARD_PIC_IDX      56 // big-endian, 16-bits
 #define CAMERA_NAME_IDX       80
 
 /* Get information from the camera */
@@ -232,14 +233,29 @@ static uint8 dc50_get_information(camera_info *info) {
   }
 
   switch(buffer[BATTERY_STATUS_IDX]) {
-  case 0: /* full */ buffer[BATTERY_STATUS_IDX] = 90; break;
-  case 1: /* full */ buffer[BATTERY_STATUS_IDX] = 50; break;
-  case 2: /* full */ buffer[BATTERY_STATUS_IDX] = 10; break;
+  case 0: /* full  */ buffer[BATTERY_STATUS_IDX] = 90; break;
+  case 1: /* low   */ buffer[BATTERY_STATUS_IDX] = 50; break;
+  case 2: /* empty */ buffer[BATTERY_STATUS_IDX] = 10; break;
   }
   info->battery_level = buffer[BATTERY_STATUS_IDX];
+
+  switch(buffer[FLASH_MODE_IDX]) {
+    case 2: /* off   */        info->flash_mode = FLASH_OFF; break;
+    case 1: /* fill  */
+    case 4: /* fill red-eye */ info->flash_mode = FLASH_ON; break;
+    case 0: /* auto */
+    case 3: /* auto red-eye */ info->flash_mode = FLASH_AUTO; break;
+  }
+
   info->charging      = buffer[AC_STATUS_IDX];
-  info->num_pics      = buffer[NUM_INTERNAL_PIC_IDX+1] + (buffer[NUM_INTERNAL_PIC_IDX]<<8);
-  info->num_pics      = buffer[NUM_CARD_PIC_IDX+1] + (buffer[NUM_CARD_PIC_IDX]<<8);
+  /* Counter is 16 bits but there won't be more than 256 pictures. */
+  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX+1]) == 0) {
+    /* we'll access internal memory if there's no card or no pics on it. */
+    info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX+1];
+    using_ram_card    = 0;
+  } else {
+    using_ram_card    = 1;
+  }
   memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
   info->name[31] = '\0';
   return 0;
