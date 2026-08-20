@@ -117,7 +117,7 @@ try_again:
 }
 
 int simple_serial_getc_with_timeout(void) {
-  return __simple_serial_getc_with_tv_timeout(ttyfd, 1, 0, 500);
+  return __simple_serial_getc_with_tv_timeout(ttyfd, 1, 0, 5000);
 }
 
 char simple_serial_getc(void) {

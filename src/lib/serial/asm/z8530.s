@@ -21,11 +21,14 @@
         .export         _z8530_set_speed
         .export         _z8530_slot_dtr_onoff
         .export         _z8530_set_parity
+        .export         _z8530_send_break
+
+        .import         _platform_msleep
 .endif
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         popa, _baudrate
+        .import         popa, pushax, popax, _baudrate
 
         .setcpu         "65816"
 
@@ -174,6 +177,7 @@ TX_DTR_ON              = %01111111      ; ANDed,DTR ON (high)
 TX_DTR_OFF             = %10000000      ; ORed, DTR OFF
 TX_RTS_ON              = %00000010      ; ORed, RTS ON (low)
 TX_RTS_OFF             = %11111101      ; ANDed, RTS OFF
+TX_SEND_BREAK          = %00010000      ; ORed
 
 WR_MASTER_IRQ_RST      = 9              ; (Ref page 5-14)
 MASTER_IRQ_SHUTDOWN    = %00000010      ; STA'd
@@ -603,4 +607,19 @@ _z8530_set_parity:
         tay                       ; Parity
         jsr     setClockAndParity
 pout:   rts
+
+_z8530_send_break:
+        jsr     pushax
+        ldx     Channel
+        ldy     #WR_TX_CTRL
+        lda     #((TX_8BITS|TX_CTRL_ON|TX_RTS_ON|TX_SEND_BREAK)&TX_DTR_ON)
+        jsr     writeSCCReg
+
+        jsr     popax
+        jsr     _platform_msleep
+        ldx     Channel
+        ldy     #WR_TX_CTRL
+        lda     #((TX_8BITS|TX_CTRL_ON|TX_RTS_ON)&TX_DTR_ON)
+        jmp     writeSCCReg
+
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL

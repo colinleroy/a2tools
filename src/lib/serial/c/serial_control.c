@@ -92,3 +92,8 @@ void simple_serial_set_parity(unsigned int p) {
   }
   tcgetattr(ttyfd, &tty);
 }
+
+void simple_serial_send_break(unsigned int duration) {
+  tcsendbreak (ttyfd, duration);
+  tcdrain(ttyfd);
+}

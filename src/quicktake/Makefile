@@ -32,6 +32,8 @@ microserial_SOURCES := \
 	cameras/fuji/fuji-serial.c \
 	cameras/fuji/fuji-read-response.c \
 	cameras/fuji/fuji-thumbs.c \
+	cameras/dc50/dc50-serial.c \
+	cameras/dc50/dc50-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -51,6 +53,7 @@ slowtake_SOURCES := \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/fuji/fuji-serial.c \
 	cameras/fuji/fuji-read-response.s \
+	cameras/dc50/dc50-serial.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
@@ -61,6 +64,7 @@ slowtake_CC65SOURCES := \
 	ui/qt-dither-vert.s \
 	cameras/qt1x0/qt1x0-thumbs.s \
 	cameras/fuji/fuji-thumbs.s \
+	cameras/dc50/dc50-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -283,12 +287,16 @@ QT1X0.ZX: slowtake.bin
 FUJI.ZX: slowtake.bin
 	zx02 -f FUJI.DRV FUJI.ZX
 
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX
+DC50.ZX: slowtake.bin
+	zx02 -f DC50.DRV DC50.ZX
+
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00 < FUJI.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC50.ZX BIN 0xC00 < DC50.ZX; \
 	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;

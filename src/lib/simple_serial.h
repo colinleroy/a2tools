@@ -50,6 +50,7 @@ void __fastcall__ simple_serial_set_flow_control(unsigned char fc);
 void __fastcall__ simple_serial_set_parity(unsigned int p);
 void __fastcall__ simple_serial_dtr_onoff(unsigned char on);
 void __fastcall__ simple_serial_slot_dtr_onoff(unsigned char slot_num, unsigned char on);
+void __fastcall__ simple_serial_send_break(unsigned int duration);
 
 #ifdef __CC65__
   char __fastcall__ simple_serial_open(void);

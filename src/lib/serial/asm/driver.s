@@ -49,14 +49,17 @@
         .export     _simple_serial_slot_dtr_onoff
         .export     _simple_serial_dtr_onoff
         .export     _simple_serial_set_parity
+        .export     _simple_serial_send_break
 
         .import     _acia_set_speed
         .import     _acia_slot_dtr_onoff
         .import     _acia_set_parity
+        .import     _acia_send_break
 
         .import     _z8530_set_speed
         .import     _z8530_slot_dtr_onoff
         .import     _z8530_set_parity
+        .import     _z8530_send_break
 .endif
 
         .import     ostype, _open_slot, pusha
@@ -181,6 +184,11 @@ _serial_shorten_timeout: .byte 0
         ldx     #>_z8530_set_parity
         sta     _simple_serial_set_parity+1
         stx     _simple_serial_set_parity+2
+
+        lda     #<_z8530_send_break
+        ldx     #>_z8530_send_break
+        sta     _simple_serial_send_break+1
+        stx     _simple_serial_send_break+2
 .endif
 
 :       rts
@@ -258,6 +266,10 @@ _serial_shorten_timeout: .byte 0
 
 .proc _simple_serial_set_parity
         jmp     _acia_set_parity
+.endproc
+
+.proc _simple_serial_send_break
+        jmp     _acia_send_break
 .endproc
 
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL

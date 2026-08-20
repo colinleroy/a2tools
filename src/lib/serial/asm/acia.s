@@ -32,11 +32,14 @@
         .export         _acia_set_speed
         .export         _acia_slot_dtr_onoff
         .export         _acia_set_parity
+        .export         _acia_send_break
+
+        .import         _platform_msleep
 .endif
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         popa, _baudrate
+        .import         popa, pushax, popax, _baudrate
 
         .include        "zeropage.inc"
         .include        "ser-kernel.inc"
@@ -355,6 +358,20 @@ _acia_set_parity:
         lda     ACIA_CMD,x
         and     #%00011111
         ora     ParityTable,y
+        sta     ACIA_CMD,x
+        rts
+
+_acia_send_break:
+        jsr     pushax
+        ldx     Index
+        lda     ACIA_CMD,x
+        pha
+        ora     #%00001100
+        sta     ACIA_CMD,x
+        jsr     popax
+        jsr     _platform_msleep
+        ldx     Index
+        pla
         sta     ACIA_CMD,x
         rts
 

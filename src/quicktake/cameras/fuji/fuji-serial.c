@@ -111,7 +111,7 @@ static void end_session(void);
 /* Use UI's info struct to spare memory */
 extern camera_info cam_info;
 #else
-camera_info cam_info;
+static camera_info cam_info;
 #endif
 
 #pragma warn(unused-param, push, off)
