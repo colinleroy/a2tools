@@ -35,6 +35,7 @@ char *cam_file_extension[] = {
   ".QTK",
   ".QTK",
   ".JPG",
+  ".KDC",
 };
 
 
@@ -49,7 +50,7 @@ extern unsigned char buffer[BUFFER_SIZE];
 #ifdef __CC65__
 uint8 load_driver(char *drv, CamSpeed speed) {
   gotox(0); clreol();
-  if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x2000) == 0) {
+  if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x1A00) == 0) {
 #ifndef DEBUG_THUMB
     if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
       return 0;

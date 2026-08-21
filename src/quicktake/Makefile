@@ -55,6 +55,7 @@ slowtake_SOURCES := \
 	cameras/fuji/fuji-serial.c \
 	cameras/fuji/fuji-read-response.s \
 	cameras/dc50/dc50-serial.c \
+	cameras/dc50/dc50-read-response.s \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c

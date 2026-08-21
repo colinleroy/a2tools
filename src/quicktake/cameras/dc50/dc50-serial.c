@@ -103,33 +103,35 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 }
 #endif
 
-extern int ttyfd;
+#ifdef __CC65__
+/* Use UI's info struct to spare memory */
+extern camera_info cam_info;
+#else
+static camera_info cam_info;
+#endif
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a DC50 camera
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 dc50_wakeup(CamSpeed speed) {
-  uint8 tries = 2;
-  cputs("Pinging Kodak DC50... ");
+  uint8 c, tries = 3;
+  cputs("Pinging Kodak DC50...");
 
 again:
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
 
-  // ACIA: CMD register bit 2/3, 1/1, transmit break
   simple_serial_send_break(250);
+  sleep(1);
 
-  platform_msleep(1500);
+  /* Flush shit */
+  while (simple_serial_read_no_irq((char *)&c, 1) != EOF);
 
-  if (dc50_set_speed(speed) != 0) {
-    if (tries--) {
-      simple_serial_close();
-      simple_serial_open();
-      goto again;
-    }
-  } else {
+  if (dc50_set_speed(speed) == 0) {
     return QT_MODEL_DC50;
+  } else if (tries--) {
+    goto again;
   }
   return QT_MODEL_UNKNOWN;
 }
@@ -137,13 +139,6 @@ again:
 
 static CamSpeed my_speed = SER_BAUD_9600;
 static uint8 storage_target;
-
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
-extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 static uint8 wait_command_completion(void) {
   char c;
@@ -176,13 +171,13 @@ static uint8 dc50_send_command(void) {
   return 0;
 }
 
-static uint8 dc50_send_and_read_response(uint16 response_len, uint16 block_size) {
+static uint8 dc50_send_and_read_response(uint16 response_len) {
   uint8 c;
   if (dc50_send_command() != 0) {
     return -1;
   }
 
-  if (dc50_read_response(response_len, block_size) == 0) {
+  if (dc50_read_response(response_len) == 0) {
     if (response_len) {
       simple_serial_putc(REP_CORRECT);
       return wait_command_completion();
@@ -221,7 +216,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (dc50_send_and_read_response(0, 0) != 0) {
+  if (dc50_send_and_read_response(0) != 0) {
     return -1;
   }
 
@@ -234,7 +229,6 @@ static uint8 dc50_set_speed(CamSpeed speed) {
     my_speed = speed;
     return 0;
   }
-
   return -1;
 }
 
@@ -249,7 +243,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 /* Get information from the camera */
 static uint8 dc50_get_information(camera_info *info) {
   init_packet(CMD_GET_STATUS);
-  if (dc50_send_and_read_response(256, 256) != 0) {
+  if (dc50_send_and_read_response(256) != 0) {
     return -1;
   }
 
@@ -280,12 +274,12 @@ static uint8 dc50_get_information(camera_info *info) {
 
 #define CMD_PIC_NUM 2
 
-static uint8 dc50_get_picture_info(uint n_pic) {
+static uint8 dc50_get_picture_info(uint8 n_pic) {
   /* Get picture info */
   init_packet(CMD_CAM_PIC_INFO+storage_target);
   command_packet[CMD_PIC_NUM+1] = n_pic;
 
-  return dc50_send_and_read_response(256, 256);
+  return dc50_send_and_read_response(256);
 }
 
 #define INFO_BUF_PIC_TYPE_IDX 1
@@ -305,47 +299,69 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
   }
 }
 
-static uint8 dc50_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 cmd) {
-  progress_bar(-1, -1, scrw - 2, 1, 1);
-  return -1;
-}
-
 #define CAM_PIC_SIZE_IDX 8
+#define HEADER_LEN 19712
+
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
-  uint32 pic_size, read = 0;
-  uint8 c;
+  uint32 pic_size;
+  uint8 c, blocks_to_read, d;
 
   if (dc50_get_picture_info(n_pic) != 0) {
     return -1;
   }
+
   // FIXME handle card pictures
 
-  pic_size = (buffer[CAM_PIC_SIZE_IDX+1] << 16)
-           + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
-           + (buffer[CAM_PIC_SIZE_IDX+3]);
+#ifndef __CC65__
+  pic_size     = buffer[CAM_PIC_SIZE_IDX+3] 
+               + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
+               + (buffer[CAM_PIC_SIZE_IDX+1] << 16);
+#else
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&pic_size)[0] = buffer[CAM_PIC_SIZE_IDX+3];
+  ((unsigned char *)&pic_size)[1] = buffer[CAM_PIC_SIZE_IDX+2];
+  ((unsigned char *)&pic_size)[2] = buffer[CAM_PIC_SIZE_IDX+1];
+  ((unsigned char *)&pic_size)[3] = 0;
+#endif
 
-  init_packet(CMD_GET_CAM_PIC+storage_target);
-  command_packet[CMD_PIC_NUM+1] = n_pic;
+  if (pic_size > avail) {
+    errno = ENOSPC;
+    return -1;
+  }
+
 
   ui_get_image_str(640, 480, pic_size);
 
+  write(fd, "MM\0*", 4);
+  /* Remember quality */
+  c = buffer[4] == 0x00 ? 0xF3 : 0x98;
+
+  /* Fill with blank */
+  bzero(buffer, sizeof buffer);
+  for (d = 0; d <= HEADER_LEN / sizeof buffer; d++) {
+    write(fd, buffer, sizeof buffer);
+  }
+
+  lseek(fd, 1063, SEEK_SET);
+  write(fd, &c, 1);
+  lseek(fd, HEADER_LEN, SEEK_SET);
+
+  blocks_to_read = 1+ (pic_size >> 10); /* div 1024 */
+  d = 0;
+  progress_bar(2, wherey(), scrw - 2, 0, blocks_to_read);
+
+  init_packet(CMD_GET_CAM_PIC+storage_target);
+  command_packet[CMD_PIC_NUM+1] = n_pic;
   dc50_send_command();
 
-  write(fd, "MM\0*", 4);
-  lseek(fd, 1063, SEEK_SET);
-  c = buffer[4] == 0x00 ? 0xF3 : 0x98;
-  write(fd, &c, 1);
-  lseek(fd, 19712, SEEK_SET);
-  while (read < pic_size) {
-    uint32 remaining = pic_size-read;
-    if (remaining > 1024) {
-      remaining = 1024;
-    }
+  while (d++ < blocks_to_read) {
+    if (dc50_read_response(1024) == 0) {
+      write(fd, buffer, 1024);
 
-    if (dc50_read_response(1024, 1024) == 0) {
-      write(fd, buffer, remaining);
+      progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
+
+      /* FIXME verify checksum */
       simple_serial_putc(REP_CORRECT);
-      read += remaining;
     } else {
       return -1;
     }

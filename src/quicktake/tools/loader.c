@@ -109,7 +109,20 @@ display:
   unsigned char c, c2;
   int x, y;
 
-  if (w != 80) {
+  if (h == 64 && qtmodel == QT_MODEL_DC50) {
+    char line[80];
+    fseek(fp, 24, SEEK_SET);
+    printf("DC50\n");
+    for (y = 0; y < 32; y+=2) {
+      fread(line, 1, 96, fp);
+      for (x = 0; x < 96; x+=2) {
+        PIXEL_OUTPUT(x, y, line[x] & 0xF0, 0);
+        PIXEL_OUTPUT((x)+1, y, line[x] & 0xF0, 0);
+        PIXEL_OUTPUT((x)+2, y, line[x] & 0xF0, 0);
+        PIXEL_OUTPUT((x)+3, y, line[x] & 0xF0, 0);
+      }
+    }
+  } else if (w != 80) {
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
         fread(&c, 1, 1, fp);
