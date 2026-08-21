@@ -136,7 +136,8 @@ again:
 #pragma warn(unused-param, pop)
 
 static CamSpeed my_speed = SER_BAUD_9600;
-static uint8 using_ram_card;
+static uint8 storage_target;
+
 #ifdef __CC65__
 /* Use UI's info struct to spare memory */
 extern camera_info cam_info;
@@ -146,7 +147,8 @@ static camera_info cam_info;
 
 static uint8 wait_command_completion(void) {
   char c;
-  while (simple_serial_read_no_irq((char *)&c, 1) == 0) {
+  do {
+    while (simple_serial_read_no_irq((char *)&c, 1) == EOF);
     PC_DEBUG("completion", &c, 1);
     if (c == REP_BUSY) {
       continue;
@@ -155,12 +157,11 @@ static uint8 wait_command_completion(void) {
       return 0;
     }
     return -1;
-  }
-  return -1;
+  } while (1);
 }
 
-static uint8 dc50_send_and_read_response(uint16 response_len) {
-  uint8 c, tries = 2;
+static uint8 dc50_send_command(void) {
+  uint8 c;
   PC_DEBUG("CMD", command_packet, 8);
 
   simple_serial_write(command_packet, 8);
@@ -172,23 +173,26 @@ static uint8 dc50_send_and_read_response(uint16 response_len) {
   if (c != REP_ACK) {
     return -1;
   }
-
-  if (response_len == 0) {
-    return 0;
-  }
-
-  c = simple_serial_read_no_irq(buffer, response_len);
-
-  PC_DEBUG("Data", buffer, response_len);
-  /* Checksum */
-  simple_serial_read_no_irq((char *)&c, 1);
-  PC_DEBUG("checksum", &c, 1);
-  
-  simple_serial_putc(REP_CORRECT);
-
-  return wait_command_completion();
+  return 0;
 }
 
+static uint8 dc50_send_and_read_response(uint16 response_len, uint16 block_size) {
+  uint8 c;
+  if (dc50_send_command() != 0) {
+    return -1;
+  }
+
+  if (dc50_read_response(response_len, block_size) == 0) {
+    if (response_len) {
+      simple_serial_putc(REP_CORRECT);
+      return wait_command_completion();
+    } else {
+      return 0;
+    }
+  } else {
+    return -1;
+  }
+}
 
 /* Send the speed upgrade command */
 static uint8 dc50_set_speed(CamSpeed speed) {
@@ -217,7 +221,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (dc50_send_and_read_response(0) != 0) {
+  if (dc50_send_and_read_response(0, 0) != 0) {
     return -1;
   }
 
@@ -238,14 +242,14 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define AC_STATUS_IDX         9
 #define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
-#define NUM_INTERNAL_PIC_IDX  36 // big-endian, 16 bits
-#define NUM_CARD_PIC_IDX      56 // big-endian, 16-bits
+#define NUM_INTERNAL_PIC_IDX  35 // big-endian, 16 bits
+#define NUM_CARD_PIC_IDX      55 // big-endian, 16-bits
 #define CAMERA_NAME_IDX       80
 
 /* Get information from the camera */
 static uint8 dc50_get_information(camera_info *info) {
   init_packet(CMD_GET_STATUS);
-  if (dc50_send_and_read_response(256) != 0) {
+  if (dc50_send_and_read_response(256, 256) != 0) {
     return -1;
   }
 
@@ -261,28 +265,43 @@ static uint8 dc50_get_information(camera_info *info) {
 
   info->charging      = buffer[AC_STATUS_IDX];
   /* Counter is 16 bits but there won't be more than 256 pictures. */
-  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX+1]) == 0) {
+  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0) {
     /* we'll access internal memory if there's no card or no pics on it. */
-    info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX+1];
-    using_ram_card    = 0;
+    storage_target    = PIC_TARGET_CARD;
   } else {
-    using_ram_card    = 1;
+    info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
+    storage_target    = PIC_TARGET_CAM;
   }
+
   memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
   info->name[31] = '\0';
   return 0;
 }
 
+#define CMD_PIC_NUM 2
+
+static uint8 dc50_get_picture_info(uint n_pic) {
+  /* Get picture info */
+  init_packet(CMD_CAM_PIC_INFO+storage_target);
+  command_packet[CMD_PIC_NUM+1] = n_pic;
+
+  return dc50_send_and_read_response(256, 256);
+}
+
+#define INFO_BUF_PIC_TYPE_IDX 1
+#define INFO_BUF_PIC_NAME_IDX 37
+
 static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
-  if (1) {
+  if (dc50_get_picture_info(n_pic) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
   } else {
-    sprintf(filename, "%s%s%s",
+    sprintf(filename, "%s%s%s.%s",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"",
-          buffer);
+          buffer+INFO_BUF_PIC_NAME_IDX,
+          buffer[INFO_BUF_PIC_TYPE_IDX] == 1 ? "KDC":"JPG");
   }
 }
 
@@ -291,10 +310,47 @@ static uint8 dc50_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
   return -1;
 }
 
+#define CAM_PIC_SIZE_IDX 8
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
-  ui_get_image_str(640, 480, 65536);
+  uint32 pic_size, read = 0;
+  uint8 c;
 
-  return -1;
+  if (dc50_get_picture_info(n_pic) != 0) {
+    return -1;
+  }
+  // FIXME handle card pictures
+
+  pic_size = (buffer[CAM_PIC_SIZE_IDX+1] << 16)
+           + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
+           + (buffer[CAM_PIC_SIZE_IDX+3]);
+
+  init_packet(CMD_GET_CAM_PIC+storage_target);
+  command_packet[CMD_PIC_NUM+1] = n_pic;
+
+  ui_get_image_str(640, 480, pic_size);
+
+  dc50_send_command();
+
+  write(fd, "MM\0*", 4);
+  lseek(fd, 1063, SEEK_SET);
+  c = 243;
+  write(fd, &c, 1);
+  lseek(fd, 19712, SEEK_SET);
+  while (read < pic_size) {
+    uint32 remaining = pic_size-read;
+    if (remaining > 1024) {
+      remaining = 1024;
+    }
+
+    if (dc50_read_response(1024, 1024) == 0) {
+      write(fd, buffer, remaining);
+      simple_serial_putc(REP_CORRECT);
+      read += remaining;
+    } else {
+      return -1;
+    }
+  }
+  return wait_command_completion();
 }
 
 static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {

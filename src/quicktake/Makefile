@@ -33,6 +33,7 @@ microserial_SOURCES := \
 	cameras/fuji/fuji-read-response.c \
 	cameras/fuji/fuji-thumbs.c \
 	cameras/dc50/dc50-serial.c \
+	cameras/dc50/dc50-read-response.c \
 	cameras/dc50/dc50-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \

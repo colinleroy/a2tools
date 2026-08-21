@@ -78,6 +78,7 @@ static void setup_pointers(void *callbacks[]) {
   impl_delete_pictures = callbacks[CAM_DELETE_PICTURES];
   impl_get_quality_str = callbacks[CAM_GET_QUALITY_STR];
   impl_get_flash_str   = callbacks[CAM_GET_FLASH_STR];
+  impl_get_filename    = callbacks[CAM_GET_FILENAME];
 }
 
 int main(int argc, char *argv[]) {

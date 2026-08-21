@@ -3,6 +3,6 @@
 
 #include "platform.h"
 
-uint8 dc50_read_response(void);
+uint8 dc50_read_response(uint16 len, uint16 block_size);
 
 #endif
