@@ -83,9 +83,10 @@ void *dc50_callbacks[] = {
 
 static char command_packet[8];
 
+/* Zero command packet and set command */
 void init_packet(char command) {
-  bzero(command_packet, 8);
   command_packet[0] = command;
+  bzero(command_packet+1, 6);
   command_packet[7] = 0x1A;
 }
 
@@ -138,8 +139,11 @@ again:
 #pragma warn(unused-param, pop)
 
 static CamSpeed my_speed = SER_BAUD_9600;
+
+/* Are we reading from card or internal storage */
 static uint8 storage_target;
 
+/* Wait for ack after a command requiring it */
 static uint8 wait_command_completion(void) {
   char c;
   do {
@@ -155,15 +159,21 @@ static uint8 wait_command_completion(void) {
   } while (1);
 }
 
+/* Send the command (packet previously inited with init_packet()) */
 static uint8 dc50_send_command(void) {
   uint8 c;
   PC_DEBUG("CMD", command_packet, 8);
 
+  /* Send */
   simple_serial_write(command_packet, 8);
+
+  /* Wait to get an answer, */
   if (simple_serial_read_no_irq((char *)&c, 1) != 0) {
     PC_DEBUG("No response", &c, 1);
     return -1;
   }
+
+  /* and verify it's accepted */
   PC_DEBUG("response", &c, 1);
   if (c != REP_ACK) {
     return -1;
@@ -171,14 +181,18 @@ static uint8 dc50_send_command(void) {
   return 0;
 }
 
+/* Help: send a command and read the reply. Reserved for use with
+ * commands that require a single packet response */
 static uint8 dc50_send_and_read_response(uint16 response_len) {
   uint8 c;
+
   if (dc50_send_command() != 0) {
     return -1;
   }
 
   if (dc50_read_response(response_len) == 0) {
     if (response_len) {
+      /* FIXME: verify the checksum */
       simple_serial_putc(REP_CORRECT);
       return wait_command_completion();
     } else {
@@ -225,6 +239,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
   /* Toggle speed */
   simple_serial_set_speed(speed);
 
+  /* Verify communication by getting info from the camera */
   if (dc50_get_information(&cam_info) == 0) {
     my_speed = speed;
     return 0;
@@ -237,7 +252,9 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
 #define NUM_INTERNAL_PIC_IDX  35 // big-endian, 16 bits
-#define NUM_CARD_PIC_IDX      55 // big-endian, 16-bits
+#define NUM_CARD_PIC_IDX      51 // big-endian, 16-bits
+#define NUM_INTERNAL_LEFT_PIC_IDX 45
+#define NUM_CARD_LEFT_PIC_IDX 61
 #define CAMERA_NAME_IDX       80
 
 /* Get information from the camera */
@@ -260,10 +277,12 @@ static uint8 dc50_get_information(camera_info *info) {
   info->charging      = buffer[AC_STATUS_IDX];
   /* Counter is 16 bits but there won't be more than 256 pictures. */
   if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0) {
-    /* we'll access internal memory if there's no card or no pics on it. */
+    /* we'll access card memory if there are pics on it. */
+    info->left_pics   = buffer[NUM_CARD_LEFT_PIC_IDX];
     storage_target    = PIC_TARGET_CARD;
   } else {
     info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
+    info->left_pics   = buffer[NUM_INTERNAL_LEFT_PIC_IDX];
     storage_target    = PIC_TARGET_CAM;
   }
 

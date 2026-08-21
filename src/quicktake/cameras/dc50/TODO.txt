@@ -1,0 +1,9 @@
+- thumbnail fetching (cmd 0x56/66) and decoding
+- card storage handling
+- camera control
+  - change flash
+  - change quality
+  - delete pictures
+- delete picture after fetching
+- clean KDC picture building
+- parse time & date
