@@ -249,6 +249,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 
 #define BATTERY_STATUS_IDX    8
 #define AC_STATUS_IDX         9
+#define TIME_IDX              12
 #define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
 #define NUM_INTERNAL_PIC_IDX  35 // big-endian, 16 bits
@@ -257,8 +258,13 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define NUM_CARD_LEFT_PIC_IDX 61
 #define CAMERA_NAME_IDX       80
 
+#define DC50_EPOCH            852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
+
 /* Get information from the camera */
 static uint8 dc50_get_information(camera_info *info) {
+  time_t int_time;
+  struct tm *tm_time;
+
   init_packet(CMD_GET_STATUS);
   if (dc50_send_and_read_response(256) != 0) {
     return -1;
@@ -288,6 +294,28 @@ static uint8 dc50_get_information(camera_info *info) {
 
   memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
   info->name[31] = '\0';
+
+#ifndef __CC65__
+  int_time     =  buffer[TIME_IDX+3]
+               + (buffer[TIME_IDX+2] << 8)
+               + (buffer[TIME_IDX+1] << 16)
+               + (buffer[TIME_IDX+0] << 24);
+#else
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&int_time)[0] = buffer[TIME_IDX+3];
+  ((unsigned char *)&int_time)[1] = buffer[TIME_IDX+2];
+  ((unsigned char *)&int_time)[2] = buffer[TIME_IDX+1];
+  ((unsigned char *)&int_time)[3] = buffer[TIME_IDX+0];
+#endif
+
+  int_time = (int_time >> 1) + DC50_EPOCH;
+  tm_time = localtime(&int_time);
+  info->date.year   = tm_time->tm_year + 1900;
+  info->date.month  = tm_time->tm_mon + 1;
+  info->date.day    = tm_time->tm_mday;
+  info->date.hour   = tm_time->tm_hour;
+  info->date.minute = tm_time->tm_min;
+
   return 0;
 }
 
