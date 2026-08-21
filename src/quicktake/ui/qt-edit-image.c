@@ -69,6 +69,8 @@ static char imgname[FILENAME_MAX];
 #endif
 static char args[FILENAME_MAX + FOUR_NUM_WIDTH];
 
+#pragma code-name(push, "SQUEEZE")
+
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
   set_scrollwindow(0, scrh);
   clrscr();
@@ -302,6 +304,8 @@ static void invert_selection(void) {
   #undef b
 #endif
 }
+
+#pragma code-name(pop)
 
 static unsigned char write_hgr_page_to_file() {
   return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
@@ -969,6 +973,8 @@ void dither_to_hgr(const char *ofname) {
 
 extern uint8 serial_model;
 
+#pragma code-name(push, "SQUEEZE")
+
 static void dither_prepare(void) {
   if (is_thumb) {
     if (cam_features & CAM_CAN_GET_THUMBNAIL) {
@@ -1025,6 +1031,8 @@ uint8 qt_view_image(const char *filename, const char *cmd) {
   init_text();
   return exec("imgview", (char *)args);
 }
+
+#pragma code-name(pop)
 
 #ifdef __CC65__
   #pragma static-locals(pop)

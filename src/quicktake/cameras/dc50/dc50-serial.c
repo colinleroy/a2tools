@@ -113,6 +113,7 @@ static uint8 dc50_wakeup(CamSpeed speed) {
   uint8 tries = 2;
   cputs("Pinging Kodak DC50... ");
 
+again:
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
 
@@ -121,7 +122,13 @@ static uint8 dc50_wakeup(CamSpeed speed) {
 
   platform_msleep(1500);
 
-  if (dc50_set_speed(speed) == 0) {
+  if (dc50_set_speed(speed) != 0) {
+    if (tries--) {
+      simple_serial_close();
+      simple_serial_open();
+      goto again;
+    }
+  } else {
     return QT_MODEL_DC50;
   }
   return QT_MODEL_UNKNOWN;
@@ -155,20 +162,14 @@ static uint8 wait_command_completion(void) {
 static uint8 dc50_send_and_read_response(uint16 response_len) {
   uint8 c, tries = 2;
   PC_DEBUG("CMD", command_packet, 8);
-again:
+
   simple_serial_write(command_packet, 8);
   if (simple_serial_read_no_irq((char *)&c, 1) != 0) {
-    if (tries--) {
-      goto again;
-    }
     PC_DEBUG("No response", &c, 1);
     return -1;
   }
   PC_DEBUG("response", &c, 1);
   if (c != REP_ACK) {
-    if (tries--) {
-      goto again;
-    }
     return -1;
   }
 
