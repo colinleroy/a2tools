@@ -333,7 +333,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   write(fd, "MM\0*", 4);
   lseek(fd, 1063, SEEK_SET);
-  c = 243;
+  c = buffer[4] == 0x00 ? 0xF3 : 0x98;
   write(fd, &c, 1);
   lseek(fd, 19712, SEEK_SET);
   while (read < pic_size) {
