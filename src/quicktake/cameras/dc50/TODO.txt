@@ -6,4 +6,3 @@
   - delete pictures
 - delete picture after fetching
 - clean KDC picture building
-- parse time & date

@@ -183,23 +183,28 @@ static uint8 dc50_send_command(void) {
 
 /* Help: send a command and read the reply. Reserved for use with
  * commands that require a single packet response */
-static uint8 dc50_send_and_read_response(uint16 response_len) {
-  uint8 c;
+static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 response_len) {
+  char *dest = buffer;
+  uint8 i = num_blocks;
 
   if (dc50_send_command() != 0) {
     return -1;
   }
-
-  if (dc50_read_response(response_len) == 0) {
-    if (response_len) {
-      /* FIXME: verify the checksum */
-      simple_serial_putc(REP_CORRECT);
-      return wait_command_completion();
+  while (i--) {
+    if (dc50_read_response(dest, response_len) == 0) {
+      dest += response_len;
+      if (response_len) {
+        /* FIXME: verify the checksum */
+        simple_serial_putc(REP_CORRECT);
+      }
     } else {
-      return 0;
+      return -1;
     }
+  }
+  if (response_len) {
+    return wait_command_completion();
   } else {
-    return -1;
+    return 0;
   }
 }
 
@@ -230,7 +235,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (dc50_send_and_read_response(0) != 0) {
+  if (dc50_send_and_read_response(1, 0) != 0) {
     return -1;
   }
 
@@ -266,7 +271,7 @@ static uint8 dc50_get_information(camera_info *info) {
   struct tm *tm_time;
 
   init_packet(CMD_GET_STATUS);
-  if (dc50_send_and_read_response(256) != 0) {
+  if (dc50_send_and_read_response(1, 256) != 0) {
     return -1;
   }
 
@@ -325,12 +330,16 @@ static uint8 dc50_get_picture_info(uint8 n_pic) {
   /* Get picture info */
   init_packet(CMD_CAM_PIC_INFO+storage_target);
   command_packet[CMD_PIC_NUM+1] = n_pic;
-
-  return dc50_send_and_read_response(256);
+  if (storage_target == PIC_TARGET_CAM) {
+    return dc50_send_and_read_response(1, 256);
+  } else {
+    return dc50_send_and_read_response(5, 256);
+  }
 }
 
 #define INFO_BUF_PIC_TYPE_IDX 1
 #define INFO_BUF_PIC_NAME_IDX 37
+#define INFO_BUF_CARD_NAME_IDX 428 //Hardcoded, should I parse TIFF header? ugh
 
 static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
   if (dc50_get_picture_info(n_pic) != 0) {
@@ -341,7 +350,7 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
     sprintf(filename, "%s%s%s.%s",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"",
-          buffer+INFO_BUF_PIC_NAME_IDX,
+          buffer+(storage_target == PIC_TARGET_CAM ? INFO_BUF_PIC_NAME_IDX : INFO_BUF_CARD_NAME_IDX),
           buffer[INFO_BUF_PIC_TYPE_IDX] == 1 ? "KDC":"JPG");
   }
 }
@@ -402,7 +411,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   dc50_send_command();
 
   while (d++ < blocks_to_read) {
-    if (dc50_read_response(1024) == 0) {
+    if (dc50_read_response(buffer, 1024) == 0) {
       write(fd, buffer, 1024);
 
       progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);

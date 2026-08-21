@@ -26,7 +26,7 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 #endif
 
 /* Read a reply from the camera */
-uint8 dc50_read_response(uint16 len) {
+uint8 dc50_read_response(char *dest, uint16 len) {
   int8 c;
 
   if (len == 0) {
@@ -34,11 +34,11 @@ uint8 dc50_read_response(uint16 len) {
   }
 
   // bzero(buffer, sizeof buffer);
-  c = simple_serial_read_no_irq((char *)buffer, len);
+  c = simple_serial_read_no_irq(dest, len);
   if (c == EOF) {
     return -1;
   }
-  PC_DEBUG("Data", buffer, len);
+  PC_DEBUG("Data", dest, len);
   /* Checksum */
   simple_serial_read_no_irq((char *)&c, 1);
   PC_DEBUG("checksum", &c, 1);

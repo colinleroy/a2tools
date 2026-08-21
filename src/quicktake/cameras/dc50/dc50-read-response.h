@@ -3,6 +3,6 @@
 
 #include "platform.h"
 
-uint8 dc50_read_response(uint16 len);
+uint8 __fastcall__ dc50_read_response(char *dest, uint16 len);
 
 #endif

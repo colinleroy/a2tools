@@ -91,7 +91,9 @@ int main(int argc, char *argv[]) {
            "\n"
            "       camera_models: qt1x0, fuji, dc50\n"
            "       tty_path:      /dev/ttyUSB0 for example\n"
-           "       command:       get (parameter: picture number)\n\n",
+           "       command:       get (parameter: picture number)\n\n"
+           "                      thumb (parameter: picture number)\n\n"
+           "                      set_name (parameter: new name)\n\n",
            argv[0]);
     exit(1);
   }
@@ -168,6 +170,9 @@ int main(int argc, char *argv[]) {
         }
         close(fd);
       }
+    }
+    if (!strcmp(argv[3], "set_name") && argc > 4) {
+      cam_set_camera_name(argv[4]);
     }
   }
   return 0;
