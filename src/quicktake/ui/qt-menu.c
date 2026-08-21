@@ -209,10 +209,10 @@ static uint8 print_menu(void) {
       cputs(" T. Set camera time\r\n");
     if (cam_features & CAM_CAN_SET_QUALITY)
       cprintf(" Q. Set quality to %s\r\n", 
-              cam_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH));
+              cam_get_quality_str(cam_info.quality_mode + 1));
     if (cam_features & CAM_CAN_SET_FLASH)
       cprintf(" F. Set flash to %s\r\n",
-              cam_get_flash_str((cam_info.flash_mode + 1) % 3));
+              cam_get_flash_str(cam_info.flash_mode + 1));
   }
   cputs(   "\r\n"
            " A. About this program\r\n"
@@ -393,7 +393,7 @@ static void set_camera_time(void) {
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "SQUEEZE")
+#pragma code-name(push, "LC")
 
 static void delete_pictures(void) {
   clrscr();
@@ -414,6 +414,7 @@ static void take_picture(void) {
   cam_take_picture();
   cputs("Done!...\r\n");
 }
+#pragma code-name(pop)
 
 void clear_dhgr(void);
 
@@ -504,6 +505,8 @@ done:
   }
 }
 
+#pragma code-name(push, "LC")
+
 static void print_welcome(void) {
   if (!do_debug) {
     init_graphics(1, 0);
@@ -529,6 +532,8 @@ static void show_about(void) {
   close(fd);
   cgetc();
 }
+
+#pragma code-name(pop)
 
 #ifdef DEBUG_THUMB
 uint8 load_driver(char *drv, CamSpeed speed);
@@ -657,6 +662,8 @@ static uint8 setup(int argc, char *argv[]) {
 
 #pragma code-name(pop)
 
+#pragma code-name(push, "LC")
+
 #ifdef __CC65__
 extern uint8 auxhgr_keep;
 #endif
@@ -672,6 +679,8 @@ void unlink_temp_files(void) {
     state_unlink();
   }
 }
+
+#pragma code-name(pop)
 
 int main(int argc, char *argv[])
 {
@@ -761,11 +770,11 @@ menu:
         break;
       case 'q':
         if (cam_features & CAM_CAN_SET_QUALITY)
-          cam_set_quality((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
+          cam_set_quality(cam_info.quality_mode + 1);
         break;
       case 'f':
         if (cam_features & CAM_CAN_SET_FLASH)
-          cam_set_flash((cam_info.flash_mode + 1) % 3);
+          cam_set_flash(cam_info.flash_mode + 1);
         break;
       default:
         break;

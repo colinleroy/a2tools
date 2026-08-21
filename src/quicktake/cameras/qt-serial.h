@@ -11,15 +11,6 @@
 #define QT_MODEL_FUJI    3
 #define QT_MODEL_DC50    4
 
-#define QUALITY_HIGH     0x10
-#define QUALITY_STANDARD 0x20
-#define QUALITY_UNKNOWN  0xFF
-
-#define FLASH_AUTO       0
-#define FLASH_OFF        1
-#define FLASH_ON         2
-#define FLASH_UNKNOWN    0xFF
-
 #define CAM_FEATURES        0
 #define CAM_WAKEUP          1
 #define CAM_SET_SPEED       2
@@ -35,6 +26,8 @@
 #define CAM_GET_FILENAME    12
 #define CAM_THUMB_HISTOGRAM 13
 #define CAM_THUMB_LOAD_DATA 14
+#define CAM_GET_QUALITY_STR 15
+#define CAM_GET_FLASH_STR   16
 
 #define CAM_CAN_SET_CAMERA_NAME 0x01
 #define CAM_CAN_SET_CAMERA_TIME 0x02
@@ -117,6 +110,9 @@ void cam_get_filename(uint8 n_pic, char *dirname, char *filename);
 /* Camera thumbnail functions */
 void cam_thumb_histogram(void);
 void cam_load_thumb_data(uint8 line);
+
+const char *cam_get_quality_str(uint8 mode);
+const char *cam_get_flash_str(uint8 mode);
 
 /* Debug helpers */
 #ifndef __CC65__

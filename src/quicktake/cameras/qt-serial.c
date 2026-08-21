@@ -49,7 +49,7 @@ extern unsigned char buffer[BUFFER_SIZE];
 #ifdef __CC65__
 uint8 load_driver(char *drv, CamSpeed speed) {
   gotox(0); clreol();
-  if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x1900) == 0) {
+  if (zx02_decompress_in_place(drv, (char *)0xC00, (char *)0x2000) == 0) {
 #ifndef DEBUG_THUMB
     if ((serial_model = cam_wakeup(speed)) != QT_MODEL_UNKNOWN) {
       return 0;
@@ -114,30 +114,4 @@ load_done:
 
 /* Protocol-dependant camera functions */
 
-#pragma code-name(pop)
-#pragma code-name(push, "LC")
-
-const char *cam_get_quality_str(uint8 mode) {
-  switch(mode) {
-    case QUALITY_STANDARD:
-      return "standard";
-    case QUALITY_HIGH:
-      return "high";
-    default:
-      return "unknown";
-  }
-}
-
-const char *cam_get_flash_str(uint8 mode) {
-  switch(mode) {
-    case FLASH_AUTO:
-      return "automatic";
-    case FLASH_OFF:
-      return "disabled";
-    case FLASH_ON:
-      return "forced";
-    default:
-      return "unknown";
-  }
-}
 #pragma code-name(pop)

@@ -13,6 +13,8 @@
         .export _cam_get_filename
         .export _cam_thumb_histogram
         .export _cam_thumb_load_data
+        .export _cam_get_quality_str
+        .export _cam_get_flash_str
 
 CAM_FEATURES        = 0
 CAM_WAKEUP          = 1
@@ -29,6 +31,8 @@ CAM_DELETE_PICTURES = 11
 CAM_GET_FILENAME    = 12
 CAM_THUMB_HISTOGRAM = 13
 CAM_THUMB_LOAD_DATA = 14
+CAM_GET_QUALITY_STR = 15
+CAM_GET_FLASH_STR   = 16
 
 _cam_features = $0C00
 
@@ -73,3 +77,9 @@ _cam_thumb_histogram:
 
 _cam_thumb_load_data:
         jmp     ($0C00 + CAM_THUMB_LOAD_DATA*2)
+
+_cam_get_quality_str:
+        jmp     ($0C00 + CAM_GET_QUALITY_STR*2)
+
+_cam_get_flash_str:
+        jmp     ($0C00 + CAM_GET_FLASH_STR*2)

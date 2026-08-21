@@ -56,6 +56,10 @@ static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename);
 void qt1x0_thumb_histogram(void);
 void qt1x0_load_thumb_data(uint8 line);
 
+/* Modes strings */
+static const char *qt1x0_get_quality_str(uint8 mode);
+static const char *qt1x0_get_flash_str(uint8 mode);
+
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
   /* FEATURES */        (void *)qt1x0_features,
@@ -73,10 +77,21 @@ void *qt1x0_callbacks[] = {
   /* GET_FILENAME */    qt1x0_get_filename,
   /* THUMB_HISTOGRAM */ qt1x0_thumb_histogram,
   /* THUMB_LOAD_DATA */ qt1x0_load_thumb_data,
+  /* GET_QUALITY_STR */ qt1x0_get_quality_str,
+  /* GET_FLASH_STR */   qt1x0_get_flash_str,
 };
 
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
+
+#define QUALITY_HIGH     0x10
+#define QUALITY_STANDARD 0x20
+#define QUALITY_UNKNOWN  0xFF
+
+#define FLASH_AUTO       0
+#define FLASH_OFF        1
+#define FLASH_ON         2
+#define FLASH_UNKNOWN    0xFF
 
 uint8 is_qt100; /* helper for thumbnailer */
 #ifdef DEBUG_THUMB
@@ -113,7 +128,7 @@ static uint8 get_ack(uint8 wait) {
   char c;
   while (wait--) {
     if (simple_serial_read_no_irq(&c, 1) == 0x00 && c == 0x00) {
-      PC_DEBUG("ack", &c, 1);
+      PC_DEBUG("ack OK", &c, 1);
       return 0;
     }
     PC_DEBUG("ack", &c, 1);
@@ -510,7 +525,7 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   }
 
   if (info) {
-    info->quality_mode = buffer[IMG_QUALITY_IDX];
+    info->quality_mode = buffer[IMG_QUALITY_IDX] == QUALITY_HIGH ? 0:1;
     info->flash_mode   = buffer[IMG_FLASH_IDX];
     info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
     info->date.month   = buffer[IMG_MONTH_IDX];
@@ -558,7 +573,7 @@ static uint8 qt1x0_set_quality(uint8 quality) {
   //                  {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
   static char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
 
-  str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
+  str[SET_QUALITY_IDX] = (quality % 2 == 0) ? QUALITY_HIGH:QUALITY_STANDARD;
 
   return send_command(str, sizeof str, 1, 0, 5);
 }
@@ -569,7 +584,7 @@ static uint8 qt1x0_set_flash(uint8 mode) {
   //                  {????,????,????,????,????,????,????,????,????,????,????,????,FLSH,????}
   static char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
 
-  str[SET_FLASH_IDX] = mode;
+  str[SET_FLASH_IDX] = (mode % 3);
 
   return send_command(str, sizeof str, 1, 0, 5);
 }
@@ -603,7 +618,7 @@ static uint8 qt1x0_get_information(camera_info *info) {
 
   info->num_pics     = buffer[NUM_PICS_IDX];
   info->left_pics    = buffer[LEFT_PICS_IDX];
-  info->quality_mode = buffer[QUAL_IDX];
+  info->quality_mode = buffer[QUAL_IDX] == QUALITY_HIGH ? 0:1;
   info->flash_mode   = buffer[FLASH_IDX];
 
   if (buffer[BATTERY_IDX] > 100) {
@@ -628,4 +643,29 @@ static uint8 qt1x0_get_information(camera_info *info) {
   }
   strcpy(info->name, (char *)(buffer + NAME_IDX));
   return 0;
+}
+
+
+static const char *qt1x0_get_quality_str(uint8 mode) {
+  switch(mode % 2) {
+    case 0:
+      return "high";
+    case 1:
+      return "standard";
+    default:
+      return "unknown";
+  }
+}
+
+static const char *qt1x0_get_flash_str(uint8 mode) {
+  switch(mode % 3) {
+    case FLASH_AUTO:
+      return "automatic";
+    case FLASH_OFF:
+      return "disabled";
+    case FLASH_ON:
+      return "forced";
+    default:
+      return "unknown";
+  }
 }

@@ -78,12 +78,11 @@ void simple_serial_set_parity(unsigned int p) {
     printf("tcgetattr error\n");
     exit(1);
   }
+  tty.c_iflag &= ~INPCK;
+  tty.c_cflag &= ~(PARENB|PARODD);
   if (p != 0) {
-    tty.c_iflag |= INPCK;
+    // tty.c_iflag |= INPCK;
     tty.c_cflag |= p;
-  } else {
-    tty.c_iflag &= ~INPCK;
-    tty.c_cflag &= ~PARENB;
   }
 
   if (tcsetattr(ttyfd, TCSANOW, &tty) != 0) {

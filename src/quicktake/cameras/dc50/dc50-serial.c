@@ -57,6 +57,9 @@ static uint8 dc50_delete_pictures(void);
 void dc50_thumb_histogram(void);
 void dc50_load_thumb_data(uint8 line);
 
+static const char *dc50_get_quality_str(uint8 mode);
+static const char *dc50_get_flash_str(uint8 mode);
+
 /* Camera callbacks */
 void *dc50_callbacks[] = {
   /* FEATURES */        (void *)dc50_features,
@@ -74,6 +77,8 @@ void *dc50_callbacks[] = {
   /* GET_FILENAME */    dc50_get_filename,
   /* THUMB_HISTOGRAM */ dc50_thumb_histogram,
   /* THUMB_LOAD_DATA */ dc50_load_thumb_data,
+  /* GET_QUALITY_STR */ dc50_get_quality_str,
+  /* GET_FLASH_STR */   dc50_get_flash_str,
 };
 
 static char command_packet[8];
@@ -220,6 +225,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 
 #define BATTERY_STATUS_IDX    8
 #define AC_STATUS_IDX         9
+#define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
 #define NUM_INTERNAL_PIC_IDX  36 // big-endian, 16 bits
 #define NUM_CARD_PIC_IDX      56 // big-endian, 16-bits
@@ -239,13 +245,8 @@ static uint8 dc50_get_information(camera_info *info) {
   }
   info->battery_level = buffer[BATTERY_STATUS_IDX];
 
-  switch(buffer[FLASH_MODE_IDX]) {
-    case 2: /* off   */        info->flash_mode = FLASH_OFF; break;
-    case 1: /* fill  */
-    case 4: /* fill red-eye */ info->flash_mode = FLASH_ON; break;
-    case 0: /* auto */
-    case 3: /* auto red-eye */ info->flash_mode = FLASH_AUTO; break;
-  }
+  info->flash_mode = buffer[FLASH_MODE_IDX];
+  info->quality_mode = buffer[COMPRESSION_MODE_IDX];
 
   info->charging      = buffer[AC_STATUS_IDX];
   /* Counter is 16 bits but there won't be more than 256 pictures. */
@@ -313,4 +314,28 @@ static uint8 dc50_take_picture(void) {
 static uint8 dc50_delete_pictures(void) {
   return -1;
 }
+
+
+static const char *dc50_get_quality_str(uint8 mode) {
+  switch (mode % 4) {
+    /* we return %s quality, not compression, so invert */
+    case 0: return "full";
+    case 1: return "high";
+    case 2: return "medium";
+    case 3: return "low";
+  }
+  return NULL;
+}
+
+static const char *dc50_get_flash_str(uint8 mode) {
+  switch(mode % 5) {
+    case 2: return "off";
+    case 1: return "fill";
+    case 4: return "fill red-eye";
+    case 0: return "auto";
+    case 3: return "auto red-eye";
+  }
+  return NULL;
+}
+
 #pragma warn(unused-param, pop)

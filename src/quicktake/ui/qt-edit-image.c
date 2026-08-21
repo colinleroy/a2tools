@@ -69,7 +69,6 @@ static char imgname[FILENAME_MAX];
 #endif
 static char args[FILENAME_MAX + FOUR_NUM_WIDTH];
 
-#pragma code-name(push, "SQUEEZE")
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
   set_scrollwindow(0, scrh);
   clrscr();
@@ -222,8 +221,6 @@ fallback_std:
 #endif
   }
 }
-
-#pragma code-name(pop)
 
 int8 bayer_map[64] = {
   -128,   0,  -96,  32,  -120,   8,  -88,  40,

@@ -1,0 +1,10 @@
+- IRQless serial communication
+- Micro optimisations on all three decoders
+- Size optimisations
+- Serial drivers hot-loadable
+- YH1V1 JPEG support
+- 768x512 RADC/KDC pictures support (via cropping to 640x480)
+- Thumbnail support for the Quicktake 200
+- Large code reorganization so I'm double-proud of my work
+- Correct decoding of Quicktake 150 thumbnails
+- Switch to Sierra Lite dithering for thumbnails, as it looks better in DHGR

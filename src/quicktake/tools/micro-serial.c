@@ -29,6 +29,8 @@ typedef uint8 (*impl_delete_pictures_func)(void);
 typedef void  (*impl_get_filename_func)(uint8 n_pic, char *dirname, char *filename);
 typedef void  (*impl_thumb_histogram_func)(void);
 typedef void  (*impl_thumb_load_data_func)(uint8 line);
+typedef const char * (*impl_get_quality_str_func)(uint8 mode);
+typedef const char * (*impl_get_flash_str_func)(uint8 mode);
 
 uint8                     camera_connected;
 uint16                    cam_features;
@@ -46,6 +48,8 @@ impl_delete_pictures_func impl_delete_pictures;
 impl_get_filename_func    impl_get_filename;
 impl_thumb_histogram_func impl_thumb_histogram;
 impl_thumb_load_data_func impl_thumb_load_data;
+impl_get_quality_str_func impl_get_quality_str;
+impl_get_flash_str_func   impl_get_flash_str;
 
 camera_info info;
 
@@ -60,19 +64,20 @@ uint8 thumb_buf[THUMB_WIDTH * 2];
 int ifd;
 
 static void setup_pointers(void *callbacks[]) {
-  cam_features          = (unsigned long)callbacks[CAM_FEATURES];
-  impl_wakeup           = callbacks[CAM_WAKEUP];
-  impl_set_speed        = callbacks[CAM_SET_SPEED];
-  impl_set_camera_name  = callbacks[CAM_SET_CAMERA_NAME];
-  impl_set_camera_time  = callbacks[CAM_SET_CAMERA_TIME];
-  impl_get_information  = callbacks[CAM_GET_INFORMATION];
-  impl_set_quality      = callbacks[CAM_SET_QUALITY];
-  impl_set_flash        = callbacks[CAM_SET_FLASH];
-  impl_take_picture     = callbacks[CAM_TAKE_PICTURE];
-  impl_get_picture      = callbacks[CAM_GET_PICTURE];
-  impl_get_thumbnail    = callbacks[CAM_GET_THUMBNAIL];
-  impl_delete_pictures  = callbacks[CAM_DELETE_PICTURES];
-  impl_get_filename     = callbacks[CAM_GET_FILENAME];
+  cam_features         = (unsigned long)callbacks[CAM_FEATURES];
+  impl_wakeup          = callbacks[CAM_WAKEUP];
+  impl_set_speed       = callbacks[CAM_SET_SPEED];
+  impl_set_camera_name = callbacks[CAM_SET_CAMERA_NAME];
+  impl_set_camera_time = callbacks[CAM_SET_CAMERA_TIME];
+  impl_get_information = callbacks[CAM_GET_INFORMATION];
+  impl_set_quality     = callbacks[CAM_SET_QUALITY];
+  impl_set_flash       = callbacks[CAM_SET_FLASH];
+  impl_take_picture    = callbacks[CAM_TAKE_PICTURE];
+  impl_get_picture     = callbacks[CAM_GET_PICTURE];
+  impl_get_thumbnail   = callbacks[CAM_GET_THUMBNAIL];
+  impl_delete_pictures = callbacks[CAM_DELETE_PICTURES];
+  impl_get_quality_str = callbacks[CAM_GET_QUALITY_STR];
+  impl_get_flash_str   = callbacks[CAM_GET_FLASH_STR];
 }
 
 int main(int argc, char *argv[]) {
@@ -221,4 +226,12 @@ void cam_thumb_histogram(void) {
 
 void cam_thumb_load_data (uint8 line) {
   return impl_thumb_load_data(line);
+}
+
+const char *cam_get_quality_str (uint8 mode) {
+  return impl_get_quality_str(mode);
+}
+
+const char *cam_get_flash_str (uint8 mode) {
+  return impl_get_flash_str(mode);
 }
