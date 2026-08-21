@@ -153,15 +153,22 @@ static uint8 wait_command_completion(void) {
 }
 
 static uint8 dc50_send_and_read_response(uint16 response_len) {
-  uint8 c;
+  uint8 c, tries = 2;
   PC_DEBUG("CMD", command_packet, 8);
+again:
   simple_serial_write(command_packet, 8);
   if (simple_serial_read_no_irq((char *)&c, 1) != 0) {
+    if (tries--) {
+      goto again;
+    }
     PC_DEBUG("No response", &c, 1);
     return -1;
   }
   PC_DEBUG("response", &c, 1);
   if (c != REP_ACK) {
+    if (tries--) {
+      goto again;
+    }
     return -1;
   }
 
@@ -209,7 +216,10 @@ static uint8 dc50_set_speed(CamSpeed speed) {
       break;
   }
 
-  dc50_send_and_read_response(0);
+  if (dc50_send_and_read_response(0) != 0) {
+    return -1;
+  }
+
   platform_msleep(300);
 
   /* Toggle speed */
