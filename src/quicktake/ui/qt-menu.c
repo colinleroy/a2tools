@@ -556,6 +556,15 @@ static uint8 setup(int argc, char *argv[]) {
 
 // debug helpers
 #ifdef DEBUG_THUMB
+  #if DEBUG_THUMB==50
+  load_driver("DC50.ZX", SER_BAUD_115200);
+  serial_model = QT_MODEL_DC50;
+  while (1) {
+    clear_dhgr();
+    qt_edit_image("/DC50/THUMB", THUMB_WIDTH*2);
+    cgetc();
+  }
+  #endif
   #if DEBUG_THUMB==100
   load_driver("QT1X0.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_100;
@@ -588,6 +597,9 @@ static uint8 setup(int argc, char *argv[]) {
 #ifdef DEBUG_HD
   if (argc == 1) {
     exec_pass = 1;
+    #if DEBUG_HD==50
+    exec("RADCCONV","/HD/TEST50.KDC 0 0 640 480");
+    #endif
     #if DEBUG_HD==100
     exec("QKTKCONV","/HD/TEST100.QTK 0 0 640 480");
     #endif
@@ -602,6 +614,9 @@ static uint8 setup(int argc, char *argv[]) {
 #ifdef DEBUG_FLOPPY
   if (argc == 1) {
     exec_pass = 1;
+    #if DEBUG_FLOPPY==50
+    exec("RADCCONV","/DC50/TEST50.KDC 0 0 640 480");
+    #endif
     #if DEBUG_FLOPPY==100
     exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
     #endif
