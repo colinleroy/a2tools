@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
@@ -339,6 +340,7 @@ static uint8 dc50_get_picture_info(uint8 n_pic) {
 
 #define INFO_BUF_PIC_TYPE_IDX 1
 #define INFO_BUF_PIC_NAME_IDX 37
+
 #define INFO_BUF_CARD_NAME_IDX 428 //Hardcoded, should I parse TIFF header? ugh
 
 static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
@@ -347,15 +349,15 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
   } else {
-    sprintf(filename, "%s%s%s.%s",
+    sprintf(filename, "%s%s%s.KDC",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"",
-          buffer+(storage_target == PIC_TARGET_CAM ? INFO_BUF_PIC_NAME_IDX : INFO_BUF_CARD_NAME_IDX),
-          buffer[INFO_BUF_PIC_TYPE_IDX] == 1 ? "KDC":"JPG");
+          buffer+(storage_target == PIC_TARGET_CAM ? INFO_BUF_PIC_NAME_IDX : INFO_BUF_CARD_NAME_IDX));
   }
 }
 
 #define CAM_PIC_SIZE_IDX 8
+#define CARD_PIC_SIZE_IDX 754
 #define HEADER_LEN 19712
 
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
@@ -366,19 +368,32 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  // FIXME handle card pictures
-
+  if (storage_target == PIC_TARGET_CARD) {
 #ifndef __CC65__
-  pic_size     = buffer[CAM_PIC_SIZE_IDX+3] 
-               + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
-               + (buffer[CAM_PIC_SIZE_IDX+1] << 16);
+    pic_size     = buffer[CARD_PIC_SIZE_IDX+3]
+                 + (buffer[CARD_PIC_SIZE_IDX+2] << 8)
+                 + (buffer[CARD_PIC_SIZE_IDX+1] << 16);
 #else
-  /* Get size (24 bits big endian)*/
-  ((unsigned char *)&pic_size)[0] = buffer[CAM_PIC_SIZE_IDX+3];
-  ((unsigned char *)&pic_size)[1] = buffer[CAM_PIC_SIZE_IDX+2];
-  ((unsigned char *)&pic_size)[2] = buffer[CAM_PIC_SIZE_IDX+1];
-  ((unsigned char *)&pic_size)[3] = 0;
+    /* Get size (24 bits big endian)*/
+    ((unsigned char *)&pic_size)[0] = buffer[CARD_PIC_SIZE_IDX+3];
+    ((unsigned char *)&pic_size)[1] = buffer[CARD_PIC_SIZE_IDX+2];
+    ((unsigned char *)&pic_size)[2] = buffer[CARD_PIC_SIZE_IDX+1];
+    ((unsigned char *)&pic_size)[3] = 0;
 #endif
+
+  } else {
+#ifndef __CC65__
+    pic_size     = buffer[CAM_PIC_SIZE_IDX+3]
+                 + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
+                 + (buffer[CAM_PIC_SIZE_IDX+1] << 16);
+#else
+    /* Get size (24 bits big endian)*/
+    ((unsigned char *)&pic_size)[0] = buffer[CAM_PIC_SIZE_IDX+3];
+    ((unsigned char *)&pic_size)[1] = buffer[CAM_PIC_SIZE_IDX+2];
+    ((unsigned char *)&pic_size)[2] = buffer[CAM_PIC_SIZE_IDX+1];
+    ((unsigned char *)&pic_size)[3] = 0;
+#endif
+  }
 
   if (pic_size > avail) {
     errno = ENOSPC;
@@ -388,18 +403,28 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   ui_get_image_str(640, 480, pic_size);
 
-  write(fd, "MM\0*", 4);
-  /* Remember quality */
-  c = buffer[4] == 0x00 ? 0xF3 : 0x98;
+  if (storage_target == PIC_TARGET_CARD) {
+    write(fd, buffer, 256*5);
+    bzero(buffer, sizeof buffer);
+    for (d = 0; d <= (HEADER_LEN-1280) / sizeof buffer; d++) {
+      write(fd, buffer, sizeof buffer);
+    }
+  } else {
+    /* "Fix" file header for pictures from cam */
+    write(fd, "MM\0*", 4);
+    /* Remember quality */
+    c = buffer[4] == 0x00 ? 0xF3 : 0x98;
 
-  /* Fill with blank */
-  bzero(buffer, sizeof buffer);
-  for (d = 0; d <= HEADER_LEN / sizeof buffer; d++) {
-    write(fd, buffer, sizeof buffer);
+    /* Fill with blank */
+    bzero(buffer, sizeof buffer);
+    for (d = 0; d <= HEADER_LEN / sizeof buffer; d++) {
+      write(fd, buffer, sizeof buffer);
+    }
+
+    lseek(fd, 1063, SEEK_SET);
+    write(fd, &c, 1);
   }
 
-  lseek(fd, 1063, SEEK_SET);
-  write(fd, &c, 1);
   lseek(fd, HEADER_LEN, SEEK_SET);
 
   blocks_to_read = 1+ (pic_size >> 10); /* div 1024 */
@@ -413,7 +438,6 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   while (d++ < blocks_to_read) {
     if (dc50_read_response(buffer, 1024) == 0) {
       write(fd, buffer, 1024);
-
       progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
 
       /* FIXME verify checksum */
@@ -426,7 +450,28 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 }
 
 static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  return -1;
+  uint8 blocks_to_read, d;
+
+  init_packet(CMD_GET_CAM_THUMB+storage_target);
+  command_packet[CMD_PIC_NUM+1] = n_pic;
+  blocks_to_read = 3;
+  d = 0;
+  dc50_send_command();
+
+  while (d++ < blocks_to_read) {
+    if (dc50_read_response(buffer, 1024) == 0) {
+      write(fd, buffer, 1024);
+
+      progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
+
+      /* FIXME verify checksum */
+      simple_serial_putc(REP_CORRECT);
+    } else {
+      cprintf("err at block %d\n", d);
+      break;
+    }
+  }
+  return wait_command_completion();
 }
 
 #pragma warn(unused-param, push, off)

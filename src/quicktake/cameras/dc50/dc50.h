@@ -15,6 +15,10 @@ extern uint8 do_debug;
 #define CMD_CAM_PIC_INFO  0x55
 #define CMD_CARD_PIC_INFO 0x65
 
+#define CMD_GET_CAM_THUMB   0x56
+#define CMD_GET_CARD_THUMB  0x66
+
+
 #define PIC_TARGET_CAM    0x00
 #define PIC_TARGET_CARD   0x10
 #if (CMD_CAM_PIC_INFO+PIC_TARGET_CARD) != CMD_CARD_PIC_INFO
