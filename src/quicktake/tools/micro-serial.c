@@ -81,6 +81,16 @@ static void setup_pointers(void *callbacks[]) {
   impl_get_filename    = callbacks[CAM_GET_FILENAME];
 }
 
+static void list_images(void) {
+  uint8 i;
+  char filename[64];
+
+  for (i = 1; i <= info.num_pics; i++) {
+    cam_get_filename(i, NULL, filename);
+    printf("%d: %s\n", i, filename);
+  }
+}
+
 int main(int argc, char *argv[]) {
   char filename[64];
 
@@ -173,6 +183,9 @@ int main(int argc, char *argv[]) {
     }
     if (!strcmp(argv[3], "set_name") && argc > 4) {
       cam_set_camera_name(argv[4]);
+    }
+    if (!strcmp(argv[3], "list")) {
+      list_images();
     }
   }
   return 0;

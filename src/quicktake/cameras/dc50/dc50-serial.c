@@ -400,10 +400,14 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-
   ui_get_image_str(640, 480, pic_size);
 
   if (storage_target == PIC_TARGET_CARD) {
+    /* Verify data */
+    if (memcmp(buffer, "MM\0*", 4)) {
+      errno = EINVAL;
+      return -1;
+    }
     write(fd, buffer, 256*5);
     bzero(buffer, sizeof buffer);
     for (d = 0; d <= (HEADER_LEN-1280) / sizeof buffer; d++) {

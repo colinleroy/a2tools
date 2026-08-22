@@ -306,6 +306,8 @@ try_again:
       if (errno == EEXIST) {
         fi++;
         goto try_again;
+      } else if (errno == EINVAL) {
+        continue;
       } else {
         cprintf("\r\nCould not save picture %d. Non-recoverable error: ", i);
         cputs(strerror(errno));
