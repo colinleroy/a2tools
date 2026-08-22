@@ -2,7 +2,7 @@
         .export           _dc50_load_thumb_data
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
-        .import           pushax, pusha0, pusheax, tossub0ax
+        .import           pushax, pusha0, push0
 
         .importzp         sreg
 
@@ -13,24 +13,12 @@
 
 .proc _dc50_thumb_histogram
         ; Seek to start of data
-        lda     _ifd          ; Push twice, once for each lseek
-        jsr     pusha0
         lda     _ifd
         jsr     pusha0
 
-        lda     #$00          ; Offset 0 to end
+        jsr     push0         ; Whence is long
+        lda     #(96*2)       ; Offset 96*2 to skip two lines
         jsr     pusha0
-        jsr     pusha0
-        lda     #SEEK_END
-        ldx     #0
-        jsr     _lseek
-
-        jsr     pusheax       ; Compute difference
-        lda     #<(160*60)
-        ldx     #>(160*60)
-        jsr     tossub0ax
-
-        jsr     pusheax       ; Push result to second lseek
         lda     #SEEK_SET
         ldx     #0
         jsr     _lseek
@@ -44,31 +32,48 @@ next:                         ; Don't really do the histogram.
 .endproc
 
 .proc _dc50_load_thumb_data
-        and     #$01
+        and     #$03
         beq     :+
         rts
 
 :       lda     _ifd
         jsr     pusha0
-        lda     #<(_buffer + THUMBNAIL_BUFFER_OFFSET)
-        ldx     #>(_buffer + THUMBNAIL_BUFFER_OFFSET)
+        lda     #<(_buffer + 256)
+        ldx     #>(_buffer + 256)
         jsr     pushax
-        lda     #<(THUMB_WIDTH*2)
-        ldx     #>(THUMB_WIDTH*2)
+        lda     #<(96)
+        ldx     #>(96)
         jsr     _read
     
-        ldy #39
+        ldx     #8
+        ldy     #0
 next:
-        tya
+        lda     _buffer+256,x
+        and     #$F0
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
+
+        lda     _buffer+256+1,x
         asl
         asl
+        asl
+        asl
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
+
+        clc
+        txa
+        adc     #3
         tax
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET+1,x
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,x
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,x
-        lda     _buffer+THUMBNAIL_BUFFER_OFFSET,x
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,x
-        dey
-        bpl     next
+        tya
+        adc     #8
+        tay
+        cpy     #(THUMB_WIDTH*2)
+        bcc     next
+
         rts
 .endproc

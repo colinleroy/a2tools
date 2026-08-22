@@ -10,9 +10,7 @@ extern int ifd;
 /* No histogram on DC50 thumbs, too expensive */
 void dc50_thumb_histogram(void) {
   uint8 x = 0;
-  off_t data_offset;
-  data_offset = lseek(ifd, 0, SEEK_END) - 160*60;
-  lseek(ifd, data_offset, SEEK_SET);
+  lseek(ifd, 96*2, SEEK_SET);
 
   do {
     x--;
@@ -22,12 +20,17 @@ void dc50_thumb_histogram(void) {
 
 void dc50_load_thumb_data(uint8 line) {
   if (!(line & 1)) {
-    uint8 i;
+    uint8 i, x;
 
-    read(ifd, THUMBNAIL_BUF_START, THUMB_WIDTH*2);
-    for (i = 0; i < 160; i+=4) {
-      THUMBNAIL_BUF_START[i+2] = THUMBNAIL_BUF_START[i+3] = THUMBNAIL_BUF_START[i+1];
-      THUMBNAIL_BUF_START[i+1] = THUMBNAIL_BUF_START[i];
+    read(ifd, buffer+256, 96);
+    for (i = 8, x = 0; x < 80; ) {
+      THUMBNAIL_BUF_START[x] = buffer[i+256] & 0xF0;
+      THUMBNAIL_BUF_START[x+1] = buffer[i+256] & 0xF0;
+      i++;
+      THUMBNAIL_BUF_START[x+2] = buffer[i+256] << 4;
+      THUMBNAIL_BUF_START[x+3] = buffer[i+256] << 4;
+      i+=2;
+      x+=4;
     }
   }
 }

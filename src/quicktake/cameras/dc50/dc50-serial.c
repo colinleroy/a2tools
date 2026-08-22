@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000010000000
+#define dc50_features 0b0000000010100000
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -185,7 +185,7 @@ static uint8 dc50_send_command(void) {
 /* Help: send a command and read the reply. Reserved for use with
  * commands that require a single packet response */
 static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 response_len) {
-  char *dest = buffer;
+  char *dest = (char *)buffer;
   uint8 i = num_blocks;
 
   if (dc50_send_command() != 0) {
@@ -436,7 +436,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   dc50_send_command();
 
   while (d++ < blocks_to_read) {
-    if (dc50_read_response(buffer, 1024) == 0) {
+    if (dc50_read_response((char *)buffer, 1024) == 0) {
       write(fd, buffer, 1024);
       progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
 
@@ -459,7 +459,7 @@ static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   dc50_send_command();
 
   while (d++ < blocks_to_read) {
-    if (dc50_read_response(buffer, 1024) == 0) {
+    if (dc50_read_response((char *)buffer, 1024) == 0) {
       write(fd, buffer, 1024);
 
       progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);

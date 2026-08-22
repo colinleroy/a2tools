@@ -592,7 +592,6 @@ static uint8 setup(int argc, char *argv[]) {
     cgetc();
   }
   #endif
-  cgetc();
 #endif
 #ifdef DEBUG_HD
   if (argc == 1) {
