@@ -125,14 +125,16 @@ static camera_info cam_info;
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 fuji_wakeup(CamSpeed speed) {
-  uint8 tries = 2;
+  uint8 tries = 2, c;
   cputs("Pinging Fuji camera... ");
 
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_EVEN);
 
-  /* Speed unused there */
+  /* Flush shit */
+  while (simple_serial_read_no_irq((char *)&c, 1) != EOF);
 
+  /* Speed unused there */
 again:
   end_session();
 
