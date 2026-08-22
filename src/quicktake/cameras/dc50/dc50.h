@@ -18,6 +18,9 @@ extern uint8 do_debug;
 #define CMD_GET_CAM_THUMB   0x56
 #define CMD_GET_CARD_THUMB  0x66
 
+#define CMD_DELETE_CAM    0x7A
+#define CMD_DELETE_CARD   0x7B
+
 #define CMD_SET_NAME      0x9E
 
 #define PIC_TARGET_CAM    0x00

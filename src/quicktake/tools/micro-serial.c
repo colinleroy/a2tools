@@ -190,6 +190,11 @@ get_info:
     if (!strcmp(argv[3], "list")) {
       list_images();
     }
+    if (!strcmp(argv[3], "delete")) {
+      cam_delete_pictures();
+      argc = 2;
+      goto get_info;
+    }
   }
   return 0;
 }

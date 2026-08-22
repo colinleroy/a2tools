@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000010100001
+#define dc50_features 0b0000000011100001
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -260,8 +260,8 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define FLASH_MODE_IDX        20
 #define NUM_INTERNAL_PIC_IDX  35 // big-endian, 16 bits
 #define NUM_CARD_PIC_IDX      51 // big-endian, 16-bits
-#define NUM_INTERNAL_LEFT_PIC_IDX 45
-#define NUM_CARD_LEFT_PIC_IDX 61
+#define NUM_INTERNAL_LEFT_PIC_IDX 43
+#define NUM_CARD_LEFT_PIC_IDX 59
 #define CAMERA_NAME_IDX       80
 
 #define DC50_EPOCH            852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
@@ -287,19 +287,23 @@ static uint8 dc50_get_information(camera_info *info) {
   info->quality_mode = buffer[COMPRESSION_MODE_IDX];
 
   info->charging      = buffer[AC_STATUS_IDX];
+
+  memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
+  info->name[31] = '\0';
   /* Counter is 16 bits but there won't be more than 256 pictures. */
   if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0) {
     /* we'll access card memory if there are pics on it. */
     info->left_pics   = buffer[NUM_CARD_LEFT_PIC_IDX];
     storage_target    = PIC_TARGET_CARD;
+    info->name[31-8] = '\0'; /* room for " (card)" */
+    strcat(info->name, " (card)");
   } else {
     info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
     info->left_pics   = buffer[NUM_INTERNAL_LEFT_PIC_IDX];
     storage_target    = PIC_TARGET_CAM;
+    info->name[31-12] = '\0'; /* room for " (internal)" */
+    strcat(info->name, " (internal)");
   }
-
-  memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
-  info->name[31] = '\0';
 
 #ifndef __CC65__
   int_time     =  buffer[TIME_IDX+3]
@@ -534,7 +538,12 @@ static uint8 dc50_take_picture(void) {
 }
 
 static uint8 dc50_delete_pictures(void) {
-  return -1;
+  init_packet(storage_target == PIC_TARGET_CAM ? CMD_DELETE_CAM : CMD_DELETE_CARD);
+  if (dc50_send_command() != 0
+   || wait_command_completion() != 0) {
+     return -1;
+   }
+  return 0;
 }
 
 
