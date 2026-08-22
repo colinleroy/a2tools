@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000010100000
+#define dc50_features 0b0000000010100001
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -478,11 +478,45 @@ static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   return wait_command_completion();
 }
 
-#pragma warn(unused-param, push, off)
-static uint8 dc50_set_camera_name(const char *name) {
-  return -1;
+static uint8 dc50_send_packet(uint8 ctrl, uint16 len) {
+  uint16 i = 0;
+  uint8 chksum = 0;
+
+  PC_DEBUG("Packet header", &ctrl, 1);
+  simple_serial_putc(ctrl);
+  while (i < len) {
+    PC_DEBUG("Packet data", buffer+i, 1);
+    simple_serial_putc(buffer[i]);
+    chksum ^= buffer[i];
+    i++;
+  }
+  PC_DEBUG("Packet checksum", &chksum, 1);
+  simple_serial_putc(chksum);
+
+  if (simple_serial_read_no_irq((char *)&ctrl, 1) == EOF) {
+    PC_DEBUG("Timeout on reply", &ctrl, 1);
+    return -1;
+  }
+  PC_DEBUG("Packet send reply", &ctrl, 1);
+  if (ctrl != REP_CORRECT) {
+    return -1;
+  }
+  return 0;
 }
 
+static uint8 dc50_set_camera_name(const char *name) {
+  bzero(buffer, 58);
+  memcpy(buffer, name, strlen(name));
+  init_packet(CMD_SET_NAME);
+  if (dc50_send_command() != 0
+   || dc50_send_packet(CTRL_EOF, 58) != 0
+   || wait_command_completion() != 0) {
+    return -1;
+  }
+  return 0;
+}
+
+#pragma warn(unused-param, push, off)
 static uint8 dc50_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   return -1;
 }

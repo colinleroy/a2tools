@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
   }
 
   printf("Connected. Getting information...\n");
+get_info:
   if (cam_get_information(&info) != 0) {
     printf("Failure.\n");
   }
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]) {
          "  Flash mode:     %d (%s)\n"
          "  Battery level:  %d%%\n"
          "  Is charging:    %d\n"
-         "  Name:           %s\n"
+         "  Name:           '%s'\n"
          "  Date:           %02d/%02d/%04d %02d:%02d\n",
          info.num_pics,
          info.left_pics,
@@ -183,6 +184,8 @@ int main(int argc, char *argv[]) {
     }
     if (!strcmp(argv[3], "set_name") && argc > 4) {
       cam_set_camera_name(argv[4]);
+      argc = 2;
+      goto get_info;
     }
     if (!strcmp(argv[3], "list")) {
       list_images();

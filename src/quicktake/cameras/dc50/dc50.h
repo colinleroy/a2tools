@@ -18,6 +18,7 @@ extern uint8 do_debug;
 #define CMD_GET_CAM_THUMB   0x56
 #define CMD_GET_CARD_THUMB  0x66
 
+#define CMD_SET_NAME      0x9E
 
 #define PIC_TARGET_CAM    0x00
 #define PIC_TARGET_CARD   0x10
@@ -34,6 +35,7 @@ extern uint8 do_debug;
 
 
 #define REP_COMPLETE    0x00
+#define CTRL_EOF        0x80
 #define REP_ACK         0xd1
 #define REP_CORRECT     0xd2
 #define REP_NACK        0xe1
