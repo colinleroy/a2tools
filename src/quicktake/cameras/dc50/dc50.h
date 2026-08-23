@@ -20,6 +20,8 @@ extern uint8 do_debug;
 
 #define CMD_SET_QUALITY     0x71
 #define CMD_SET_FLASH       0x72
+#define CMD_SET_TIMER       0x74
+#define CMD_SET_TIME        0x75
 #define CMD_DELETE_CAM      0x7A
 #define CMD_DELETE_CARD     0x7B
 

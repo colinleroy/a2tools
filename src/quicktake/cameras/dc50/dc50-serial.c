@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000011101101
+#define dc50_features 0b0000000011101111
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -258,8 +258,9 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define TIME_IDX              12
 #define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
-#define NUM_INTERNAL_PIC_IDX  35 // big-endian, 16 bits
-#define NUM_CARD_PIC_IDX      51 // big-endian, 16-bits
+#define TIMER_MODE_IDX        29
+#define NUM_INTERNAL_PIC_IDX  35
+#define NUM_CARD_PIC_IDX      51
 #define NUM_INTERNAL_LEFT_PIC_IDX 43
 #define NUM_CARD_LEFT_PIC_IDX 59
 #define CAMERA_NAME_IDX       80
@@ -534,7 +535,31 @@ static uint8 dc50_set_camera_name(const char *name) {
 
 #pragma warn(unused-param, push, off)
 static uint8 dc50_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  return -1;
+  struct tm date;
+  time_t stamp;
+
+  date.tm_mday = day;
+  date.tm_mon  = month-1;
+  date.tm_year = year+100;
+  date.tm_hour = hour;
+  date.tm_min  = minute;
+  date.tm_sec  = second;
+
+  stamp = mktime(&date);
+  stamp -= DC50_EPOCH;
+  stamp <<= 1;
+
+  init_packet(CMD_SET_TIME);
+  command_packet[2] = (stamp >> 24) & 0xFF;
+  command_packet[3] = (stamp >> 16) & 0xFF;
+  command_packet[4] = (stamp >> 8)  & 0xFF;
+  command_packet[5] = (stamp)       & 0xFF;
+
+  if (dc50_send_command() != 0
+   || wait_command_completion() != 0) {
+     return -1;
+   }
+  return 0;
 }
 
 static uint8 dc50_command(uint8 command, uint8 param) {

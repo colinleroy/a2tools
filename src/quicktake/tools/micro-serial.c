@@ -205,6 +205,20 @@ get_info:
       argc = 2;
       goto get_info;
     }
+    if (!strcmp(argv[3], "snap")) {
+      cam_take_picture();
+      argc = 2;
+      goto get_info;
+    }
+    if (!strcmp(argv[3], "set_time")) {
+      time_t now = time(NULL);
+      struct tm *date = localtime(&now);
+
+      cam_set_camera_time(date->tm_mday, date->tm_mon+1, (date->tm_year+1900)%100, 
+                          date->tm_hour, date->tm_min, 00);
+      argc = 2;
+      goto get_info;
+    }
   }
   return 0;
 }
