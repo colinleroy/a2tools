@@ -10,6 +10,7 @@
 #define QT_MODEL_150     2
 #define QT_MODEL_FUJI    3
 #define QT_MODEL_DC50    4
+#define QT_MODEL_SIERRA  5
 
 #define CAM_FEATURES        0
 #define CAM_WAKEUP          1
