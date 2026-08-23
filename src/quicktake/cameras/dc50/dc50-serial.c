@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000011100001
+#define dc50_features 0b0000000011101001
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -266,10 +266,21 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 
 #define DC50_EPOCH            852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
 
+static void dc50_time_to_camera_date(time_t int_time, camera_date *date) {
+  struct tm *tm_time;
+
+  int_time = (int_time >> 1) + DC50_EPOCH;
+  tm_time = localtime(&int_time);
+  date->year   = tm_time->tm_year + 1900;
+  date->month  = tm_time->tm_mon + 1;
+  date->day    = tm_time->tm_mday;
+  date->hour   = tm_time->tm_hour;
+  date->minute = tm_time->tm_min;
+}
+
 /* Get information from the camera */
 static uint8 dc50_get_information(camera_info *info) {
   time_t int_time;
-  struct tm *tm_time;
 
   init_packet(CMD_GET_STATUS);
   if (dc50_send_and_read_response(1, 256) != 0) {
@@ -318,14 +329,7 @@ static uint8 dc50_get_information(camera_info *info) {
   ((unsigned char *)&int_time)[3] = buffer[TIME_IDX+0];
 #endif
 
-  int_time = (int_time >> 1) + DC50_EPOCH;
-  tm_time = localtime(&int_time);
-  info->date.year   = tm_time->tm_year + 1900;
-  info->date.month  = tm_time->tm_mon + 1;
-  info->date.day    = tm_time->tm_mday;
-  info->date.hour   = tm_time->tm_hour;
-  info->date.minute = tm_time->tm_min;
-
+  dc50_time_to_camera_date(int_time, &(info->date));
   return 0;
 }
 
@@ -460,6 +464,14 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   uint8 blocks_to_read, d;
 
+  ui_get_thumbnail_str(n_pic);
+  // 
+  // if (dc50_get_picture_info(n_pic) == 0) {
+  //   info->flash_mode = 
+  //   info->quality_mode = 
+  //   dc50_time_to_camera_date(int_time, &(info->date));
+  // }
+
   init_packet(CMD_GET_CAM_THUMB+storage_target);
   command_packet[CMD_PIC_NUM+1] = n_pic;
   blocks_to_read = 3;
@@ -525,12 +537,23 @@ static uint8 dc50_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour
   return -1;
 }
 
+static uint8 dc50_command(uint8 command, uint8 param) {
+  init_packet(command);
+  command_packet[2] = param;
+  if (dc50_send_command() != 0
+   || wait_command_completion() != 0) {
+     return -1;
+   }
+  return 0;
+
+}
+
 static uint8 dc50_set_quality(uint8 quality) {
   return -1;
 }
 
 static uint8 dc50_set_flash(uint8 mode) {
-  return -1;
+  return dc50_command(CMD_SET_FLASH, mode % 3);
 }
 
 static uint8 dc50_take_picture(void) {
@@ -538,33 +561,25 @@ static uint8 dc50_take_picture(void) {
 }
 
 static uint8 dc50_delete_pictures(void) {
-  init_packet(storage_target == PIC_TARGET_CAM ? CMD_DELETE_CAM : CMD_DELETE_CARD);
-  if (dc50_send_command() != 0
-   || wait_command_completion() != 0) {
-     return -1;
-   }
-  return 0;
+  return dc50_command(storage_target == PIC_TARGET_CAM ? CMD_DELETE_CAM : CMD_DELETE_CARD, 0);
 }
 
 
 static const char *dc50_get_quality_str(uint8 mode) {
-  switch (mode % 4) {
+  switch (mode % 3) {
     /* we return %s quality, not compression, so invert */
-    case 0: return "full";
-    case 1: return "high";
-    case 2: return "medium";
-    case 3: return "low";
+    case 0: return "high";
+    case 1: return "medium";
+    case 2: return "low";
   }
   return NULL;
 }
 
 static const char *dc50_get_flash_str(uint8 mode) {
-  switch(mode % 5) {
-    case 2: return "off";
-    case 1: return "fill";
-    case 4: return "fill red-eye";
-    case 0: return "auto";
-    case 3: return "auto red-eye";
+  switch(mode % 3) {
+    case 0: return "automatic";
+    case 1: return "forced";
+    case 2: return "disabled";
   }
   return NULL;
 }

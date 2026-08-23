@@ -472,7 +472,7 @@ err_thumb_io:
     cprintf("%s (%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
            thumb_buf, cam_get_quality_str(info.quality_mode),
-           info.flash_mode ? "on":"off", info.date.day, info.date.month,
+           cam_get_flash_str(info.flash_mode), info.date.day, info.date.month,
            info.date.year, info.date.hour, info.date.minute);
 
 get_key:
