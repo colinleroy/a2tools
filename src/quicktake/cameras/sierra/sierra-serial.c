@@ -119,8 +119,8 @@ static uint8 sierra_read_packet(void) {
       return EOF;
     }
     /* Read two more bytes for the checksum */
-    if (simple_serial_read_no_irq((char *)(buffer+4), packet_length+2) == EOF) {
-      return EOF;
+    if (simple_serial_read_no_irq((char *)(buffer+4), packet_length+2) != EOF) {
+      return 0;
     }
   } else {
     /* We read the single-byte "packet" */
@@ -149,7 +149,7 @@ static void sierra_write_packet(void) {
     }
     buffer[len]   = chksum        & 0xFF;
     buffer[len+1] = (chksum >> 8) & 0xFF;
-    simple_serial_write(buffer, len+2);
+    simple_serial_write((char *)buffer, len+2);
   } else {
     simple_serial_putc(buffer[0]);
   }
@@ -172,8 +172,8 @@ static uint8 sierra_write_int(uint8 reg, int32 value) {
   sierra_write_packet();
   PC_DEBUG("write_int sent: ", buffer, packet_length+6);
 
-  if (sierra_read_packet() != EOF
-   && (buffer[0] == SIERRA_PACKET_ENQ || buffer[0] == SIERRA_PACKET_ACK)) {
+  if (sierra_read_packet() == 0
+   && (buffer[0] == SIERRA_PACKET_ENQ|| buffer[0] == SIERRA_PACKET_ACK)) {
      PC_DEBUG("write_int reply OK: ", buffer, packet_length+6);
     return 0;
   }
@@ -201,7 +201,7 @@ static uint8 sierra_wakeup(CamSpeed speed) {
   r = QT_MODEL_UNKNOWN;
 
   simple_serial_putc(0x00);
-  if (sierra_read_packet() != EOF && buffer[0] == SIERRA_PACKET_NAK) {
+  if (sierra_read_packet() == 0 && buffer[0] == SIERRA_PACKET_NAK) {
     r = QT_MODEL_SIERRA;
   }
   PC_DEBUG("wakeup packet: ", buffer, 10);

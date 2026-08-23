@@ -2,7 +2,7 @@
         .export           _sierra_load_thumb_data
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
-        .import           pushax, pusha0, pusheax, tossub0ax
+        .import           pushax, pusha0, push0, pusheax, tossub0ax
 
         .importzp         sreg
 

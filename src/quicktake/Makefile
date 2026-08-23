@@ -58,6 +58,7 @@ slowtake_SOURCES := \
 	cameras/fuji/fuji-read-response.s \
 	cameras/dc50/dc50-serial.c \
 	cameras/dc50/dc50-read-response.c \
+	cameras/sierra/sierra-serial.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c
@@ -69,6 +70,7 @@ slowtake_CC65SOURCES := \
 	cameras/qt1x0/qt1x0-thumbs.s \
 	cameras/fuji/fuji-thumbs.s \
 	cameras/dc50/dc50-thumbs.s \
+	cameras/sierra/sierra-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -285,22 +287,22 @@ ABOUT.ZX: ui/about.in
 	zx02 -f about.tmp ABOUT.ZX; \
 	rm about.tmp
 
-QT1X0.ZX: slowtake.bin
-	zx02 -f QT1X0.DRV QT1X0.ZX
+QT1X0.DRV: slowtake.bin
+FUJI.DRV: slowtake.bin
+DC50.DRV: slowtake.bin
+SRRA.DRV: slowtake.bin
 
-FUJI.ZX: slowtake.bin
-	zx02 -f FUJI.DRV FUJI.ZX
+%.ZX: %.DRV
+	zx02 -f $< $@
 
-DC50.ZX: slowtake.bin
-	zx02 -f DC50.DRV DC50.ZX
-
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00 < FUJI.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC50.ZX BIN 0xC00 < DC50.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SRRA.ZX BIN 0xC00 < SRRA.ZX; \
 	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
