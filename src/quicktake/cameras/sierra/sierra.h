@@ -6,6 +6,13 @@
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
 
+/* Indexes */
+#define PACKET_TYPE                      0
+#define PACKET_SUBTYPE                   1
+#define PACKET_LENGTH                    2
+#define PACKET_REGISTER                  5
+#define PACKET_VALUE                     6
+
 /* Packet types */
 #define SIERRA_PACKET_NUL             0x00
 #define SIERRA_PACKET_DATA            0x02
@@ -26,4 +33,11 @@ extern uint8 do_debug;
 #define SIERRA_SUBPACKET_CMD_FIRST    0x53
 #define SIERRA_SUBPACKET_CMD          0x43
 
+/* Registers */
+#define SIERRA_REG_SPEED              0x11
+
+/* Sierra speeds */
+#define SIERRA_SPEED_9600             0x01
+#define SIERRA_SPEED_19200            0x02
+#define SIERRA_SPEED_115200           0x05
 #endif

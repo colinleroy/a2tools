@@ -129,6 +129,58 @@ static uint8 sierra_read_packet(void) {
   return EOF;
 }
 
+static void sierra_flush(void) {
+  uint8 r;
+  while (simple_serial_read_no_irq((char *)&r, 1) != EOF);
+}
+
+uint8 first_packet;
+static void sierra_write_packet(void) {
+  uint16 i, len, chksum;
+  if (buffer[0] == SIERRA_PACKET_COMMAND) {
+    buffer[PACKET_SUBTYPE]  = first_packet ? SIERRA_SUBPACKET_CMD_FIRST : SIERRA_SUBPACKET_CMD;
+    first_packet = 0;
+
+    len = packet_length + 4; /* header length */
+
+    chksum = 0;
+    for (i = 4; i < len; i++) {
+      chksum += buffer[i];
+    }
+    buffer[len]   = chksum        & 0xFF;
+    buffer[len+1] = (chksum >> 8) & 0xFF;
+    simple_serial_write(buffer, len+2);
+  } else {
+    simple_serial_putc(buffer[0]);
+  }
+}
+
+static uint8 sierra_write_int(uint8 reg, int32 value) {
+  /* Note: libgphoto2 sends no value if value < 0? */
+  bzero(buffer, 10);
+  buffer[PACKET_TYPE]     = SIERRA_PACKET_COMMAND;
+  buffer[PACKET_LENGTH]   = 6 & 0xFF;
+  buffer[PACKET_LENGTH+1] = 6 >> 8;
+  buffer[PACKET_REGISTER] = reg;
+
+  /* TODO: optimize that, the assembly is going to be ugly */
+  buffer[PACKET_VALUE]    = value         & 0xFF;
+  buffer[PACKET_VALUE+1]  = (value >> 8)  & 0xFF;
+  buffer[PACKET_VALUE+2]  = (value >> 16) & 0xFF;
+  buffer[PACKET_VALUE+3]  = (value >> 24) & 0xFF;
+
+  sierra_write_packet();
+  PC_DEBUG("write_int sent: ", buffer, packet_length+6);
+
+  if (sierra_read_packet() != EOF
+   && (buffer[0] == SIERRA_PACKET_ENQ || buffer[0] == SIERRA_PACKET_ACK)) {
+     PC_DEBUG("write_int reply OK: ", buffer, packet_length+6);
+    return 0;
+  }
+  PC_DEBUG("write_int reply NOK: ", buffer, packet_length+6);
+  return -1;
+}
+
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Sierra camera
  * Returns 0 if successful, -1 otherwise
@@ -137,17 +189,16 @@ static uint8 sierra_wakeup(CamSpeed speed) {
   uint8 r;
   cputs("Pinging Sierra camera... ");
 
+  first_packet = 1;
+
+  /* Parity first because resets speed to 9600 on PC, a bug in
+   * my lib that I don't want to investigate right now. */
   simple_serial_set_parity(SER_PAR_NONE);
   simple_serial_set_speed(SER_BAUD_19200);
 
   /* Flush shit */
-  while (simple_serial_read_no_irq((char *)&r, 1) != EOF);
+  sierra_flush();
   r = QT_MODEL_UNKNOWN;
-
-  // simple_serial_dtr_onoff(0);
-  // platform_msleep(500);
-  // simple_serial_dtr_onoff(1);
-  // platform_msleep(500);
 
   simple_serial_putc(0x00);
   if (sierra_read_packet() != EOF && buffer[0] == SIERRA_PACKET_NAK) {
@@ -158,11 +209,21 @@ static uint8 sierra_wakeup(CamSpeed speed) {
 }
 #pragma warn(unused-param, pop)
 
-static CamSpeed my_speed = SER_BAUD_9600;
+/* Default speed for Sierra cameras */
+static CamSpeed my_speed = SER_BAUD_19200;
 
 /* Send the speed upgrade command */
 static uint8 sierra_set_speed(CamSpeed speed) {
-  return -1;
+  uint8 sierra_speed;
+  switch(speed) {
+  case SER_BAUD_9600:   sierra_speed = SIERRA_SPEED_9600;   break;
+  case SER_BAUD_19200:  sierra_speed = SIERRA_SPEED_19200;  break;
+  case SER_BAUD_115200: sierra_speed = SIERRA_SPEED_115200; break;
+  }
+  sierra_write_int(SIERRA_REG_SPEED, sierra_speed);
+  simple_serial_set_speed(speed);
+  sierra_flush();
+  return 0;
 }
 
 /* Get information from the camera */
