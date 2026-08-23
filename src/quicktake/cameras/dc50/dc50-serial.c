@@ -586,7 +586,7 @@ static uint8 dc50_set_flash(uint8 mode) {
 }
 
 static uint8 dc50_take_picture(void) {
-  if (dc50_command(CMD_TAKE_PICTURE, 0) != 0) {
+  if (dc50_command(storage_target == PIC_TARGET_CAM ? CMD_TAKE_PICTURE_CAM : CMD_TAKE_PICTURE_CARD, 0) != 0) {
     return -1;
   }
   /* Camera returns completion before being ready... */
