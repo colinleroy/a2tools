@@ -279,6 +279,10 @@ static void dc50_time_to_camera_date(time_t int_time, camera_date *date) {
   date->minute = tm_time->tm_min;
 }
 
+/* Camera tells how many pics left on each quality setting */
+static uint8 pics_left_on_card[] = {59, 61, 63};
+static uint8 pics_left_on_cam[] = {43, 45, 47};
+
 /* Get information from the camera */
 static uint8 dc50_get_information(camera_info *info) {
   time_t int_time;
@@ -302,16 +306,16 @@ static uint8 dc50_get_information(camera_info *info) {
 
   memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
   info->name[31] = '\0';
-  /* Counter is 16 bits but there won't be more than 256 pictures. */
-  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0) {
-    /* we'll access card memory if there are pics on it. */
-    info->left_pics   = buffer[NUM_CARD_LEFT_PIC_IDX];
+
+  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0
+   || (info->left_pics = buffer[pics_left_on_card[info->quality_mode]]) != 0) {
+    /* we'll access card memory if it is there (either pictures taken or pictures left). */
     storage_target    = PIC_TARGET_CARD;
     info->name[31-8] = '\0'; /* room for " (card)" */
     strcat(info->name, " (card)");
   } else {
     info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
-    info->left_pics   = buffer[NUM_INTERNAL_LEFT_PIC_IDX];
+    info->left_pics   = buffer[pics_left_on_cam[info->quality_mode]];
     storage_target    = PIC_TARGET_CAM;
     info->name[31-12] = '\0'; /* room for " (internal)" */
     strcat(info->name, " (internal)");
