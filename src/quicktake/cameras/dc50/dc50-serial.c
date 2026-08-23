@@ -307,13 +307,15 @@ static uint8 dc50_get_information(camera_info *info) {
   memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
   info->name[31] = '\0';
 
-  if ((info->num_pics = buffer[NUM_CARD_PIC_IDX]) != 0
-   || (info->left_pics = buffer[pics_left_on_card[info->quality_mode]]) != 0) {
-    /* we'll access card memory if it is there (either pictures taken or pictures left). */
-    storage_target    = PIC_TARGET_CARD;
-    info->name[31-8] = '\0'; /* room for " (card)" */
-    strcat(info->name, " (card)");
-  } else {
+  /* Prepare data as if there is a card */
+  info->num_pics = buffer[NUM_CARD_PIC_IDX];
+  info->left_pics = buffer[pics_left_on_card[info->quality_mode]];
+  storage_target    = PIC_TARGET_CARD;
+  info->name[31-8] = '\0'; /* room for " (card)" */
+  strcat(info->name, " (card)");
+
+  if (info->num_pics == 0 && info->left_pics == 0) {
+    /* No card */
     info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
     info->left_pics   = buffer[pics_left_on_cam[info->quality_mode]];
     storage_target    = PIC_TARGET_CAM;
