@@ -437,6 +437,9 @@ static void show_thumbnails(uint8 num_pics) {
 
   if (state_load(STATE_PREVIEW, &tmp, NULL) == 0) {
     i = tmp;
+    if (i > num_pics) {
+      i = 0;
+    }
   }
 
   do {
