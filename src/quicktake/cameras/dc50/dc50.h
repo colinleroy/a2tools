@@ -29,13 +29,6 @@ extern uint8 do_debug;
 
 #define CMD_SET_NAME           0x9E
 
-#define PIC_TARGET_CAM         0x00
-#define PIC_TARGET_CARD        0x10
-
-#if (CMD_CAM_PIC_INFO+PIC_TARGET_CARD) != CMD_CARD_PIC_INFO
-#error Unexpected picture source value
-#endif
-
 // $DC50_ERASE_IMAGE_IN_CAMERA  = 0x7A;
 // $DC50_ERASE_IMAGE_IN_CARD    = 0x7B;
 // $DC50_TAKE_PICTURE_TO_CAMERA = 0x77;

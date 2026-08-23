@@ -142,7 +142,7 @@ again:
 static CamSpeed my_speed = SER_BAUD_9600;
 
 /* Are we reading from card or internal storage */
-static uint8 storage_target;
+static uint8 card_present;
 
 /* Wait for ack after a command requiring it */
 static uint8 wait_command_completion(void) {
@@ -308,9 +308,9 @@ static uint8 dc50_get_information(camera_info *info) {
   info->name[31] = '\0';
 
   /* Prepare data as if there is a card */
-  info->num_pics = buffer[NUM_CARD_PIC_IDX];
-  info->left_pics = buffer[pics_left_on_card[info->quality_mode]];
-  storage_target    = PIC_TARGET_CARD;
+  info->num_pics   = buffer[NUM_CARD_PIC_IDX];
+  info->left_pics  = buffer[pics_left_on_card[info->quality_mode]];
+  card_present     = 1;
   info->name[31-8] = '\0'; /* room for " (card)" */
   strcat(info->name, " (card)");
 
@@ -318,7 +318,7 @@ static uint8 dc50_get_information(camera_info *info) {
     /* No card */
     info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
     info->left_pics   = buffer[pics_left_on_cam[info->quality_mode]];
-    storage_target    = PIC_TARGET_CAM;
+    card_present      = 0;
     info->name[31-12] = '\0'; /* room for " (internal)" */
     strcat(info->name, " (internal)");
   }
@@ -344,12 +344,12 @@ static uint8 dc50_get_information(camera_info *info) {
 
 static uint8 dc50_get_picture_info(uint8 n_pic) {
   /* Get picture info */
-  init_packet(CMD_CAM_PIC_INFO+storage_target);
+  init_packet(card_present ? CMD_CARD_PIC_INFO : CMD_CAM_PIC_INFO);
   command_packet[CMD_PIC_NUM+1] = n_pic;
-  if (storage_target == PIC_TARGET_CAM) {
-    return dc50_send_and_read_response(1, 256);
-  } else {
+  if (card_present) {
     return dc50_send_and_read_response(5, 256);
+  } else {
+    return dc50_send_and_read_response(1, 256);
   }
 }
 
@@ -367,7 +367,7 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
     sprintf(filename, "%s%s%s.KDC",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"",
-          buffer+(storage_target == PIC_TARGET_CAM ? INFO_BUF_PIC_NAME_IDX : INFO_BUF_CARD_NAME_IDX));
+          buffer+(card_present ? INFO_BUF_CARD_NAME_IDX : INFO_BUF_PIC_NAME_IDX));
   }
 }
 
@@ -383,7 +383,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  if (storage_target == PIC_TARGET_CARD) {
+  if (card_present) {
 #ifndef __CC65__
     pic_size     = buffer[CARD_PIC_SIZE_IDX+3]
                  + (buffer[CARD_PIC_SIZE_IDX+2] << 8)
@@ -417,7 +417,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   ui_get_image_str(640, 480, pic_size);
 
-  if (storage_target == PIC_TARGET_CARD) {
+  if (card_present) {
     /* Verify data */
     if (memcmp(buffer, "MM\0*", 4)) {
       errno = EINVAL;
@@ -450,7 +450,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   d = 0;
   progress_bar(2, wherey(), scrw - 2, 0, blocks_to_read);
 
-  init_packet(CMD_GET_CAM_PIC+storage_target);
+  init_packet(card_present ? CMD_GET_CARD_PIC : CMD_GET_CAM_PIC);
   command_packet[CMD_PIC_NUM+1] = n_pic;
   dc50_send_command();
 
@@ -479,7 +479,7 @@ static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   //   dc50_time_to_camera_date(int_time, &(info->date));
   // }
 
-  init_packet(CMD_GET_CAM_THUMB+storage_target);
+  init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
   command_packet[CMD_PIC_NUM+1] = n_pic;
   blocks_to_read = 3;
   d = 0;
@@ -494,8 +494,7 @@ static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
       /* FIXME verify checksum */
       simple_serial_putc(REP_CORRECT);
     } else {
-      cprintf("err at block %d\n", d);
-      break;
+      return -1;
     }
   }
   return wait_command_completion();
@@ -588,7 +587,7 @@ static uint8 dc50_set_flash(uint8 mode) {
 }
 
 static uint8 dc50_take_picture(void) {
-  if (dc50_command(storage_target == PIC_TARGET_CAM ? CMD_TAKE_PICTURE_CAM : CMD_TAKE_PICTURE_CARD, 0) != 0) {
+  if (dc50_command(card_present ? CMD_TAKE_PICTURE_CARD : CMD_TAKE_PICTURE_CAM, 0) != 0) {
     return -1;
   }
   /* Camera returns completion before being ready... */
@@ -597,7 +596,7 @@ static uint8 dc50_take_picture(void) {
 }
 
 static uint8 dc50_delete_pictures(void) {
-  return dc50_command(storage_target == PIC_TARGET_CAM ? CMD_DELETE_CAM : CMD_DELETE_CARD, 0);
+  return dc50_command(card_present ? CMD_DELETE_CARD : CMD_DELETE_CAM, 0);
 }
 
 
