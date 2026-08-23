@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000011101111
+#define dc50_features 0b0000000011111111
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -582,7 +582,12 @@ static uint8 dc50_set_flash(uint8 mode) {
 }
 
 static uint8 dc50_take_picture(void) {
-  return -1;
+  if (dc50_command(CMD_TAKE_PICTURE, 0) != 0) {
+    return -1;
+  }
+  /* Camera returns completion before being ready... */
+  sleep(5);
+  return 0;
 }
 
 static uint8 dc50_delete_pictures(void) {
