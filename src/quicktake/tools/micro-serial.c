@@ -200,6 +200,11 @@ get_info:
       argc = 2;
       goto get_info;
     }
+    if (!strcmp(argv[3], "set_quality") && argc > 4) {
+      cam_set_quality(atoi(argv[4]));
+      argc = 2;
+      goto get_info;
+    }
   }
   return 0;
 }

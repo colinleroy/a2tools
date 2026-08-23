@@ -22,7 +22,7 @@
 #pragma data-name(push, "DC50")
 
 /* Camera features */
-#define dc50_features 0b0000000011101001
+#define dc50_features 0b0000000011101101
 //                              ||||||||_ SET_CAMERA_NAME
 //                              |||||||__ SET_CAMERA_TIME
 //                              ||||||___ SET_QUALITY,
@@ -549,7 +549,7 @@ static uint8 dc50_command(uint8 command, uint8 param) {
 }
 
 static uint8 dc50_set_quality(uint8 quality) {
-  return -1;
+  return dc50_command(CMD_SET_QUALITY, quality % 3);
 }
 
 static uint8 dc50_set_flash(uint8 mode) {
