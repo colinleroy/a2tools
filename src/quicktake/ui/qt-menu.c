@@ -192,17 +192,11 @@ static uint8 print_menu(void) {
     cputs(" M. Get many pictures from camera\r\n");
     if (cam_features & CAM_CAN_GET_THUMBNAIL)
       cputs(" P. Preview pictures on camera\r\n");
+    if (cam_features & CAM_CAN_TAKE_PICTURE)
+      cputs(" S. Snap a picture\r\n");
+    cputs("\r\n");
     if (cam_features & CAM_CAN_DELETE_PICTURES)
       cputs(" D. Delete all pictures from camera\r\n");
-    if (cam_features & CAM_CAN_TAKE_PICTURE) {
-      cputs(" S. Snap a picture\r\n");
-    }
-  } else {
-    cputs(" R. Retry connecting camera\r\n");
-  }
-  cputs(  " C. Convert a raw picture from disk\r\n"
-          " V. View a converted picture from disk\r\n");
-  if (camera_connected) {
     if (cam_features & CAM_CAN_SET_CAMERA_NAME)
       cputs(" N. Set camera name\r\n");
     if (cam_features & CAM_CAN_SET_CAMERA_TIME)
@@ -213,6 +207,13 @@ static uint8 print_menu(void) {
     if (cam_features & CAM_CAN_SET_FLASH)
       cprintf(" F. Set flash to %s\r\n",
               cam_get_flash_str(cam_info.flash_mode + 1));
+  } else {
+    cputs(" R. Retry connecting camera\r\n");
+  }
+  cputs(  "\r\n"
+          " C. Convert a raw picture from disk\r\n"
+          " V. View a converted picture from disk\r\n");
+  if (camera_connected) {
   }
   cputs(   "\r\n"
            " A. About this program\r\n"
