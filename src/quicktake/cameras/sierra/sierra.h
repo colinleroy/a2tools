@@ -13,6 +13,8 @@ extern uint8 do_debug;
 #define PACKET_OPERATION                 4
 #define PACKET_REGISTER                  5
 #define PACKET_VALUE                     6
+#define PACKET_ACTION                    5
+#define PACKET_SUBACTION                 6
 
 /* Packet types */
 #define SIERRA_PACKET_NUL             0x00
@@ -51,9 +53,14 @@ extern uint8 do_debug;
 #define SIERRA_REG_MODEL              0x1B
 #define SIERRA_REG_BATTERY            0x1C
 
+/* Actions */
+#define SIERRA_ACTION_DELETE_ALL      0x01
+#define SIERRA_ACTION_CAPTURE         0x02
+
 /* Register ops */
 #define OP_SET_INT                    0x00
 #define OP_GET_INT                    0x01
+#define OP_ACTION                     0x02
 #define OP_SET_STRING                 0x03
 #define OP_GET_STRING                 0x04
 

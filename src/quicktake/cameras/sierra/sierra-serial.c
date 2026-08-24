@@ -20,7 +20,7 @@
 #pragma data-name(push, "SIERRA")
 
 /* Camera features */
-#define sierra_features 0b0000000010000000
+#define sierra_features 0b0000000011011101
 //                                ||||||||_ SET_CAMERA_NAME
 //                                |||||||__ SET_CAMERA_TIME
 //                                ||||||___ SET_QUALITY,
@@ -283,6 +283,35 @@ try_again:
   return -1;
 }
 
+
+static uint8 sierra_action(uint8 action, uint8 sub_action) {
+  uint8 got_ack = 0;
+try_again:
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 3, OP_ACTION, action);
+  buffer[PACKET_SUBACTION] = sub_action;
+
+  sierra_write_packet();
+  PC_DEBUG_BUFFER("action sent: ", buffer, 2+6);
+wait_again:
+  if (sierra_read_packet() == 0) {
+    PC_DEBUG_PRINTF("packet type %02X length %d\n", sierra_packet_type, sierra_response_len);
+    PC_DEBUG_BUFFER("action reply OK: ", buffer, sierra_response_len);
+    if (!got_ack) {
+      got_ack = 1;
+      /* Wait for the second packet indicating end of action. */
+      goto wait_again;
+    }
+    return 0;
+  } else if (sierra_packet_type == SIERRA_PACKET_RETRY_INTERNAL) {
+    goto try_again;
+  } else {
+    PC_DEBUG_PRINTF("action: %02X\n", sierra_packet_type);
+    goto wait_again;
+  }
+  PC_DEBUG_BUFFER("action reply NOK: ", buffer, 2+6);
+  return -1;
+}
+
 static CamSpeed my_speed;
 
 static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FIRST, 0x06, 0x00, 0x00, 
@@ -528,11 +557,11 @@ static uint8 sierra_set_flash(uint8 mode) {
 }
 
 static uint8 sierra_take_picture(void) {
-  return -1;
+  return sierra_action(SIERRA_ACTION_CAPTURE, 0);
 }
 
 static uint8 sierra_delete_pictures(void) {
-  return -1;
+  return sierra_action(SIERRA_ACTION_DELETE_ALL, 0);
 }
 
 static const char *sierra_get_quality_str(uint8 mode) {
