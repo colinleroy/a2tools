@@ -334,6 +334,16 @@ try_again:
     /* Flush shit */
     sierra_flush();
     first_reset = 0;
+  } else {
+    /* We failed. Downgrade speed. */
+    if (my_speed == SER_BAUD_115200) {
+// #ifdef __CC65__
+//       __asm__("sta $C030");
+// #endif
+      tries = 0;
+      my_speed = is_iigs ? SER_BAUD_57600 : SER_BAUD_19200;
+      PC_DEBUG_PRINTF("Downgrading speed to %d\n", my_speed);
+    }
   }
 
   /* Do the reset without interfering with buffer, so that we can reset anytime. */
@@ -363,9 +373,13 @@ try_again:
       PC_DEBUG_PRINTF("Reset done\n");
       return 0;
     } else {
-      PC_DEBUG_PRINTF("UGGGGH\n");
+      sierra_packet_type = SIERRA_PACKET_SESSION_END;
     }
-  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END && tries++ < 3) {
+  }
+  if (sierra_packet_type == SIERRA_PACKET_SESSION_END && tries++ < 3) {
+// #ifdef __CC65__
+//       __asm__("sta $C030");
+// #endif
     platform_msleep(500);
     goto try_again;
   } 
@@ -380,11 +394,7 @@ try_again:
 static uint8 sierra_wakeup(CamSpeed speed) {
   uint8 r;
   cputs("Pinging Sierra camera... ");
-  if (speed == SER_BAUD_115200) {
-    my_speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
-  } else {
-    my_speed = SER_BAUD_19200;
-  }
+  my_speed = speed;
 
   r = QT_MODEL_UNKNOWN;
   if (sierra_reset() == 0) {
