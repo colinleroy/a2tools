@@ -239,6 +239,33 @@ try_again:
   return -1;
 }
 
+static uint8 sierra_write_string(uint8 reg, const char *value, uint16 len) {
+  uint8 tries = 0;
+try_again:
+  sierra_build_packet(SIERRA_PACKET_COMMAND, len+2, OP_SET_STRING, reg);
+
+  /* FIXME doesn't handle packets longer than max packet size */
+  memcpy(buffer+6, value, len);
+
+  sierra_write_packet();
+  PC_DEBUG_BUFFER("write_string sent: ", buffer, 6+6);
+
+  if (sierra_read_packet() != 0) {
+    if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
+      if (tries++ < 3) {
+        sierra_reset();
+        goto try_again;
+      }
+    }
+    return -1;
+  }
+  PC_DEBUG_PRINTF("write_string reply: %d", sierra_packet_type);
+  if (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK) {
+    return 0;
+  }
+  return -1;
+}
+
 static uint8 sierra_read_string(uint8 reg) {
   uint8 tries = 0;
 try_again:
@@ -482,7 +509,7 @@ static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 
 #pragma warn(unused-param, push, off)
 static uint8 sierra_set_camera_name(const char *name) {
-  return -1;
+  return sierra_write_string(SIERRA_REG_NAME, name, strlen(name));
 }
 
 static uint8 sierra_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
@@ -490,11 +517,14 @@ static uint8 sierra_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 ho
 }
 
 static uint8 sierra_set_quality(uint8 quality) {
-  return -1;
+  if (quality > 2) {
+    quality = 1;
+  }
+  return sierra_write_int(SIERRA_REG_RESOLUTION, quality);
 }
 
 static uint8 sierra_set_flash(uint8 mode) {
-  return -1;
+  return sierra_write_int(SIERRA_REG_FLASH_MODE, mode % 3);
 }
 
 static uint8 sierra_take_picture(void) {
@@ -506,6 +536,9 @@ static uint8 sierra_delete_pictures(void) {
 }
 
 static const char *sierra_get_quality_str(uint8 mode) {
+  if (mode > 2) {
+    mode = 1;
+  }
   switch(mode) {
   case 2: return "high";
   case 1: return "low";
@@ -514,7 +547,7 @@ static const char *sierra_get_quality_str(uint8 mode) {
 }
 
 static const char *sierra_get_flash_str(uint8 mode) {
-  switch(mode) {
+  switch(mode % 3) {
   case 0: return "automatic";
   case 1: return "forced";
   case 2: return "off";

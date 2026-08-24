@@ -53,6 +53,7 @@ extern uint8 do_debug;
 /* Register ops */
 #define OP_SET_INT                    0x00
 #define OP_GET_INT                    0x01
+#define OP_SET_STRING                 0x03
 #define OP_GET_STRING                 0x04
 
 /* Sierra speeds */
