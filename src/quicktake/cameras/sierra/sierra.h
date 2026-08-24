@@ -27,6 +27,7 @@ extern uint8 do_debug;
 #define SIERRA_PACKET_WRONG_SPEED     0x8c
 #define SIERRA_PACKET_SESSION_ERROR   0xfc
 #define SIERRA_PACKET_SESSION_END     0xff
+#define SIERRA_PACKET_RETRY_INTERNAL  0xee
 
 #define SIERRA_PACKET_SIZE            32774
 

@@ -110,9 +110,12 @@ static camera_info cam_info;
 uint16 sierra_response_len;
 uint8 sierra_response_continues;
 uint8 sierra_packet_type;
+uint8 resetting = 0;
 
 static uint8 sierra_read_packet(void) {
+  static uint8 tries = 0;
   uint8 header[3];
+
   /* either one byte or longer. length in bytes 2-3 */
   if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == EOF) {
     PC_DEBUG_PRINTF("timeout reading one byte\n");
@@ -139,11 +142,20 @@ static uint8 sierra_read_packet(void) {
     /* Read two more bytes for the checksum */
     return simple_serial_read_no_irq((char *)header, 2);
   } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-    PC_DEBUG_PRINTF("got %02X\n", sierra_packet_type);
-    return -1;
+    PC_DEBUG_PRINTF("session end %02X\n", sierra_packet_type);
+    if (!resetting && tries++ < 3) {
+      sierra_reset();
+      sierra_packet_type = SIERRA_PACKET_RETRY_INTERNAL;
+      return -1;
+    } else {
+      /* Abandon and reset tries */
+      tries = 0;
+      return -1;
+    }
   } else {
-    PC_DEBUG_PRINTF("got %02X\n", sierra_packet_type);
+    PC_DEBUG_PRINTF("OK %02X\n", sierra_packet_type);
     /* We read the single-byte "packet" */
+    tries = 0;
     return 0;
   }
 }
@@ -188,7 +200,6 @@ static void sierra_build_packet(uint8 type, uint16 length, uint8 op, uint8 reg) 
 }
 
 static uint8 sierra_write_int(uint8 reg, int32 value) {
-  uint8 tries = 0;
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 6, OP_SET_INT, reg);
 
@@ -202,11 +213,9 @@ try_again:
   PC_DEBUG_BUFFER("write_int sent: ", buffer, 6+6);
 
   if (sierra_read_packet() != 0) {
-    if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-      if (tries++ < 3) {
-        sierra_reset();
-        goto try_again;
-      }
+    if (sierra_packet_type == SIERRA_PACKET_RETRY_INTERNAL) {
+      PC_DEBUG_PRINTF("trying again\n");
+      goto try_again;
     }
     return -1;
   }
@@ -218,9 +227,7 @@ try_again:
 }
 
 static uint8 sierra_read_int(uint8 reg) {
-  uint8 tries = 0;
 try_again:
-
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_INT, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_int sent: ", buffer, 6);
@@ -229,18 +236,14 @@ try_again:
     PC_DEBUG_BUFFER("read_int details: ", buffer, 6);
     sierra_write_ack();
     return 0;
-  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-    if (tries++ < 3) {
-      sierra_reset();
-      goto try_again;
-    }
+  } else if (sierra_packet_type == SIERRA_PACKET_RETRY_INTERNAL) {
+    goto try_again;
   }
   PC_DEBUG_BUFFER("read_int reply NOK: ", buffer, 6);
   return -1;
 }
 
 static uint8 sierra_write_string(uint8 reg, const char *value, uint16 len) {
-  uint8 tries = 0;
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, len+2, OP_SET_STRING, reg);
 
@@ -251,11 +254,8 @@ try_again:
   PC_DEBUG_BUFFER("write_string sent: ", buffer, 6+6);
 
   if (sierra_read_packet() != 0) {
-    if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-      if (tries++ < 3) {
-        sierra_reset();
-        goto try_again;
-      }
+    if (sierra_packet_type == SIERRA_PACKET_RETRY_INTERNAL) {
+      goto try_again;
     }
     return -1;
   }
@@ -267,9 +267,7 @@ try_again:
 }
 
 static uint8 sierra_read_string(uint8 reg) {
-  uint8 tries = 0;
 try_again:
-
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_string sent: ", buffer, 2+6);
@@ -278,11 +276,8 @@ try_again:
     PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
     sierra_write_ack();
     return 0;
-  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-    if (tries++ < 3) {
-      sierra_reset();
-      goto try_again;
-    }
+  } else if (sierra_packet_type == SIERRA_PACKET_RETRY_INTERNAL) {
+    goto try_again;
   }
   PC_DEBUG_BUFFER("read_string reply NOK: ", buffer, 2+6);
   return -1;
@@ -296,6 +291,8 @@ static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FI
 static uint8 sierra_reset(void) {
   static uint8 first_reset = 1;
   uint8 tries = 0;
+
+  resetting = 1;
   PC_DEBUG_PRINTF("Resetting camera\n");
 
 try_again:
@@ -333,14 +330,17 @@ try_again:
       simple_serial_set_speed(my_speed);
       platform_msleep(10);
       first_packet = 0;
-
+      resetting = 0;
+      PC_DEBUG_PRINTF("Reset done\n");
       return 0;
+    } else {
+      PC_DEBUG_PRINTF("UGGGGH\n");
     }
   } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END && tries++ < 3) {
     platform_msleep(500);
     goto try_again;
   } 
-
+  resetting = 0;
   return -1;
 }
 
