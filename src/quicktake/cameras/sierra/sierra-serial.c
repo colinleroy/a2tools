@@ -150,26 +150,22 @@ uint8 first_packet = 1;
 
 static void sierra_write_packet(void) {
   uint16 i, len, chksum;
+  simple_serial_putc(buffer[0]);
   if (buffer[0] == SIERRA_PACKET_COMMAND) {
-    buffer[PACKET_SUBTYPE]  = first_packet ? SIERRA_SUBPACKET_CMD_FIRST : SIERRA_SUBPACKET_CMD;
+    simple_serial_putc(first_packet ? SIERRA_SUBPACKET_CMD_FIRST : SIERRA_SUBPACKET_CMD);
     first_packet = 0;
 
+    simple_serial_putc(buffer[2]);
+    simple_serial_putc(buffer[3]);
     len = ((buffer[2])|(buffer[3] << 8)) + 4; /* header length */
 
     chksum = 0;
     for (i = 4; i < len; i++) {
+      simple_serial_putc(buffer[i]);
       chksum += buffer[i];
     }
-    buffer[len]   = chksum        & 0xFF;
-    buffer[len+1] = (chksum >> 8) & 0xFF;
-
-    /* Too fast for PCDC001? do it char by char */
-    // simple_serial_write((char *)buffer, len+2);
-    for (i = 0; i < len+2; i++) {
-      simple_serial_putc(buffer[i]);
-    }
-  } else {
-    simple_serial_putc(buffer[0]);
+    simple_serial_putc(chksum & 0xFF);
+    simple_serial_putc(chksum >> 8);
   }
 }
 
@@ -283,61 +279,66 @@ static uint8 sierra_set_speed(CamSpeed speed) {
 
 /* Get information from the camera */
 static uint8 sierra_get_information(camera_info *info) {
-  time_t cam_date;
-  struct tm *tm_time;
+  // time_t cam_date;
+  // struct tm *tm_time;
+  /* Use our own static cam_info for codesize */
 
   if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
-    return -1;
+    goto out_err;
   }
-  info->num_pics = buffer[0]; /* Ignore +1/2/3 */
+  cam_info.num_pics = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_LEFT_PICS) != 0) {
-    return -1;
+    goto out_err;
   }
-  info->left_pics = buffer[0]; /* Ignore +1/2/3 */
+  cam_info.left_pics = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_FLASH_MODE) != 0) {
-    return -1;
+    goto out_err;
   }
-  info->flash_mode = buffer[0]; /* Ignore +1/2/3 */
+  cam_info.flash_mode = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_RESOLUTION) != 0) {
-    return -1;
+    goto out_err;
   }
-  info->quality_mode = buffer[0]; /* Ignore +1/2/3 */
+  cam_info.quality_mode = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_BATTERY) != 0) {
-    return -1;
+    goto out_err;
   }
-  info->battery_level = (buffer[0]*100)/256; /* Ignore +1/2/3 */
+  cam_info.battery_level = (buffer[0]*100)/256; /* Ignore +1/2/3 */
 
-  if (sierra_read_int(SIERRA_REG_DATE) != 0) {
-    return -1;
-  }
-#ifndef __CC65__
-  cam_date     =  buffer[0]
-               + (buffer[1] << 8)
-               + (buffer[2] << 16)
-               + (buffer[3] << 24);
-#else
-  /* Get size (24 bits big endian)*/
-  ((unsigned char *)&cam_date)[0] = buffer[0];
-  ((unsigned char *)&cam_date)[1] = buffer[1];
-  ((unsigned char *)&cam_date)[2] = buffer[2];
-  ((unsigned char *)&cam_date)[3] = buffer[3];
-#endif
-  tm_time = localtime(&cam_date);
-  info->date.year   = tm_time->tm_year + 1900;
-  info->date.month  = tm_time->tm_mon + 1;
-  info->date.day    = tm_time->tm_mday;
-  info->date.hour   = tm_time->tm_hour;
-  info->date.minute = tm_time->tm_min;
+// Date is not correct on at least Epson PhotoPC PCDC001, so skip that
+//   if (sierra_read_int(SIERRA_REG_DATE) != 0) {
+//     goto out_err;
+//   }
+// #ifndef __CC65__
+//   cam_date     =  buffer[0]
+//                + (buffer[1] << 8)
+//                + (buffer[2] << 16)
+//                + (buffer[3] << 24);
+// #else
+//   /* Get size (24 bits big endian)*/
+//   ((unsigned char *)&cam_date)[0] = buffer[0];
+//   ((unsigned char *)&cam_date)[1] = buffer[1];
+//   ((unsigned char *)&cam_date)[2] = buffer[2];
+//   ((unsigned char *)&cam_date)[3] = buffer[3];
+// #endif
+//   tm_time = localtime(&cam_date);
+//   cam_info.date.year   = tm_time->tm_year + 1900;
+//   cam_info.date.month  = tm_time->tm_mon + 1;
+//   cam_info.date.day    = tm_time->tm_mday;
+//   cam_info.date.hour   = tm_time->tm_hour;
+//   cam_info.date.minute = tm_time->tm_min;
 
   if (sierra_read_string(SIERRA_REG_NAME) != 0) {
-    return -1;
+    goto out_err;
   }
-  strcpy(info->name, buffer);
+  strcpy(cam_info.name, (char *)buffer);
+  memcpy(info, &cam_info, sizeof(cam_info));
   return 0;
+out_err:
+  return -1;
 }
 
 static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename) {
@@ -351,11 +352,9 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   ui_get_image_header_str();
 
-  if (sierra_write_int(SIERRA_REG_PIC_NUM, n_pic) != 0) {
-    return -1;
-  }
-  if (sierra_read_int(SIERRA_REG_PIC_SIZE) != 0) {
-    return -1;
+  if (sierra_write_int(SIERRA_REG_PIC_NUM, n_pic) != 0
+   || sierra_read_int(SIERRA_REG_PIC_SIZE) != 0) {
+    goto err_out;
   }
 
 #ifndef __CC65__
@@ -373,7 +372,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   if (pic_size > avail) {
     errno = ENOSPC;
-    return -1;
+    goto err_out;
   }
 
   ui_get_image_str(640, 480, pic_size);
@@ -386,7 +385,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   do {
     if (sierra_read_packet() != 0) {
       PC_DEBUG_PRINTF("Read string failed\n");
-      return -1;
+    goto err_out;
     }
     PC_DEBUG_PRINTF("Received %d bytes\n", sierra_response_len);
     write(fd, buffer, sierra_response_len);
@@ -394,6 +393,8 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   } while (sierra_response_continues);
   PC_DEBUG_PRINTF("done\n");
   return 0;
+err_out:
+  return -1;
 }
 
 static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
