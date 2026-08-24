@@ -26,16 +26,18 @@ static char *camera_drivers[] = {
   "QT1X0.ZX",
   "FUJI.ZX",
   "DC50.ZX",
+  "SRRA.ZX",
   NULL
 };
 
 uint8 serial_model = QT_MODEL_UNKNOWN;
 char *cam_file_extension[] = {
-  ".???",
-  ".QTK",
-  ".QTK",
-  ".JPG",
-  ".KDC",
+  ".???", /* QT_MODEL_UNKNOWN */
+  ".QTK", /* QT_MODEL_100 */
+  ".QTK", /* QT_MODEL_150 */
+  ".JPG", /* QT_MODEL_200 */
+  ".KDC", /* QT_MODEL_DC50 */
+  ".JPG", /* QT_MODEL_SIERRA */
 };
 
 
