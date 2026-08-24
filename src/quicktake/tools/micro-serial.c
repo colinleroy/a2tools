@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  printf("Connected. Getting information...\n");
+  printf("Getting information...\n");
 get_info:
   if (cam_get_information(&info) != 0) {
     printf("Failure.\n");

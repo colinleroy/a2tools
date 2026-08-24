@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/serial.h>
 #include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
@@ -149,19 +151,31 @@ static void sierra_write_packet(void) {
     }
     buffer[len]   = chksum        & 0xFF;
     buffer[len+1] = (chksum >> 8) & 0xFF;
-    simple_serial_write((char *)buffer, len+2);
+
+    /* Too fast for PCDC001? do it char by char */
+    // simple_serial_write((char *)buffer, len+2);
+    for (i = 0; i < len+2; i++) {
+      simple_serial_putc(buffer[i]);
+    }
   } else {
     simple_serial_putc(buffer[0]);
   }
 }
 
+#define sierra_write_ack() do { simple_serial_putc(SIERRA_PACKET_ACK); } while (0)
+
+static void sierra_build_packet(uint8 type, uint16 length, uint8 op, uint8 reg) {
+  buffer[PACKET_TYPE]     = type;
+  buffer[PACKET_LENGTH]   = length & 0xFF;
+  buffer[PACKET_LENGTH+1] = length >> 8;
+
+  buffer[PACKET_OPERATION]= op;
+  buffer[PACKET_REGISTER] = reg;
+}
+
 static uint8 sierra_write_int(uint8 reg, int32 value) {
   /* Note: libgphoto2 sends no value if value < 0? */
-  bzero(buffer, 10);
-  buffer[PACKET_TYPE]     = SIERRA_PACKET_COMMAND;
-  buffer[PACKET_LENGTH]   = 6 & 0xFF;
-  buffer[PACKET_LENGTH+1] = 6 >> 8;
-  buffer[PACKET_REGISTER] = reg;
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 6, OP_SET_INT, reg);
 
   /* TODO: optimize that, the assembly is going to be ugly */
   buffer[PACKET_VALUE]    = value         & 0xFF;
@@ -181,15 +195,39 @@ static uint8 sierra_write_int(uint8 reg, int32 value) {
   return -1;
 }
 
+static uint8 sierra_read_int(uint8 reg) {
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_INT, reg);
+  sierra_write_packet();
+  PC_DEBUG("read_int sent: ", buffer, 2+6);
+  if (sierra_read_packet() == 0) {
+    PC_DEBUG("read_int reply OK: ", buffer, 2+6);
+    sierra_write_ack();
+    return 0;
+  }
+  PC_DEBUG("read_int reply NOK: ", buffer, 2+6);
+  return -1;
+}
+
+static uint8 sierra_read_string(uint8 reg) {
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, reg);
+  sierra_write_packet();
+  PC_DEBUG("read_string sent: ", buffer, 2+6);
+  if (sierra_read_packet() == 0) {
+    PC_DEBUG("read_string reply OK: ", buffer, packet_length+6);
+    sierra_write_ack();
+    return 0;
+  }
+  PC_DEBUG("read_string reply NOK: ", buffer, 2+6);
+  return -1;
+}
+
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Sierra camera
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 sierra_wakeup(CamSpeed speed) {
-  uint8 r;
+  uint8 r, i;
   cputs("Pinging Sierra camera... ");
-
-  first_packet = 1;
 
   /* Parity first because resets speed to 9600 on PC, a bug in
    * my lib that I don't want to investigate right now. */
@@ -198,37 +236,96 @@ static uint8 sierra_wakeup(CamSpeed speed) {
 
   /* Flush shit */
   sierra_flush();
-  r = QT_MODEL_UNKNOWN;
 
+  r = QT_MODEL_UNKNOWN;
   simple_serial_putc(0x00);
   if (sierra_read_packet() == 0 && buffer[0] == SIERRA_PACKET_NAK) {
     r = QT_MODEL_SIERRA;
+    PC_DEBUG("wakeup packet OK: ", buffer, 1);
+  } else {
+    PC_DEBUG("wakeup packet NOK: ", buffer, 10);
   }
-  PC_DEBUG("wakeup packet: ", buffer, 10);
   return r;
 }
 #pragma warn(unused-param, pop)
 
-/* Default speed for Sierra cameras */
-static CamSpeed my_speed = SER_BAUD_19200;
-
 /* Send the speed upgrade command */
 static uint8 sierra_set_speed(CamSpeed speed) {
   uint8 sierra_speed;
+
+  /* PCDC001 can't do better reliably */
+  speed = SER_BAUD_19200;
   switch(speed) {
   case SER_BAUD_9600:   sierra_speed = SIERRA_SPEED_9600;   break;
   case SER_BAUD_19200:  sierra_speed = SIERRA_SPEED_19200;  break;
+  case SER_BAUD_57600:  sierra_speed = SIERRA_SPEED_57600;  break;
   case SER_BAUD_115200: sierra_speed = SIERRA_SPEED_115200; break;
   }
+
+  first_packet = 1;
   sierra_write_int(SIERRA_REG_SPEED, sierra_speed);
   simple_serial_set_speed(speed);
-  sierra_flush();
+  platform_msleep(10);
   return 0;
 }
 
 /* Get information from the camera */
 static uint8 sierra_get_information(camera_info *info) {
-  return -1;
+  time_t cam_date;
+  struct tm *tm_time;
+
+  if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
+    return -1;
+  }
+  info->num_pics = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+
+  if (sierra_read_int(SIERRA_REG_LEFT_PICS) != 0) {
+    return -1;
+  }
+  info->left_pics = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+
+  if (sierra_read_int(SIERRA_REG_FLASH_MODE) != 0) {
+    return -1;
+  }
+  info->flash_mode = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+
+  if (sierra_read_int(SIERRA_REG_RESOLUTION) != 0) {
+    return -1;
+  }
+  info->quality_mode = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+
+  if (sierra_read_int(SIERRA_REG_BATTERY) != 0) {
+    return -1;
+  }
+  info->battery_level = (buffer[PACKET_RESPONSE_IDX]*100)/256; /* Ignore +1/2/3 */
+
+  if (sierra_read_int(SIERRA_REG_DATE) != 0) {
+    return -1;
+  }
+#ifndef __CC65__
+  cam_date     =  buffer[PACKET_RESPONSE_IDX+0]
+               + (buffer[PACKET_RESPONSE_IDX+1] << 8)
+               + (buffer[PACKET_RESPONSE_IDX+2] << 16)
+               + (buffer[PACKET_RESPONSE_IDX+3] << 24);
+#else
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&cam_date)[0] = buffer[PACKET_RESPONSE_IDX+0];
+  ((unsigned char *)&cam_date)[1] = buffer[PACKET_RESPONSE_IDX+1];
+  ((unsigned char *)&cam_date)[2] = buffer[PACKET_RESPONSE_IDX+2];
+  ((unsigned char *)&cam_date)[3] = buffer[PACKET_RESPONSE_IDX+3];
+#endif
+  tm_time = localtime(&cam_date);
+  info->date.year   = tm_time->tm_year + 1900;
+  info->date.month  = tm_time->tm_mon + 1;
+  info->date.day    = tm_time->tm_mday;
+  info->date.hour   = tm_time->tm_hour;
+  info->date.minute = tm_time->tm_min;
+
+  if (sierra_read_string(SIERRA_REG_NAME) != 0) {
+    return -1;
+  }
+  strcpy(info->name, buffer+PACKET_RESPONSE_IDX);
+  return 0;
 }
 
 static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename) {
@@ -275,10 +372,19 @@ static uint8 sierra_delete_pictures(void) {
 }
 
 static const char *sierra_get_quality_str(uint8 mode) {
+  switch(mode) {
+  case 0: return "high";
+  case 1: return "low";
+  }
   return "unknown";
 }
 
 static const char *sierra_get_flash_str(uint8 mode) {
+  switch(mode) {
+  case 0: return "automatic";
+  case 1: return "forced";
+  case 2: return "off";
+  }
   return "unknown";
 }
 
