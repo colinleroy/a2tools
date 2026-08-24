@@ -5,8 +5,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/serial.h>
 #include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
@@ -84,9 +82,12 @@ void *sierra_callbacks[] = {
 };
 
 #ifdef __CC65__
-#define PC_DEBUG(op, str, len)
+#define PC_DEBUG_BUFFER(op, str, len)
+#define PC_DEBUG_PRINTF(...)
 #else
-static void PC_DEBUG(char *op, const char *str, int len) {
+#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
+
+static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
   if (do_debug) {
     printf("%s:", op);
     for (int i = 0; i < len; i++) {
@@ -104,31 +105,40 @@ extern camera_info cam_info;
 static camera_info cam_info;
 #endif
 
-#define packet_type (buffer[0])
-#define packet_subtype (buffer[1])
-#define packet_length ((buffer[2])|(buffer[3] << 8))
+uint16 sierra_response_len;
+uint8 sierra_response_continues;
+uint8 sierra_packet_type;
 
 static uint8 sierra_read_packet(void) {
+  uint8 header[3];
   /* either one byte or longer. length in bytes 2-3 */
-  if (simple_serial_read_no_irq((char *)buffer, 1) == EOF) {
+  if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == EOF) {
+    PC_DEBUG_PRINTF("timeout reading one byte\n");
     return EOF;
   }
-  if (packet_type == SIERRA_PACKET_DATA ||
-      packet_type == SIERRA_PACKET_DATA_END ||
-      packet_type == SIERRA_PACKET_COMMAND) {
+  if (sierra_packet_type == SIERRA_PACKET_DATA ||
+      sierra_packet_type == SIERRA_PACKET_DATA_END ||
+      sierra_packet_type == SIERRA_PACKET_COMMAND) {
+
+    sierra_response_continues = (sierra_packet_type == SIERRA_PACKET_DATA);
     /* Read subtype and length */
-    if (simple_serial_read_no_irq((char *)(buffer+1), 3) == EOF) {
+    if (simple_serial_read_no_irq((char *)header, 3) == EOF) {
+      return EOF;
+    }
+    PC_DEBUG_BUFFER("HEADER ", header, 3);
+    /* Ignore subtype for now */
+    sierra_response_len = header[1] | (header[2] << 8);
+    /* Read actual data */
+    if (simple_serial_read_no_irq((char *)buffer, sierra_response_len) == EOF) {
       return EOF;
     }
     /* Read two more bytes for the checksum */
-    if (simple_serial_read_no_irq((char *)(buffer+4), packet_length+2) != EOF) {
-      return 0;
-    }
+    return simple_serial_read_no_irq((char *)header, 2);
   } else {
+    PC_DEBUG_PRINTF("got %02X\n", sierra_packet_type);
     /* We read the single-byte "packet" */
     return 0;
   }
-  return EOF;
 }
 
 static void sierra_flush(void) {
@@ -136,14 +146,15 @@ static void sierra_flush(void) {
   while (simple_serial_read_no_irq((char *)&r, 1) != EOF);
 }
 
-uint8 first_packet;
+uint8 first_packet = 1;
+
 static void sierra_write_packet(void) {
   uint16 i, len, chksum;
   if (buffer[0] == SIERRA_PACKET_COMMAND) {
     buffer[PACKET_SUBTYPE]  = first_packet ? SIERRA_SUBPACKET_CMD_FIRST : SIERRA_SUBPACKET_CMD;
     first_packet = 0;
 
-    len = packet_length + 4; /* header length */
+    len = ((buffer[2])|(buffer[3] << 8)) + 4; /* header length */
 
     chksum = 0;
     for (i = 4; i < len; i++) {
@@ -184,40 +195,41 @@ static uint8 sierra_write_int(uint8 reg, int32 value) {
   buffer[PACKET_VALUE+3]  = (value >> 24) & 0xFF;
 
   sierra_write_packet();
-  PC_DEBUG("write_int sent: ", buffer, packet_length+6);
+  PC_DEBUG_BUFFER("write_int sent: ", buffer, 6+6);
 
   if (sierra_read_packet() == 0
-   && (buffer[0] == SIERRA_PACKET_ENQ|| buffer[0] == SIERRA_PACKET_ACK)) {
-     PC_DEBUG("write_int reply OK: ", buffer, packet_length+6);
+   && (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK)) {
+     PC_DEBUG_BUFFER("write_int reply OK: ", buffer, 6+6);
     return 0;
   }
-  PC_DEBUG("write_int reply NOK: ", buffer, packet_length+6);
+  PC_DEBUG_BUFFER("write_int reply NOK: ", buffer, 6+6);
   return -1;
 }
 
 static uint8 sierra_read_int(uint8 reg) {
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_INT, reg);
   sierra_write_packet();
-  PC_DEBUG("read_int sent: ", buffer, 2+6);
+  PC_DEBUG_BUFFER("read_int sent: ", buffer, 6);
   if (sierra_read_packet() == 0) {
-    PC_DEBUG("read_int reply OK: ", buffer, 2+6);
+    PC_DEBUG_BUFFER("read_int reply OK: ", buffer, 6);
     sierra_write_ack();
     return 0;
   }
-  PC_DEBUG("read_int reply NOK: ", buffer, 2+6);
+  PC_DEBUG_BUFFER("read_int reply NOK: ", buffer, 6);
   return -1;
 }
 
 static uint8 sierra_read_string(uint8 reg) {
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, reg);
   sierra_write_packet();
-  PC_DEBUG("read_string sent: ", buffer, 2+6);
+  PC_DEBUG_BUFFER("read_string sent: ", buffer, 2+6);
   if (sierra_read_packet() == 0) {
-    PC_DEBUG("read_string reply OK: ", buffer, packet_length+6);
+    PC_DEBUG_PRINTF("packet type %02X length %d\n", sierra_packet_type, sierra_response_len);
+    PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
     sierra_write_ack();
     return 0;
   }
-  PC_DEBUG("read_string reply NOK: ", buffer, 2+6);
+  PC_DEBUG_BUFFER("read_string reply NOK: ", buffer, 2+6);
   return -1;
 }
 
@@ -226,7 +238,7 @@ static uint8 sierra_read_string(uint8 reg) {
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 sierra_wakeup(CamSpeed speed) {
-  uint8 r, i;
+  uint8 r;
   cputs("Pinging Sierra camera... ");
 
   /* Parity first because resets speed to 9600 on PC, a bug in
@@ -239,11 +251,11 @@ static uint8 sierra_wakeup(CamSpeed speed) {
 
   r = QT_MODEL_UNKNOWN;
   simple_serial_putc(0x00);
-  if (sierra_read_packet() == 0 && buffer[0] == SIERRA_PACKET_NAK) {
+  if (sierra_read_packet() == 0 && sierra_packet_type == SIERRA_PACKET_NAK) {
     r = QT_MODEL_SIERRA;
-    PC_DEBUG("wakeup packet OK: ", buffer, 1);
+    PC_DEBUG_PRINTF("wakeup packet OK: %02X\n", sierra_packet_type);
   } else {
-    PC_DEBUG("wakeup packet NOK: ", buffer, 10);
+    PC_DEBUG_PRINTF("wakeup packet NOK: %02X\n", sierra_packet_type);
   }
   return r;
 }
@@ -277,42 +289,42 @@ static uint8 sierra_get_information(camera_info *info) {
   if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
     return -1;
   }
-  info->num_pics = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+  info->num_pics = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_LEFT_PICS) != 0) {
     return -1;
   }
-  info->left_pics = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+  info->left_pics = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_FLASH_MODE) != 0) {
     return -1;
   }
-  info->flash_mode = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+  info->flash_mode = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_RESOLUTION) != 0) {
     return -1;
   }
-  info->quality_mode = buffer[PACKET_RESPONSE_IDX]; /* Ignore +1/2/3 */
+  info->quality_mode = buffer[0]; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_BATTERY) != 0) {
     return -1;
   }
-  info->battery_level = (buffer[PACKET_RESPONSE_IDX]*100)/256; /* Ignore +1/2/3 */
+  info->battery_level = (buffer[0]*100)/256; /* Ignore +1/2/3 */
 
   if (sierra_read_int(SIERRA_REG_DATE) != 0) {
     return -1;
   }
 #ifndef __CC65__
-  cam_date     =  buffer[PACKET_RESPONSE_IDX+0]
-               + (buffer[PACKET_RESPONSE_IDX+1] << 8)
-               + (buffer[PACKET_RESPONSE_IDX+2] << 16)
-               + (buffer[PACKET_RESPONSE_IDX+3] << 24);
+  cam_date     =  buffer[0]
+               + (buffer[1] << 8)
+               + (buffer[2] << 16)
+               + (buffer[3] << 24);
 #else
   /* Get size (24 bits big endian)*/
-  ((unsigned char *)&cam_date)[0] = buffer[PACKET_RESPONSE_IDX+0];
-  ((unsigned char *)&cam_date)[1] = buffer[PACKET_RESPONSE_IDX+1];
-  ((unsigned char *)&cam_date)[2] = buffer[PACKET_RESPONSE_IDX+2];
-  ((unsigned char *)&cam_date)[3] = buffer[PACKET_RESPONSE_IDX+3];
+  ((unsigned char *)&cam_date)[0] = buffer[0];
+  ((unsigned char *)&cam_date)[1] = buffer[1];
+  ((unsigned char *)&cam_date)[2] = buffer[2];
+  ((unsigned char *)&cam_date)[3] = buffer[3];
 #endif
   tm_time = localtime(&cam_date);
   info->date.year   = tm_time->tm_year + 1900;
@@ -324,7 +336,7 @@ static uint8 sierra_get_information(camera_info *info) {
   if (sierra_read_string(SIERRA_REG_NAME) != 0) {
     return -1;
   }
-  strcpy(info->name, buffer+PACKET_RESPONSE_IDX);
+  strcpy(info->name, buffer);
   return 0;
 }
 
@@ -335,10 +347,53 @@ static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename) {
 }
 
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
-  ui_get_image_header_str();
-  ui_get_image_str(640, 480, 0UL);
+  off_t pic_size;
 
-  return -1;
+  ui_get_image_header_str();
+
+  if (sierra_write_int(SIERRA_REG_PIC_NUM, n_pic) != 0) {
+    return -1;
+  }
+  if (sierra_read_int(SIERRA_REG_PIC_SIZE) != 0) {
+    return -1;
+  }
+
+#ifndef __CC65__
+  pic_size     =  buffer[0]
+               + (buffer[1] << 8)
+               + (buffer[2] << 16)
+               + (buffer[3] << 24);
+#else
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&pic_size)[0] = buffer[0];
+  ((unsigned char *)&pic_size)[1] = buffer[1];
+  ((unsigned char *)&pic_size)[2] = buffer[2];
+  ((unsigned char *)&pic_size)[3] = buffer[3];
+#endif
+
+  if (pic_size > avail) {
+    errno = ENOSPC;
+    return -1;
+  }
+
+  ui_get_image_str(640, 480, pic_size);
+
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, SIERRA_REG_PIC_DATA);
+  sierra_write_packet();
+  PC_DEBUG_PRINTF("packet type %02X length %d\n", sierra_packet_type, sierra_response_len);
+  PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
+
+  do {
+    if (sierra_read_packet() != 0) {
+      PC_DEBUG_PRINTF("Read string failed\n");
+      return -1;
+    }
+    PC_DEBUG_PRINTF("Received %d bytes\n", sierra_response_len);
+    write(fd, buffer, sierra_response_len);
+    sierra_write_ack();
+  } while (sierra_response_continues);
+  PC_DEBUG_PRINTF("done\n");
+  return 0;
 }
 
 static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
@@ -373,7 +428,7 @@ static uint8 sierra_delete_pictures(void) {
 
 static const char *sierra_get_quality_str(uint8 mode) {
   switch(mode) {
-  case 0: return "high";
+  case 2: return "high";
   case 1: return "low";
   }
   return "unknown";

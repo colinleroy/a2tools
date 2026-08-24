@@ -14,8 +14,6 @@ extern uint8 do_debug;
 #define PACKET_REGISTER                  5
 #define PACKET_VALUE                     6
 
-#define PACKET_RESPONSE_IDX              4
-
 /* Packet types */
 #define SIERRA_PACKET_NUL             0x00
 #define SIERRA_PACKET_DATA            0x02
@@ -39,11 +37,15 @@ extern uint8 do_debug;
 /* Registers */
 #define SIERRA_REG_RESOLUTION         0x01
 #define SIERRA_REG_DATE               0x02
+#define SIERRA_REG_PIC_NUM            0x04
 #define SIERRA_REG_FLASH_MODE         0x07
 #define SIERRA_REG_NUM_PICS           0x0A
 #define SIERRA_REG_LEFT_PICS          0x0B
+#define SIERRA_REG_PIC_SIZE           0x0C
+#define SIERRA_REG_PIC_DATA           0x0E
 #define SIERRA_REG_SPEED              0x11
 #define SIERRA_REG_NAME               0x16
+#define SIERRA_REG_MODEL              0x1B
 #define SIERRA_REG_BATTERY            0x1C
 
 /* Register ops */

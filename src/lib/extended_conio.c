@@ -39,15 +39,15 @@ void clrscr(void) {
   fprintf(stdout, "%c[H", CH_ESC);
 }
 void gotoxy(int x, int y) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1);
+  // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1);
 }
 void gotox(int x) {
   int y = wherey();
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 y */
+  // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 y */
 }
 void gotoy(int y) {
   int x = wherex();
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 x */
+  // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 x */
 }
 
 char cgetc(void) {
