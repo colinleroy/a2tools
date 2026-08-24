@@ -81,6 +81,8 @@ void *sierra_callbacks[] = {
   /* GET_FLASH_STR */   sierra_get_flash_str,
 };
 
+static uint8 sierra_reset(void);
+
 #ifdef __CC65__
 #define PC_DEBUG_BUFFER(op, str, len)
 #define PC_DEBUG_PRINTF(...)
@@ -132,8 +134,13 @@ static uint8 sierra_read_packet(void) {
     if (simple_serial_read_no_irq((char *)buffer, sierra_response_len) == EOF) {
       return EOF;
     }
+    PC_DEBUG_BUFFER("RESPONSE ", buffer, sierra_response_len);
+
     /* Read two more bytes for the checksum */
     return simple_serial_read_no_irq((char *)header, 2);
+  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
+    PC_DEBUG_PRINTF("got %02X\n", sierra_packet_type);
+    return -1;
   } else {
     PC_DEBUG_PRINTF("got %02X\n", sierra_packet_type);
     /* We read the single-byte "packet" */
@@ -181,7 +188,8 @@ static void sierra_build_packet(uint8 type, uint16 length, uint8 op, uint8 reg) 
 }
 
 static uint8 sierra_write_int(uint8 reg, int32 value) {
-  /* Note: libgphoto2 sends no value if value < 0? */
+  uint8 tries = 0;
+try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 6, OP_SET_INT, reg);
 
   /* TODO: optimize that, the assembly is going to be ugly */
@@ -193,29 +201,48 @@ static uint8 sierra_write_int(uint8 reg, int32 value) {
   sierra_write_packet();
   PC_DEBUG_BUFFER("write_int sent: ", buffer, 6+6);
 
-  if (sierra_read_packet() == 0
-   && (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK)) {
-     PC_DEBUG_BUFFER("write_int reply OK: ", buffer, 6+6);
+  if (sierra_read_packet() != 0) {
+    if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
+      if (tries++ < 3) {
+        sierra_reset();
+        goto try_again;
+      }
+    }
+    return -1;
+  }
+  PC_DEBUG_PRINTF("write_int reply: %d", sierra_packet_type);
+  if (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK) {
     return 0;
   }
-  PC_DEBUG_BUFFER("write_int reply NOK: ", buffer, 6+6);
   return -1;
 }
 
 static uint8 sierra_read_int(uint8 reg) {
+  uint8 tries = 0;
+try_again:
+
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_INT, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_int sent: ", buffer, 6);
   if (sierra_read_packet() == 0) {
-    PC_DEBUG_BUFFER("read_int reply OK: ", buffer, 6);
+    PC_DEBUG_PRINTF("read_int reply OK: %d", sierra_packet_type);
+    PC_DEBUG_BUFFER("read_int details: ", buffer, 6);
     sierra_write_ack();
     return 0;
+  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
+    if (tries++ < 3) {
+      sierra_reset();
+      goto try_again;
+    }
   }
   PC_DEBUG_BUFFER("read_int reply NOK: ", buffer, 6);
   return -1;
 }
 
 static uint8 sierra_read_string(uint8 reg) {
+  uint8 tries = 0;
+try_again:
+
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_string sent: ", buffer, 2+6);
@@ -224,8 +251,69 @@ static uint8 sierra_read_string(uint8 reg) {
     PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
     sierra_write_ack();
     return 0;
+  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
+    if (tries++ < 3) {
+      sierra_reset();
+      goto try_again;
+    }
   }
   PC_DEBUG_BUFFER("read_string reply NOK: ", buffer, 2+6);
+  return -1;
+}
+
+static CamSpeed my_speed;
+
+static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FIRST, 0x06, 0x00, 0x00, 
+                                  SIERRA_REG_SPEED, SIERRA_SPEED_19200, 0x00, 0x00,
+                                  0x00, SIERRA_REG_SPEED+SIERRA_SPEED_19200, 0x00};
+static uint8 sierra_reset(void) {
+  static uint8 first_reset = 1;
+  uint8 tries = 0;
+  PC_DEBUG_PRINTF("Resetting camera\n");
+
+try_again:
+  /* Parity first because resets speed to 9600 on PC, a bug in
+   * my lib that I don't want to investigate right now. */
+  simple_serial_set_parity(SER_PAR_NONE);
+  simple_serial_set_speed(SER_BAUD_19200);
+
+  if (first_reset) {
+    /* Flush shit */
+    sierra_flush();
+    first_reset = 0;
+  }
+
+  /* Do the reset without interfering with buffer, so that we can reset anytime. */
+  simple_serial_putc(0x00);
+  if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == 0
+   && sierra_packet_type == SIERRA_PACKET_NAK) {
+    uint8 sierra_speed, chksum, i;
+    /* PCDC001 can't do better reliably */
+    switch(my_speed) {
+    case SER_BAUD_9600:   sierra_speed = SIERRA_SPEED_9600;   break;
+    case SER_BAUD_19200:  sierra_speed = SIERRA_SPEED_19200;  break;
+    case SER_BAUD_57600:  sierra_speed = SIERRA_SPEED_57600;  break;
+    case SER_BAUD_115200: sierra_speed = SIERRA_SPEED_115200; break;
+    }
+    speed_set_packet[6]  = sierra_speed;
+    speed_set_packet[10] = SIERRA_REG_SPEED+sierra_speed;
+    for (i = 0; i < sizeof speed_set_packet; i++) {
+      simple_serial_putc(speed_set_packet[i]);
+    }
+    PC_DEBUG_BUFFER("Reset: sent ", speed_set_packet, sizeof speed_set_packet);
+    if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == 0
+     && sierra_packet_type == SIERRA_PACKET_ACK) {
+      simple_serial_set_speed(my_speed);
+      platform_msleep(10);
+      first_packet = 0;
+
+      return 0;
+    }
+  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END && tries++ < 3) {
+    platform_msleep(500);
+    goto try_again;
+  } 
+
   return -1;
 }
 
@@ -236,53 +324,30 @@ static uint8 sierra_read_string(uint8 reg) {
 static uint8 sierra_wakeup(CamSpeed speed) {
   uint8 r;
   cputs("Pinging Sierra camera... ");
-
-  /* Parity first because resets speed to 9600 on PC, a bug in
-   * my lib that I don't want to investigate right now. */
-  simple_serial_set_parity(SER_PAR_NONE);
-  simple_serial_set_speed(SER_BAUD_19200);
-
-  /* Flush shit */
-  sierra_flush();
+  if (speed == SER_BAUD_115200) {
+    my_speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
+  } else {
+    my_speed = SER_BAUD_19200;
+  }
 
   r = QT_MODEL_UNKNOWN;
-  simple_serial_putc(0x00);
-  if (sierra_read_packet() == 0 && sierra_packet_type == SIERRA_PACKET_NAK) {
+  if (sierra_reset() == 0) {
     r = QT_MODEL_SIERRA;
-    PC_DEBUG_PRINTF("wakeup packet OK: %02X\n", sierra_packet_type);
-  } else {
-    PC_DEBUG_PRINTF("wakeup packet NOK: %02X\n", sierra_packet_type);
   }
   return r;
 }
-#pragma warn(unused-param, pop)
 
-/* Send the speed upgrade command */
+/* Done at reset time */
 static uint8 sierra_set_speed(CamSpeed speed) {
-  uint8 sierra_speed;
-
-  /* PCDC001 can't do better reliably */
-  speed = SER_BAUD_19200;
-  switch(speed) {
-  case SER_BAUD_9600:   sierra_speed = SIERRA_SPEED_9600;   break;
-  case SER_BAUD_19200:  sierra_speed = SIERRA_SPEED_19200;  break;
-  case SER_BAUD_57600:  sierra_speed = SIERRA_SPEED_57600;  break;
-  case SER_BAUD_115200: sierra_speed = SIERRA_SPEED_115200; break;
-  }
-
-  first_packet = 1;
-  sierra_write_int(SIERRA_REG_SPEED, sierra_speed);
-  simple_serial_set_speed(speed);
-  platform_msleep(10);
   return 0;
 }
+#pragma warn(unused-param, pop)
 
 /* Get information from the camera */
 static uint8 sierra_get_information(camera_info *info) {
   // time_t cam_date;
   // struct tm *tm_time;
   /* Use our own static cam_info for codesize */
-
   if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
     goto out_err;
   }
@@ -354,7 +419,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   if (sierra_write_int(SIERRA_REG_PIC_NUM, n_pic) != 0
    || sierra_read_int(SIERRA_REG_PIC_SIZE) != 0) {
-    goto err_out;
+    goto out_err;
   }
 
 #ifndef __CC65__
@@ -372,7 +437,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   if (pic_size > avail) {
     errno = ENOSPC;
-    goto err_out;
+    goto out_err;
   }
 
   ui_get_image_str(640, 480, pic_size);
@@ -385,7 +450,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   do {
     if (sierra_read_packet() != 0) {
       PC_DEBUG_PRINTF("Read string failed\n");
-    goto err_out;
+    goto out_err;
     }
     PC_DEBUG_PRINTF("Received %d bytes\n", sierra_response_len);
     write(fd, buffer, sierra_response_len);
@@ -393,7 +458,7 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   } while (sierra_response_continues);
   PC_DEBUG_PRINTF("done\n");
   return 0;
-err_out:
+out_err:
   return -1;
 }
 
