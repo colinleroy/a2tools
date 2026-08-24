@@ -412,14 +412,14 @@ static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename) {
         IS_NOT_NULL(dirname)?"/":"", n_pic);
 }
 
-static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
+static uint8 sierra_get_picture_data(uint8 n_pic, int fd, off_t avail, uint8 full_size) {
   off_t pic_size;
   uint8 n_blocks, cur_block;
 
   ui_get_image_header_str();
 
-  if (sierra_write_int(SIERRA_REG_PIC_NUM, n_pic) != 0
-   || sierra_read_int(SIERRA_REG_PIC_SIZE) != 0) {
+  if (sierra_write_int(SIERRA_REG_PIC_NUM , n_pic) != 0
+   || sierra_read_int(full_size ? SIERRA_REG_PIC_SIZE : SIERRA_REG_THUMB_SIZE) != 0) {
     goto out_err;
   }
 
@@ -436,16 +436,21 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   ((unsigned char *)&pic_size)[3] = buffer[3];
 #endif
 
-  if (pic_size > avail) {
-    errno = ENOSPC;
-    goto out_err;
+  if (full_size) {
+    if (pic_size > avail) {
+      errno = ENOSPC;
+      goto out_err;
+    }
+    ui_get_image_str(640, 480, pic_size);
+  } else {
+    ui_get_thumbnail_str(n_pic);
   }
 
-  ui_get_image_str(640, 480, pic_size);
   n_blocks = (pic_size >> 11) + 1;
   progress_bar(2, wherey(), scrw - 2, 0, n_blocks);
 
-  sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, SIERRA_REG_PIC_DATA);
+  sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING,
+                      full_size ? SIERRA_REG_PIC_DATA : SIERRA_REG_THUMB_DATA);
   sierra_write_packet();
   PC_DEBUG_PRINTF("packet type %02X length %d\n", sierra_packet_type, sierra_response_len);
   PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
@@ -467,9 +472,12 @@ out_err:
   return -1;
 }
 
+static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
+  return sierra_get_picture_data(n_pic, fd, avail, 1);
+}
+
 static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  ui_get_thumbnail_str(n_pic);
-  return -1;
+  return sierra_get_picture_data(n_pic, fd, 0, 0);
 }
 
 #pragma warn(unused-param, push, off)

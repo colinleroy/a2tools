@@ -42,7 +42,9 @@ extern uint8 do_debug;
 #define SIERRA_REG_NUM_PICS           0x0A
 #define SIERRA_REG_LEFT_PICS          0x0B
 #define SIERRA_REG_PIC_SIZE           0x0C
+#define SIERRA_REG_THUMB_SIZE         0x0D
 #define SIERRA_REG_PIC_DATA           0x0E
+#define SIERRA_REG_THUMB_DATA         0x0F
 #define SIERRA_REG_SPEED              0x11
 #define SIERRA_REG_NAME               0x16
 #define SIERRA_REG_MODEL              0x1B
