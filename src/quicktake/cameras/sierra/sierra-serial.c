@@ -414,6 +414,7 @@ static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   off_t pic_size;
+  uint8 n_blocks, cur_block;
 
   ui_get_image_header_str();
 
@@ -441,6 +442,8 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   }
 
   ui_get_image_str(640, 480, pic_size);
+  n_blocks = (pic_size >> 11) + 1;
+  progress_bar(2, wherey(), scrw - 2, 0, n_blocks);
 
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, SIERRA_REG_PIC_DATA);
   sierra_write_packet();
@@ -454,6 +457,8 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
     }
     PC_DEBUG_PRINTF("Received %d bytes\n", sierra_response_len);
     write(fd, buffer, sierra_response_len);
+    progress_bar(2, wherey(), scrw - 2, ++cur_block, n_blocks);
+
     sierra_write_ack();
   } while (sierra_response_continues);
   PC_DEBUG_PRINTF("done\n");
