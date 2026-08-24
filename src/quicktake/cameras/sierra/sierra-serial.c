@@ -20,7 +20,7 @@
 #pragma data-name(push, "SIERRA")
 
 /* Camera features */
-#define sierra_features 0b0000000011011101
+#define sierra_features 0b0000000011011111
 //                                ||||||||_ SET_CAMERA_NAME
 //                                |||||||__ SET_CAMERA_TIME
 //                                ||||||___ SET_QUALITY,
@@ -199,7 +199,7 @@ static void sierra_build_packet(uint8 type, uint16 length, uint8 op, uint8 reg) 
   buffer[PACKET_REGISTER] = reg;
 }
 
-static uint8 sierra_write_int(uint8 reg, int32 value) {
+static uint8 sierra_write_int(uint8 reg, uint32 value) {
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 6, OP_SET_INT, reg);
 
@@ -411,8 +411,8 @@ static uint8 sierra_set_speed(CamSpeed speed) {
 
 /* Get information from the camera */
 static uint8 sierra_get_information(camera_info *info) {
-  // time_t cam_date;
-  // struct tm *tm_time;
+  time_t cam_date;
+  struct tm *tm_time;
   /* Use our own static cam_info for codesize */
   if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
     goto out_err;
@@ -439,28 +439,27 @@ static uint8 sierra_get_information(camera_info *info) {
   }
   cam_info.battery_level = (buffer[0]*100)/256; /* Ignore +1/2/3 */
 
-// Date is not correct on at least Epson PhotoPC PCDC001, so skip that
-//   if (sierra_read_int(SIERRA_REG_DATE) != 0) {
-//     goto out_err;
-//   }
-// #ifndef __CC65__
-//   cam_date     =  buffer[0]
-//                + (buffer[1] << 8)
-//                + (buffer[2] << 16)
-//                + (buffer[3] << 24);
-// #else
-//   /* Get size (24 bits big endian)*/
-//   ((unsigned char *)&cam_date)[0] = buffer[0];
-//   ((unsigned char *)&cam_date)[1] = buffer[1];
-//   ((unsigned char *)&cam_date)[2] = buffer[2];
-//   ((unsigned char *)&cam_date)[3] = buffer[3];
-// #endif
-//   tm_time = localtime(&cam_date);
-//   cam_info.date.year   = tm_time->tm_year + 1900;
-//   cam_info.date.month  = tm_time->tm_mon + 1;
-//   cam_info.date.day    = tm_time->tm_mday;
-//   cam_info.date.hour   = tm_time->tm_hour;
-//   cam_info.date.minute = tm_time->tm_min;
+  if (sierra_read_int(SIERRA_REG_DATE) != 0) {
+    goto out_err;
+  }
+#ifndef __CC65__
+  cam_date     =  buffer[0]
+               + (buffer[1] << 8)
+               + (buffer[2] << 16)
+               + (buffer[3] << 24);
+#else
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&cam_date)[0] = buffer[0];
+  ((unsigned char *)&cam_date)[1] = buffer[1];
+  ((unsigned char *)&cam_date)[2] = buffer[2];
+  ((unsigned char *)&cam_date)[3] = buffer[3];
+#endif
+  tm_time = localtime(&cam_date);
+  cam_info.date.year   = tm_time->tm_year + 1900;
+  cam_info.date.month  = tm_time->tm_mon + 1;
+  cam_info.date.day    = tm_time->tm_mday;
+  cam_info.date.hour   = tm_time->tm_hour;
+  cam_info.date.minute = tm_time->tm_min;
 
   if (sierra_read_string(SIERRA_REG_NAME) != 0) {
     goto out_err;
@@ -552,7 +551,17 @@ static uint8 sierra_set_camera_name(const char *name) {
 }
 
 static uint8 sierra_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  return -1;
+  struct tm date;
+  time_t stamp;
+
+  date.tm_mday = day;
+  date.tm_mon  = month-1;
+  date.tm_year = year+100;
+  date.tm_hour = hour;
+  date.tm_min  = minute;
+  date.tm_sec  = second;
+
+  return sierra_write_int(SIERRA_REG_DATE, mktime(&date));
 }
 
 static uint8 sierra_set_quality(uint8 quality) {
