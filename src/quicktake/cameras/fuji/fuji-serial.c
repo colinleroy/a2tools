@@ -126,6 +126,7 @@ static camera_info cam_info;
  */
 static uint8 fuji_wakeup(CamSpeed speed) {
   uint8 tries = 2, c;
+
   cputs("Pinging Fuji camera... ");
 
   simple_serial_set_speed(SER_BAUD_9600);
@@ -139,14 +140,18 @@ again:
   end_session();
 
   fuji_model = FUJI_UNKNOWN;
+#ifdef __CC65__
   fuji_callbacks[CAM_FEATURES] |= (CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES);
+#endif
 
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     fuji_get_information(&cam_info);
     if (!strcmp(cam_info.name, "QT-200")) {
       fuji_model = FUJI_QT200;
+#ifdef __CC65__
       fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES);
+#endif
     }
     return QT_MODEL_FUJI;
   } else {

@@ -308,8 +308,6 @@ wait_again:
     PC_DEBUG_PRINTF("action: %02X\n", sierra_packet_type);
     goto wait_again;
   }
-  PC_DEBUG_BUFFER("action reply NOK: ", buffer, 2+6);
-  return -1;
 }
 
 static CamSpeed my_speed;
@@ -350,7 +348,7 @@ try_again:
   simple_serial_putc(0x00);
   if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == 0
    && sierra_packet_type == SIERRA_PACKET_NAK) {
-    uint8 sierra_speed, chksum, i;
+    uint8 sierra_speed, i;
     /* PCDC001 can't do better reliably */
     switch(my_speed) {
     case SER_BAUD_9600:   sierra_speed = SIERRA_SPEED_9600;   break;
@@ -359,6 +357,7 @@ try_again:
     case SER_BAUD_115200: sierra_speed = SIERRA_SPEED_115200; break;
     }
     speed_set_packet[6]  = sierra_speed;
+    /* Checksum */
     speed_set_packet[10] = SIERRA_REG_SPEED+sierra_speed;
     for (i = 0; i < sizeof speed_set_packet; i++) {
       simple_serial_putc(speed_set_packet[i]);
@@ -552,7 +551,6 @@ static uint8 sierra_set_camera_name(const char *name) {
 
 static uint8 sierra_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   struct tm date;
-  time_t stamp;
 
   date.tm_mday = day;
   date.tm_mon  = month-1;
