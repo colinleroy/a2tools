@@ -7,7 +7,6 @@ extern uint8 scrw, scrh;
 extern uint8 do_debug;
 
 #define CMD_SET_SPEED          0x41
-#define CMD_GET_STATUS         0x7f
 
 #define CMD_GET_CAM_PIC        0x51
 #define CMD_GET_CARD_PIC       0x61
@@ -26,15 +25,9 @@ extern uint8 do_debug;
 #define CMD_DELETE_CAM         0x7A
 #define CMD_DELETE_CARD        0x7B
 #define CMD_TAKE_PICTURE_CARD  0x7C
+#define CMD_GET_STATUS         0x7F
 
 #define CMD_SET_NAME           0x9E
-
-// $DC50_ERASE_IMAGE_IN_CAMERA  = 0x7A;
-// $DC50_ERASE_IMAGE_IN_CARD    = 0x7B;
-// $DC50_TAKE_PICTURE_TO_CAMERA = 0x77;
-// $DC50_TAKE_PICTURE_TO_CARD   = 0x7C;
-// $DC50_INITIALIZE             = 0x7E;
-// $DC50_STATUS                 = 0x7F;
 
 
 #define REP_COMPLETE    0x00
