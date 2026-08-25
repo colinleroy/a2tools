@@ -339,7 +339,7 @@ try_again:
 //       __asm__("sta $C030");
 // #endif
       tries = 0;
-      my_speed = is_iigs ? SER_BAUD_57600 : SER_BAUD_19200;
+      my_speed = SER_BAUD_19200;
       PC_DEBUG_PRINTF("Downgrading speed to %d\n", my_speed);
     }
   }
