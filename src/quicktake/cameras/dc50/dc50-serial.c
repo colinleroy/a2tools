@@ -373,6 +373,9 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 #define CAM_PIC_SIZE_IDX 8
 #define CARD_PIC_SIZE_IDX 754
+
+/* Hardcoded even if loses space, because dcraw hardcodes it, and I want my
+ * downloads to be decodable by dcraw. */
 #define HEADER_LEN 19712
 
 static uint8 minimal_exif_header[] = {
@@ -420,7 +423,7 @@ static uint8 minimal_exif_header[] = {
     0x00, 0x00, 0x00, 0x01,
     0x01, 0xF8, 0x00, 0x00,
 
-    // StripOffset (0x0111), LONG = 19712
+    // StripOffset (0x0111), LONG = 19712 (HEADER_LEN)
     0x01, 0x11,
     0x00, 0x04,
     0x00, 0x00, 0x00, 0x01,
