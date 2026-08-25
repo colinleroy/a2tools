@@ -139,11 +139,14 @@ again:
   end_session();
 
   fuji_model = FUJI_UNKNOWN;
+  fuji_callbacks[CAM_FEATURES] |= (CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES);
+
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     fuji_get_information(&cam_info);
     if (!strcmp(cam_info.name, "QT-200")) {
       fuji_model = FUJI_QT200;
+      fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES);
     }
     return QT_MODEL_FUJI;
   } else {
@@ -303,6 +306,7 @@ static uint8 fuji_get_information(camera_info *info) {
 
   cmd[1] = FUJI_CMD_GET_INFO;
   if (send_command(cmd, sizeof cmd) != 0) {
+    fuji_stop();
     return -1;
   }
   PC_DEBUG("cmd", buffer, response_len);
@@ -406,6 +410,7 @@ static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail) {
   size_cmd[NUM_PIC_IDX] = n_pic;
 
   if (send_command(size_cmd, sizeof size_cmd) != 0) {
+    fuji_stop();
     errno = EIO;
     return -1;
   }
@@ -459,11 +464,32 @@ static uint8 fuji_set_flash(uint8 mode) {
 }
 
 static uint8 fuji_take_picture(void) {
-  return -1;
+  char cmd[]  = {0x00,FUJI_CMD_TAKE_PIC,0x00,0x00};
+  uint8 r = 0;
+
+  fuji_start();
+  if (send_command(cmd, sizeof cmd) != 0) {
+    r = -1;
+  }
+
+  fuji_stop();
+  return r;
 }
 
 static uint8 fuji_delete_pictures(void) {
-  return -1;
+  char cmd[]  = {0x00,FUJI_CMD_DELETE_PIC,0x00,0x00};
+  uint8 r = 0;
+
+  fuji_start();
+  for (cmd[2] = cam_info.num_pics; cmd[2] > 0; cmd[2]--) {
+    if (send_command(cmd, sizeof cmd) != 0) {
+      r = -1;
+      break;
+    }
+  }
+
+  fuji_stop();
+  return r;
 }
 
 static const char *fuji_get_quality_str(uint8 mode) {

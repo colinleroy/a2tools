@@ -26,4 +26,13 @@ extern uint8 do_debug;
 #define FUJI_CMD_PIC_COUNT     0x0B
 #define FUJI_CMD_PIC_SIZE      0x17
 
+/* TODO test this on QT200 */
+#define FUJI_CMD_DELETE_PIC    0x19
+#define FUJI_CMD_TAKE_PIC      0x27
+#define FUJI_CMD_GET_FLASH     0x30
+#define FUJI_CMD_SET_FLASH     0x32
+#define FUJI_CMD_GET_CAM_ID    0x80
+#define FUJI_CMD_SET_CAM_ID    0x82
+#define FUJI_CMD_GET_DATE      0x84
+#define FUJI_CMD_SET_DATE      0x86
 #endif
