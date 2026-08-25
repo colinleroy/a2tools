@@ -217,8 +217,8 @@ qktkconv_GCCCFLAGS = \
 
 # 3.5 tracks cache
 radcconv_CLCFLAGS = \
-	-DCACHE_SIZE=14336  --asm-define CACHE_SIZE=14336 \
-	-DINITIAL_CACHE_READ=4096 \
+	-DCACHE_SIZE=13312  --asm-define CACHE_SIZE=13312 \
+	-DINITIAL_CACHE_READ=2048 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=384     --asm-define RAW_WIDTH=384 \

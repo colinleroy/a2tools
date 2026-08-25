@@ -375,6 +375,77 @@ static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename) {
 #define CARD_PIC_SIZE_IDX 754
 #define HEADER_LEN 19712
 
+static uint8 minimal_exif_header[] = {
+    // TIFF header, big endian
+    0x4D, 0x4D, 0x00, 0x2A,
+    // IFD0 offset
+    0x00, 0x00, 0x00, 0x08,
+
+    // IFD0: 3 tags
+    0x00, 0x03,
+
+    // Tag 1: Make (0x010F), ASCII, count=5, offset=0x0070
+    0x01, 0x0F,
+    0x00, 0x02,
+    0x00, 0x00, 0x00, 0x05,
+    0x00, 0x00, 0x00, 0x70,
+
+    // Tag 2: Model (0x0110), ASCII, count=10, offset=0x0086
+    0x01, 0x10,
+    0x00, 0x02,
+    0x00, 0x00, 0x00, 0x0A,
+    0x00, 0x00, 0x00, 0x76,
+
+    // Tag 3: SubIFD (0x014A), LONG, offset=0x0032
+    0x01, 0x4A,
+    0x00, 0x04,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x32,
+
+    // Next IFD pointer: nope
+    0x00, 0x00, 0x00, 0x00,
+
+    // --- SubIFD at offset 0x0032 ---
+    0x00, 0x04,   // 4 tags
+
+    // Width (0x0100), SHORT = 756
+    0x01, 0x00,
+    0x00, 0x03,
+    0x00, 0x00, 0x00, 0x01,
+    0x02, 0xF4, 0x00, 0x00,
+
+    // Height (0x0101), SHORT = 504
+    0x01, 0x01,
+    0x00, 0x03,
+    0x00, 0x00, 0x00, 0x01,
+    0x01, 0xF8, 0x00, 0x00,
+
+    // StripOffset (0x0111), LONG = 19712
+    0x01, 0x11,
+    0x00, 0x04,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x4D, 0x00,
+
+    // CompressedBitsPerPixel (0x9102), RATIONAL, offset=0x0068
+    0x91, 0x02,
+    0x00, 0x05,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x68,
+
+    // Next IFD pointer: nope
+    0x00, 0x00, 0x00, 0x00,
+
+    // RATIONAL data at offset 104 (CompressedBitsPerPixel)
+    0x00, 0x00, 0x00, 0xFF,   // numerator, to be set according to image quality (At 0x6B)
+    0x00, 0x00, 0x00, 0x64,   // denominator = 100
+
+    // ASCII data at offset 112 (Make)
+    'K','o','d','a','k', 0x00,
+
+    // ASCII data at offset 118 (Model)
+    'K','o','d','a','k',' ','D','C','5','0', 0x00
+};
+
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint32 pic_size;
   uint8 c, blocks_to_read, d;
@@ -430,7 +501,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
     }
   } else {
     /* "Fix" file header for pictures from cam */
-    write(fd, "MM\0*", 4);
+    write(fd, minimal_exif_header, sizeof(minimal_exif_header));
     /* Remember quality */
     c = buffer[4] == 0x00 ? 0xF3 : 0x98;
 
@@ -440,7 +511,8 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
       write(fd, buffer, sizeof buffer);
     }
 
-    lseek(fd, 1063, SEEK_SET);
+    /* 0x6B is the offset in our minimal EXIF header. */
+    lseek(fd, 0x6B, SEEK_SET);
     write(fd, &c, 1);
   }
 
