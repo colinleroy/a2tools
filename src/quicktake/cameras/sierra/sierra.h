@@ -70,3 +70,5 @@ extern uint8 do_debug;
 #define SIERRA_SPEED_57600            0x04
 #define SIERRA_SPEED_115200           0x05
 #endif
+
+uint8 sierra_reset(void);

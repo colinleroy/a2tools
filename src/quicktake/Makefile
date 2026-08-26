@@ -36,6 +36,7 @@ microserial_SOURCES := \
 	cameras/dc50/dc50-read-response.c \
 	cameras/dc50/dc50-thumbs.c \
 	cameras/sierra/sierra-serial.c \
+	cameras/sierra/sierra-read-packet.c \
 	cameras/sierra/sierra-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
@@ -59,6 +60,7 @@ slowtake_SOURCES := \
 	cameras/dc50/dc50-serial.c \
 	cameras/dc50/dc50-read-response.c \
 	cameras/sierra/sierra-serial.c \
+	cameras/sierra/sierra-read-packet.s \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c

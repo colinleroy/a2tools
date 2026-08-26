@@ -1,9 +1,7 @@
-#include <arpa/inet.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
 #include <unistd.h>
 #include "a2_features.h"
@@ -12,6 +10,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "sierra.h"
+#include "sierra-read-packet.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -82,8 +81,6 @@ void *sierra_callbacks[] = {
   /* GET_FLASH_STR */   sierra_get_flash_str,
 };
 
-static uint8 sierra_reset(void);
-
 #ifdef __CC65__
 #define PC_DEBUG_BUFFER(op, str, len)
 #define PC_DEBUG_PRINTF(...)
@@ -112,71 +109,12 @@ uint16 sierra_response_len;
 uint8 sierra_response_continues;
 uint8 sierra_packet_type;
 uint8 resetting = 0;
+uint8 header[3], footer[2];
 
 /* Helper for stupid cameras that want us to send slow. */
 static void sierra_putc_slow(uint8 c) {
   platform_msleep(2);
   simple_serial_putc(c);
-}
-
-static uint8 sierra_read_packet(void) {
-  uint8 tries = 0;
-  uint8 header[3];
-
-  /* Set to stupid value */
-  sierra_packet_type = 0xEE;
-
-  /* either one byte or longer. length in bytes 2-3 */
-  if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) != 0) {
-    PC_DEBUG_PRINTF("Timeout\r\n");
-    return EOF;
-  }
-
-  if (sierra_packet_type == SIERRA_PACKET_DATA ||
-      sierra_packet_type == SIERRA_PACKET_DATA_END ||
-      sierra_packet_type == SIERRA_PACKET_COMMAND) {
-    sierra_response_continues = (sierra_packet_type == SIERRA_PACKET_DATA);
-    /* Read subtype and length */
-    if (simple_serial_read_no_irq((char *)header, 3) != 0) {
-      PC_DEBUG_PRINTF("header %02X %02X %02X\r\n", header[0], header[1], header[2]);
-      return EOF;
-    }
-    PC_DEBUG_BUFFER("HEADER ", header, 3);
-    /* Ignore subtype for now */
-    sierra_response_len = header[1] | (header[2] << 8);
-    /* Read actual data */
-    if (simple_serial_read_no_irq((char *)buffer, sierra_response_len) != 0) {
-      PC_DEBUG_PRINTF("Timeout packet\r\n");
-      return EOF;
-    }
-    PC_DEBUG_BUFFER("RESPONSE ", buffer, sierra_response_len);
-
-    /* Read two more bytes for the checksum */
-    if (simple_serial_read_no_irq((char *)header, 2) != 0) {
-      PC_DEBUG_PRINTF("Error checksum\r\n");
-      return -1;
-    } else {
-      return 0;
-    }
-  } else if (sierra_packet_type == SIERRA_PACKET_SESSION_END) {
-    PC_DEBUG_PRINTF("session end %02X\n", sierra_packet_type);
-    cputs("got session end\r\n");
-    if (!resetting && tries++ < 3) {
-      sierra_reset();
-      sierra_packet_type = SIERRA_PACKET_RETRY_INTERNAL;
-      return -1;
-    } else {
-      /* Abandon and reset tries */
-      tries = 0;
-      return -1;
-    }
-  } else {
-    PC_DEBUG_PRINTF("OK %02X\n", sierra_packet_type);
-    cputs("single byte OK\r\n");
-    /* We read the single-byte "packet" */
-    tries = 0;
-    return 0;
-  }
 }
 
 static void sierra_flush(void) {
@@ -248,12 +186,27 @@ try_again:
   return -1;
 }
 
+static void dump_packet(void) {
+  uint16 i, l;
+  cprintf("packet: %02X %02X %02X %02X\r\n",
+          sierra_packet_type, header[0], header[1], header[2]);
+  l = sierra_response_len;
+  if (l > 25) l = 25;
+  for (i = 0; i < l; i++) {
+    cprintf("%02X ", buffer[i]);
+  }
+  cprintf("\r\n%02X %02X\r\n", footer[0], footer[1]);
+}
+
 static uint8 sierra_read_int(uint8 reg) {
+  uint8 r;
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_INT, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_int sent: ", buffer, 6+6);
-  if (sierra_read_packet() == 0) {
+  r = sierra_read_packet();
+  // dump_packet();
+  if (r == 0) {
     PC_DEBUG_PRINTF("read_int reply OK: %d", sierra_packet_type);
     PC_DEBUG_BUFFER("read_int details: ", buffer, 6);
     sierra_write_ack();
@@ -289,11 +242,15 @@ try_again:
 }
 
 static uint8 sierra_read_string(uint8 reg) {
+  uint8 r;
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 2, OP_GET_STRING, reg);
   sierra_write_packet();
   PC_DEBUG_BUFFER("read_string sent: ", buffer, 2+6);
-  if (sierra_read_packet() == 0) {
+  r = sierra_read_packet();
+  // dump_packet();
+
+  if (r == 0) {
     PC_DEBUG_PRINTF("packet type %02X length %d\n", sierra_packet_type, sierra_response_len);
     PC_DEBUG_BUFFER("read_string reply OK: ", buffer, sierra_response_len);
     sierra_write_ack();
@@ -337,7 +294,7 @@ static CamSpeed my_speed;
 static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FIRST, 0x06, 0x00, 0x00, 
                                   SIERRA_REG_SPEED, SIERRA_SPEED_19200, 0x00, 0x00,
                                   0x00, SIERRA_REG_SPEED+SIERRA_SPEED_19200, 0x00};
-static uint8 sierra_reset(void) {
+uint8 sierra_reset(void) {
   static uint8 first_reset = 1;
   uint8 i;
   uint8 tries = 0;
@@ -355,6 +312,7 @@ try_again:
     /* Flush shit */
     sierra_flush();
 #ifdef __CC65__
+    /* Sierra cameras timing suck at 115k, there are framing errors */
     my_speed = SER_BAUD_19200;
 #endif
     first_reset = 0;
@@ -449,6 +407,12 @@ static uint8 sierra_set_speed(CamSpeed speed) {
 static uint8 sierra_get_information(camera_info *info) {
   time_t cam_date;
   struct tm *tm_time;
+
+  if (sierra_read_string(SIERRA_REG_NAME) != 0) {
+    goto out_err;
+  }
+  strcpy(cam_info.name, (char *)buffer);
+
   if (sierra_read_int(SIERRA_REG_RESOLUTION) != 0) {
     goto out_err;
   }
@@ -500,10 +464,6 @@ static uint8 sierra_get_information(camera_info *info) {
   cam_info.date.hour   = tm_time->tm_hour;
   cam_info.date.minute = tm_time->tm_min;
 
-  if (sierra_read_string(SIERRA_REG_NAME) != 0) {
-    goto out_err;
-  }
-  strcpy(cam_info.name, (char *)buffer);
   memcpy(info, &cam_info, sizeof(cam_info));
   return 0;
 out_err:
