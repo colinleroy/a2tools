@@ -3,6 +3,7 @@ TARGET := apple2
 GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
+	--asm-define NO_FILESEL_MKDIR \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
 FLOP_NAME = IMAGEVIEWER
@@ -12,7 +13,6 @@ imgview_SOURCES := \
 	imageview.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
-	../lib/dget_text_single.c
 
 imgview_CC65SOURCES := \
 	../lib/hgr_addrs.s \
