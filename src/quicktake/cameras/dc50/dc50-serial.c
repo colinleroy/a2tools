@@ -329,7 +329,6 @@ static uint8 dc50_get_information(camera_info *info) {
                + (buffer[TIME_IDX+1] << 16)
                + (buffer[TIME_IDX+0] << 24);
 #else
-  /* Get size (24 bits big endian)*/
   ((unsigned char *)&int_time)[0] = buffer[TIME_IDX+3];
   ((unsigned char *)&int_time)[1] = buffer[TIME_IDX+2];
   ((unsigned char *)&int_time)[2] = buffer[TIME_IDX+1];
@@ -484,7 +483,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 #endif
   }
 
-  if (pic_size > avail) {
+  if (pic_size + HEADER_LEN > avail) {
     errno = ENOSPC;
     return -1;
   }
