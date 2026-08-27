@@ -160,7 +160,7 @@ void __fastcall__ write_raw(uint16 h)
   dst_ptr = raw_image;
 
   for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
-    write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*width), width);
+    write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), width);
   }
   y_len = 0;
   dst_ptr = raw_image;
