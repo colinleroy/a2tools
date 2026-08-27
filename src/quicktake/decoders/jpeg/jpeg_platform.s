@@ -14,7 +14,7 @@
         .import     _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY, _gMaxMCUSPerRow
-        .import     _gWinogradQuant
+        .import     _gWinogradQuant, _gScanType
         .import     floppy_motor_on
         .import     right_shift_4
 
@@ -49,6 +49,12 @@ _gBitsLeft     = _zp13      ; byte, used everywhere, across bands
 
 NO_FF_CHECK = $60           ; RTS
 FF_CHECK_ON = $C9           ; CMP #$nn
+
+ PJPG_GRAYSCALE = 0
+ PJPG_YH1V1     = 1
+ PJPG_YH2V1     = 2
+ PJPG_YH1V2     = 3
+ PJPG_YH2V2     = 4
 
 CACHE_END = _cache + CACHE_SIZE + 4
 .assert <CACHE_END = 0, error
@@ -797,8 +803,8 @@ cont_idct_rows:
 
 :       rts
 
-; void idctCols(void
 
+; void idctCols(void
 _idctCols:
         ldy     #0
 nextCol:
@@ -1163,8 +1169,32 @@ noRestart:
         ldx     #$00
         stx     mcuBlock
 
+        ; for (mcuBlock = 0; mcuBlock < numNormalMCUBlocks; mcuBlock++) {
 nextMcuBlock:
-        ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
+        cpx     #2            ; If we have more than 2 normal MCU blocks, we're doing H2V2
+        bne     zeroBuf
+
+        .assert (<RAW_WIDTH = 0), error
+        lda     _output0+1    ; In which case, shift to next 4 lines, 8 pixels left to do the two blocks at Y=1
+        adc     #7            ; (Carry set so eq -8 )
+                              ; So add 8 pages as each line is 2 pages
+        ldy     _outputIdx    ; One less when Idx is 0
+        bne     :+
+        sbc     #0            ; Carry clear, so -1
+        clc
+:
+        sta     _output0+1
+        adc     #2
+        sta     _output1+1
+        adc     #2
+        sta     _output2+1
+        adc     #2
+        sta     _output3+1
+
+        lda     _outputIdx    ; and decrement Idx by 8
+        sbc     #7            ; Carry clear, so -8
+        sta     _outputIdx
+
 zeroBuf:
         ; Zero indices of gCoeffBuf that we'll use
         ; in idctRows
@@ -1289,7 +1319,7 @@ ZAG_finished:
 _numNormalMCUBlocks = *+1
         cpx     #2
         bcc     :+
-        jmp     nextUselessBlock
+        jmp     startUselessBlocks
 :       jmp     nextMcuBlock
 
 no_data:
@@ -1311,6 +1341,25 @@ skip_coeff:
 
 getACBits:
         GETBITSDIRECT gotACBits
+
+startUselessBlocks:
+        cpx     #4
+        bne     nextUselessBlock
+
+        lda     _output0+1    ; In which case, shift back 4 lines for next MCU
+        sbc     #8            ; So remove 8 pages
+        ldy     _outputIdx
+        bne     :+
+        sbc     #2            ; Carry still set
+
+:       sta     _output0+1
+        adc     #1            ; Carry still set
+        sta     _output1+1
+        adc     #2
+        sta     _output2+1
+        adc     #2
+        sta     _output3+1
+        ; ... and don't touch outputIdx, it's correctly set.
 
 nextUselessBlock:
         ; Skip the other blocks, do the minimal work

@@ -65,7 +65,7 @@ extern uint8 gMCUOrg[6];
 extern uint8 gWinogradQuant[];
 
 extern uint8 *output0, *output1, *output2, *output3;
-extern uint16 outputIdx;
+extern uint8 outputIdx;
 #pragma zpsym("outputIdx")
 
 #ifdef __CC65__

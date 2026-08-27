@@ -241,7 +241,7 @@ void idctRows(void)
 #define PJPG_DCT_SCALE_BITS 7
 
 uint8 *output0, *output1, *output2, *output3;
-uint16 outputIdx;
+uint8 outputIdx;
 
 void idctCols(void)
 {
@@ -299,6 +299,12 @@ void idctCols(void)
       output2[outputIdx] = val2;
       output3[outputIdx] = val3;
       outputIdx++;
+      if (outputIdx == 0) {
+        output0 += 256;
+        output1 += 256;
+        output2 += 256;
+        output3 += 256;
+      }
    }
 }
 
@@ -381,7 +387,10 @@ void setACDCTabs(void) {
 //  return xxoff-CACHE_SIZE+(size_t)(cur_cache_ptr-cache_start);
 //}
 
+extern uint8 *pDst_row;
+extern uint8 gScanType;
 size_t total_mcu = 0;
+
 uint8 decodeNextMCU(void)
 {
   uint8 status;
@@ -405,12 +414,27 @@ uint8 decodeNextMCU(void)
   total_mcu++;
 
   for (mcuBlock = 0; mcuBlock < numNormalMCUBlocks; mcuBlock++) {
+    printf("doing block %d/%d\n", mcuBlock, numNormalMCUBlocks);
     if (gMCUOrg[mcuBlock] != 0) {
       /* see initFrame, componentID = 0 for mcuBlocks 0/1 */
-      printf("Unexpected thingy.\n");
+      printf("Unexpected thingy, block %d type %d.\n", mcuBlock, gMCUOrg[mcuBlock]);
       return -1;
     }
-
+    if (mcuBlock == 2) {
+      uint16 page_shift = (RAW_WIDTH*4);
+      if (outputIdx == 0) {
+        page_shift-=256;
+      }
+      /* Now do the two next blocks 4 lines down, 4 pixels left */
+      printf("shifting output0 from   %p to %p   (offset %d)\n",
+             output0, output0+page_shift,
+             output0-raw_image);
+      output0 += page_shift;
+      output1 = output0 + RAW_WIDTH;
+      output2 = output1 + RAW_WIDTH;
+      output3 = output2 + RAW_WIDTH;
+      outputIdx -= 8;
+    }
     /* Pre-zero coeffs we'll use in idctRows */
     gCoeffBuf[1] =
       gCoeffBuf[2] =
@@ -461,9 +485,25 @@ uint8 decodeNextMCU(void)
     idctCols();
   }
 
-   /* Skip the other blocks, do the minimal work, only consuming
-    * input bits
-    */
+  /* If H2V2, go back 4 lines and 4 pixels right */
+  if (gScanType == PJPG_YH2V2) {
+    uint16 page_shift = (RAW_WIDTH*4);
+    if (outputIdx == 0) {
+      page_shift+=512;
+    }
+    printf("setting output0 back to %p from %p (Ofsset %d, idx %d)\n",
+           output0-page_shift, output0,
+           (output0-page_shift)-raw_image,
+           outputIdx);
+    output0 -= page_shift;
+    output1 = output0 + RAW_WIDTH;
+    output2 = output1 + RAW_WIDTH;
+    output3 = output2 + RAW_WIDTH;
+  }
+
+  /* Skip the other blocks, do the minimal work, only consuming
+   * input bits
+   */
   skipBits = 1;
   for (; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];

@@ -951,6 +951,19 @@ static uint8 initFrame(void)
 
     gMaxMCUXSize = 16;
     gMaxMCUYSize = 8;
+  } else if ((gCompHSamp[0] == 2) && (gCompVSamp[0] == 2)) {
+    gScanType = PJPG_YH2V2;
+    gMaxBlocksPerMCU = 6;
+    numNormalMCUBlocks = 4;
+    gMCUOrg[0] = 0;
+    gMCUOrg[1] = 0;
+    gMCUOrg[2] = 0;
+    gMCUOrg[3] = 0;
+    gMCUOrg[4] = 1;
+    gMCUOrg[5] = 2;
+
+    gMaxMCUXSize = 16;
+    gMaxMCUYSize = 16;
   }
   gNumMCUSRemainingX = gMaxMCUSPerRow = (640 + (gMaxMCUXSize - 1)) >> ((gMaxMCUXSize == 8) ? 3 : 4);
   gNumMCUSRemainingY = gMaxMCUSPerCol = (480 + (gMaxMCUYSize - 1)) >> ((gMaxMCUYSize == 8) ? 3 : 4);
@@ -999,12 +1012,11 @@ unsigned char pjpeg_decode_init(void)
 static uint8 mcu_x = 0;
 static uint8 status;
 static uint8 dst_y;
-
+uint16 bandInc;
+uint8 *pDst_row;
 uint8 qt_load_raw(uint16 top)
 {
-  static uint8 *pDst_row;
   static uint8 bandStop;
-  static uint16 bandInc;
 
   if (top == 0) {
 #ifdef __CC65__
@@ -1020,6 +1032,8 @@ uint8 qt_load_raw(uint16 top)
     bandStop = (BAND_HEIGHT*2)/gMaxMCUYSize;
     bandInc  = (RAW_WIDTH/2)*gMaxMCUYSize;
   }
+
+  // printf("JPEG decoding from %d ", top);
 
   dst_y = 0;
   pDst_row = raw_image;
@@ -1044,6 +1058,7 @@ setup_output_pointers:
       outputIdx = 0;
     }
   }
+  // printf(" (scaled height %d)\n", (dst_y-1)*4);
   return 0;
 }
 

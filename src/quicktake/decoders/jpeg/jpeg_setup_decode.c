@@ -4,10 +4,8 @@
 #define WH_OFFSET 544
 
 char qt_setup_decode(void) {
-  /* fix subtypes */
-  cache_start[3] &= 0xF0;
-
-  if (memcmp (cache_start, magic, 4)) {
+  /* fix subtypes, ignore fourth byte */
+  if (memcmp (cache_start, magic, 3)) {
     cputs("Invalid file.\r\n");
     return -1;
   }

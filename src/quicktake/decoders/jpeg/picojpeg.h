@@ -53,11 +53,11 @@ enum
 // Scan types
 typedef enum
 {
-   PJPG_GRAYSCALE,
-   PJPG_YH1V1,
-   PJPG_YH2V1,
-   PJPG_YH1V2,
-   PJPG_YH2V2
+   PJPG_GRAYSCALE = 0,
+   PJPG_YH1V1     = 1,
+   PJPG_YH2V1     = 2,
+   PJPG_YH1V2     = 3,
+   PJPG_YH2V2     = 4
 } pjpeg_scan_type_t;
 
 // Initializes the decompressor. Returns 0 on success, or one of the above error codes on failure.

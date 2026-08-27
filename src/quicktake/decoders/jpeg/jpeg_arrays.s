@@ -30,7 +30,7 @@
 ; far enough that the scaler won't overwrite it (it will
 ; overwrite 256*16 bytes)
 .align 256
-_raw_image:       .res (BAND_HEIGHT-1)*RAW_WIDTH+DECODE_WIDTH
+_raw_image:       .res (BAND_HEIGHT)*RAW_WIDTH
 
 _gQuant0_l =      _raw_image+((BAND_HEIGHT-10)*512)+DECODE_WIDTH  ; 64 bytes
 _gQuant0_h =      _raw_image+((BAND_HEIGHT-9)*512)+DECODE_WIDTH   ; 64 bytes
@@ -46,7 +46,7 @@ _gHuffVal0 =      _raw_image+((BAND_HEIGHT-2)*512)+DECODE_WIDTH   ; 16 bytes
 _gHuffVal1 =      _raw_image+((BAND_HEIGHT-1)*512)+DECODE_WIDTH   ; 16 bytes
 
 ; Fill the last bytes to align cache
-filler:                 .res RAW_WIDTH-DECODE_WIDTH-4
+filler:                 .res RAW_WIDTH-4
 .assert <* = 256-4, error
 _cache:                 .res CACHE_SIZE+4
 
