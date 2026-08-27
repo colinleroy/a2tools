@@ -242,6 +242,7 @@ try_again:
   ifd = -1;
 
   /* Append histogram */
+  lseek(ofd, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
 #ifndef __CC65__
   write(ofd, histogram, sizeof(uint16)*256);
 #else
