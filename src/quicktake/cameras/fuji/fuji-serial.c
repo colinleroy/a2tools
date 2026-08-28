@@ -93,12 +93,6 @@ uint8 can_get_flash[] = {
   1,  /* DX-8 */
 };
 
-uint8 can_get_id[] = {
-  0,  /* QT200 */
-  0,  /* DS-7 */
-  1,  /* DX-8 */
-};
-
 uint8 fuji_model;
 
 #define NUM_PIC_IDX 4
@@ -142,7 +136,7 @@ static camera_info cam_info;
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 fuji_wakeup(CamSpeed speed) {
-  uint8 tries = 2, c, available_features;
+  uint8 tries = 2, c;
 
   cputs("Pinging Fuji camera... ");
 
@@ -156,33 +150,10 @@ static uint8 fuji_wakeup(CamSpeed speed) {
 again:
   end_session();
 
-  fuji_model = FUJI_UNKNOWN;
-#ifdef __CC65__
-  fuji_callbacks[CAM_FEATURES] &= ~(CAM_SET_CAMERA_NAME|
-                                    CAM_CAN_TAKE_PICTURE|
-                                    CAM_CAN_DELETE_PICTURES|
-                                    CAM_CAN_GET_THUMBNAIL);
-#endif
-
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     PC_DEBUG_PRINTF("Getting information\n");
     fuji_get_information(&cam_info);
-    switch (fuji_model) {
-      case FUJI_QT200:
-      case FUJI_DS7:
-        available_features = CAM_CAN_GET_THUMBNAIL;
-        break;
-      case FUJI_DX8:
-        available_features = CAM_SET_CAMERA_NAME|
-                             CAM_CAN_TAKE_PICTURE|
-                             CAM_CAN_DELETE_PICTURES;
-        break;
-    }
-
-#ifdef __CC65__
-    fuji_callbacks[CAM_FEATURES] |= available_features;
-#endif
     return QT_MODEL_FUJI;
   } else {
     if (--tries) {
@@ -347,7 +318,7 @@ static void trim_spaces(char *str) {
 /* Get information from the camera */
 static uint8 fuji_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
-
+  uint16 available_features = 0;
   fuji_start();
 
   if (send_command(cmd, sizeof cmd, 1) != 0) {
@@ -364,9 +335,10 @@ static uint8 fuji_get_information(camera_info *info) {
   }
   PC_DEBUG_BUFFER("cmd", buffer, response_len);
   buffer[response_len] = '\0';
-  trim_spaces(buffer+6);
+  trim_spaces((char *)buffer+6);
   strcpy(info->name, (char *)(buffer + 6));
 
+  fuji_model = FUJI_UNKNOWN;
   PC_DEBUG_PRINTF("Camera is %s\n", info->name);
   if (!strcmp(info->name, "QT-200")) {
     fuji_model = FUJI_QT200;
@@ -376,7 +348,31 @@ static uint8 fuji_get_information(camera_info *info) {
     fuji_model = FUJI_DX8;
   }
 
-  if (can_get_flash[fuji_model]) {
+#ifdef __CC65__
+  fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_SET_CAMERA_NAME|
+                                    CAM_CAN_SET_FLASH|
+                                    CAM_CAN_TAKE_PICTURE|
+                                    CAM_CAN_DELETE_PICTURES|
+                                    CAM_CAN_GET_THUMBNAIL);
+#endif
+  switch (fuji_model) {
+    case FUJI_QT200:
+    case FUJI_DS7:
+      available_features = CAM_CAN_GET_THUMBNAIL;
+      break;
+    case FUJI_DX8:
+      available_features = CAM_CAN_SET_CAMERA_NAME|
+                           CAM_CAN_SET_FLASH|
+                           CAM_CAN_TAKE_PICTURE|
+                           CAM_CAN_DELETE_PICTURES;
+      break;
+  }
+
+#ifdef __CC65__
+    fuji_callbacks[CAM_FEATURES] |= available_features;
+#endif
+
+  if (available_features & CAM_SET_FLASH) {
     cmd[1] = FUJI_CMD_GET_FLASH;
     if (send_command(cmd, sizeof cmd, 1) != 0) {
       return -1;
@@ -385,7 +381,7 @@ static uint8 fuji_get_information(camera_info *info) {
     PC_DEBUG_PRINTF("Flash mode: %d\n", info->flash_mode);
   }
   
-  if (can_get_id[fuji_model]) {
+  if (available_features & CAM_SET_CAMERA_NAME) {
     cmd[1] = FUJI_CMD_GET_CAM_ID;
     if (send_command(cmd, sizeof cmd, 1) != 0) {
       return -1;
