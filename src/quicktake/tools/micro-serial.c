@@ -102,9 +102,10 @@ int main(int argc, char *argv[]) {
            "\n"
            "       camera_models: qt1x0, fuji, dc50, sierra\n"
            "       tty_path:      /dev/ttyUSB0 for example\n"
-           "       command:       get (parameter: picture number)\n\n"
-           "                      thumb (parameter: picture number)\n\n"
-           "                      set_name (parameter: new name)\n\n",
+           "       command:       get (parameter: picture number)\n"
+           "                      thumb (parameter: picture number)\n"
+           "                      set_name (parameter: new name)\n"
+           "\n",
            argv[0]);
     exit(1);
   }
@@ -168,7 +169,7 @@ get_info:
       }
 
       printf("Saving picture %d to %s\n", n_pic, filename);
-
+      unlink(filename);
       fd = open(filename, O_WRONLY|O_CREAT, 00644);
       if (fd < 0) {
         printf("Can not open %s: %s\n", filename, strerror(errno));
