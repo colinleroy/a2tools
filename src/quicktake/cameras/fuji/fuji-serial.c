@@ -349,7 +349,8 @@ static uint8 fuji_get_information(camera_info *info) {
   }
 
 #ifdef __CC65__
-  fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_SET_CAMERA_NAME|
+  fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_SET_CAMERA_TIME|
+                                    CAM_CAN_SET_CAMERA_NAME|
                                     CAM_CAN_SET_FLASH|
                                     CAM_CAN_TAKE_PICTURE|
                                     CAM_CAN_DELETE_PICTURES|
@@ -361,7 +362,8 @@ static uint8 fuji_get_information(camera_info *info) {
       available_features = CAM_CAN_GET_THUMBNAIL;
       break;
     case FUJI_DX8:
-      available_features = CAM_CAN_SET_CAMERA_NAME|
+      available_features = CAM_CAN_SET_CAMERA_TIME|
+                           CAM_CAN_SET_CAMERA_NAME|
                            CAM_CAN_SET_FLASH|
                            CAM_CAN_TAKE_PICTURE|
                            CAM_CAN_DELETE_PICTURES;
@@ -372,7 +374,7 @@ static uint8 fuji_get_information(camera_info *info) {
     fuji_callbacks[CAM_FEATURES] |= available_features;
 #endif
 
-  if (available_features & CAM_SET_FLASH) {
+  if (available_features & CAM_CAN_SET_FLASH) {
     cmd[1] = FUJI_CMD_GET_FLASH;
     if (send_command(cmd, sizeof cmd, 1) != 0) {
       return -1;
@@ -381,7 +383,7 @@ static uint8 fuji_get_information(camera_info *info) {
     PC_DEBUG_PRINTF("Flash mode: %d\n", info->flash_mode);
   }
   
-  if (available_features & CAM_SET_CAMERA_NAME) {
+  if (available_features & CAM_CAN_SET_CAMERA_NAME) {
     cmd[1] = FUJI_CMD_GET_CAM_ID;
     if (send_command(cmd, sizeof cmd, 1) != 0) {
       return -1;
@@ -391,15 +393,26 @@ static uint8 fuji_get_information(camera_info *info) {
     strcpy(info->name, (char *)(buffer));
   }
 
+  if (available_features & CAM_CAN_SET_CAMERA_TIME) {
+    cmd[1] = FUJI_CMD_GET_DATE;
+    if (send_command(cmd, sizeof cmd, 1) != 0) {
+      return -1;
+    }
+    buffer[12] = '\0';
+    info->date.minute = atoi(buffer+10);
+    buffer[10] = '\0';
+    info->date.hour = atoi(buffer+8);
+    buffer[8] = '\0';
+    info->date.day = atoi(buffer+6);
+    buffer[6] = '\0';
+    info->date.month = atoi(buffer+4);
+    buffer[4] = '\0';
+    info->date.year = atoi(buffer);
+  }
+
   info->left_pics     = 0;
   info->battery_level = 0;
   info->charging      = 0;
-
-  info->date.day      = 1;
-  info->date.month    = 1;
-  info->date.year     = 1970;
-  info->date.hour     = 0;
-  info->date.minute   = 0;
 
   fuji_stop();
   return 0;
@@ -538,7 +551,12 @@ static uint8 fuji_set_camera_name(const char *name) {
 
 #pragma warn(unused-param, push, off)
 static uint8 fuji_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  return -1;
+  char cmd[19]  = {0};
+  cmd[1] = FUJI_CMD_SET_DATE;
+  cmd[2] = 14;
+  sprintf(cmd+4, "%04d%02d%02d%02d%02d00",
+                 year, month, day, hour, minute);
+  return send_command(cmd, 18, 1);
 }
 
 static uint8 fuji_set_quality(uint8 quality) {

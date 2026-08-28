@@ -214,7 +214,7 @@ get_info:
       argc = 2;
       goto get_info;
     }
-    if (!strcmp(argv[3], "set_time")) {
+    if (!strcmp(argv[3], "set_time") || !strcmp(argv[3], "set_date")) {
       time_t now = time(NULL);
       struct tm *date = localtime(&now);
 
