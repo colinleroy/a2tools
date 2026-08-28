@@ -271,6 +271,10 @@ static uint8 fuji_set_speed(CamSpeed speed) {
     case SER_BAUD_57600:
       str_speed[SPD_CMD_IDX] = 0x07;
       break;
+
+    case SER_BAUD_115200:
+      str_speed[SPD_CMD_IDX] = 0x08;
+      break;
   }
 
   if (send_command(str_speed, sizeof str_speed, 1) != 0) {
@@ -531,8 +535,6 @@ static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     errno = EIO;
     return -1;
   }
-
-  /* FIXME get info */
   return fuji_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
 
