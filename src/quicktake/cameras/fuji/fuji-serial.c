@@ -254,11 +254,12 @@ static uint8 fuji_set_speed(CamSpeed speed) {
   //                 {????,CMD ,          ????,????,SPD }
   char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
 
-  if (speed == SER_BAUD_115200) {
-    /* Use max possible speed */
+  /* Don't even try 115200 on QT200/DS7 */
+  if (speed == SER_BAUD_115200 && fuji_model < FUJI_DX8) {
     speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
   }
 
+downgrade:
   switch(speed) {
     case SER_BAUD_9600:
       str_speed[SPD_CMD_IDX] = 0x00;
@@ -280,6 +281,12 @@ static uint8 fuji_set_speed(CamSpeed speed) {
   if (send_command(str_speed, sizeof str_speed, 1) != 0) {
     cputs("Speed set command failed.\r\n");
     return -1;
+  }
+  if (buffer[0] != 0) {
+    if (speed == SER_BAUD_115200) {
+      speed = is_iigs ? SER_BAUD_57600:SER_BAUD_19200;
+      goto downgrade;
+    }
   }
   /* End session */
   end_session();
