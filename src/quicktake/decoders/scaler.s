@@ -20,6 +20,8 @@
 
         .importzp       tmp1, c_sp
 
+HGR_HEIGHT = 192
+
 .proc _write_raw
         ldy     _last_band_crop   ; Is there cropping?
         beq     full_band
@@ -181,6 +183,7 @@ scale_320:
         sta     _scaled_band_height
 
         lda     _width
+        .assert <640 = <384, error
         cmp     #<640
         bne     :+
         inc     _effective_width
@@ -204,12 +207,12 @@ scale_512:
 
         lda     _crop_start_y
         clc
-        adc     #<380
+        adc     #<((HGR_HEIGHT/(BAND_HEIGHT * 5 / 10))*BAND_HEIGHT)
         sta     _last_band
         lda     _crop_start_y+1
-        adc     #>380
+        adc     #>((HGR_HEIGHT/(BAND_HEIGHT * 5 / 10))*BAND_HEIGHT)
         sta     _last_band+1
-        lda     #2
+        lda     #(HGR_HEIGHT - (HGR_HEIGHT/(BAND_HEIGHT * 5 / 10))*(BAND_HEIGHT * 5 / 10))
         sta     _last_band_crop
 
         lda     #<(FILE_WIDTH*BAND_HEIGHT*5/10)
@@ -223,12 +226,12 @@ scale_256:
 
         lda     _crop_start_y
         clc
-        adc     #<180
+        adc     #<((HGR_HEIGHT/(BAND_HEIGHT * 10 / 10))*BAND_HEIGHT)
         sta     _last_band
         lda     _crop_start_y+1
-        adc     #>180
+        adc     #>((HGR_HEIGHT/(BAND_HEIGHT * 10 / 10))*BAND_HEIGHT)
         sta     _last_band+1
-        lda     #12
+        lda     #(HGR_HEIGHT - (HGR_HEIGHT/(BAND_HEIGHT * 10 / 10))*(BAND_HEIGHT * 10 / 10))
         sta     _last_band_crop
 
         lda     #<(FILE_WIDTH*BAND_HEIGHT*10/10)

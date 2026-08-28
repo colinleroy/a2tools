@@ -32,7 +32,7 @@
   #pragma static-locals(push, on)
 #endif
 
-uint16 histogram[256];
+uint16 histogram[256] = {0};
 
 uint8 *orig_y_table[BAND_HEIGHT];
 uint8 orig_x_offset[256];
@@ -84,7 +84,7 @@ void __fastcall__ build_scale_table(const char *ofname) {
       scaling_factor = 8;
       scaled_band_height = (BAND_HEIGHT * 8 / 10);
       output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
-      if (width == 640) {
+      if (width == 640 || width == 384 /* Hack for KDC */) {
         effective_width = 321; /* Prevent re-cropping from menu */
       }
       break;
@@ -92,15 +92,15 @@ void __fastcall__ build_scale_table(const char *ofname) {
       scaling_factor = 5;
       scaled_band_height = (BAND_HEIGHT * 5 / 10);
       output_write_len = FILE_WIDTH * (BAND_HEIGHT * 5 / 10);
-      last_band = crop_start_y + 380;
-      last_band_crop = 2; /* 4, scaled */
+      last_band = crop_start_y + (HGR_HEIGHT/(BAND_HEIGHT * 5 / 10))*BAND_HEIGHT;
+      last_band_crop = HGR_HEIGHT - (HGR_HEIGHT/(BAND_HEIGHT * 5 / 10))*(BAND_HEIGHT * 5 / 10);
       break;
     case 256:
       scaling_factor = 10;
       scaled_band_height = (BAND_HEIGHT * 10 / 10);
       output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
-      last_band = crop_start_y + 180;
-      last_band_crop = 12;
+      last_band = crop_start_y + (HGR_HEIGHT/(BAND_HEIGHT * 10 / 10))*BAND_HEIGHT;
+      last_band_crop = HGR_HEIGHT - (HGR_HEIGHT/(BAND_HEIGHT * 10 / 10))*(BAND_HEIGHT * 10 / 10);
       break;
     default:
       cputs("Unsupported width.\r\n");
@@ -108,7 +108,9 @@ void __fastcall__ build_scale_table(const char *ofname) {
       reload_menu(ofname);
       break;
   }
-
+  
+  printf("Band height %d to %d, %zu bytes per band\n",
+         BAND_HEIGHT, scaled_band_height, output_write_len);
   /* Hack for 768px wide pics */
   if (width == 384) {
     crop_start_x += 32;
@@ -148,10 +150,12 @@ void __fastcall__ write_raw(uint16 h)
   static uint8 y_end;
   static uint8 y_len;
 
+  printf("doing Band %d (%d / last %d)\n", h, last_band_crop, last_band);
   if (last_band_crop && h == last_band) {
     /* Skip end of last band if cropping */
     y_end = last_band_crop;
     output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH;
+    printf("last Band %d, output %d\n", y_end, output_write_len);
   } else {
     y_end = scaled_band_height;
   }
@@ -181,11 +185,13 @@ first_col:
         xoff = *cur_orig_x;
       }
       *dst_ptr = *(cur + xoff);
+      printf("counting one pix\n");
       histogram[*dst_ptr]++;
       cur_orig_x++;
       dst_ptr ++;
     } while (--x_len);
     cur_orig_y++;
   } while (++y_len < y_end);
+  printf("Band: writing %d bytes\n", output_write_len);
   write(ofd, raw_image, output_write_len);
 }
