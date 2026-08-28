@@ -94,9 +94,12 @@ uint8 fuji_model;
 
 
 #ifdef __CC65__
-#define PC_DEBUG(op, str, len)
+#define PC_DEBUG_BUFFER(op, str, len)
+#define PC_DEBUG_PRINTF(...)
 #else
-static void PC_DEBUG(char *op, const char *str, int len) {
+#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
+
+static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
   if (do_debug) {
     printf("%s:", op);
     for (int i = 0; i < len; i++) {
@@ -146,7 +149,9 @@ again:
 
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
+    PC_DEBUG_PRINTF("Getting information\n");
     fuji_get_information(&cam_info);
+    PC_DEBUG_PRINTF("Camera is %s\n", cam_info.name);
     if (!strcmp(cam_info.name, "QT-200")) {
       fuji_model = FUJI_QT200;
 #ifdef __CC65__
@@ -191,17 +196,22 @@ static uint8 send_command(const char *cmd, uint8 len) {
   checksum ^= ETX;
   cmd_buffer[len++] = checksum;
 
+  PC_DEBUG_BUFFER("Sent header: ", header, sizeof header);
+  PC_DEBUG_BUFFER("Sent data: ", cmd_buffer, len);
+
   simple_serial_write((char *)header, sizeof header);
   simple_serial_write((char *)cmd_buffer, len);
 
   response_len = 0;
   if (simple_serial_read_no_irq((char *)&i, 1) != 0 || i != ACK) {
+    PC_DEBUG_PRINTF("Did not read ack\n");
     return -1;
   }
 
   if (fuji_read_response() != 0) {
     return -1;
   }
+  simple_serial_putc(ACK);
   return 0;
 }
 
@@ -211,7 +221,7 @@ static CamSpeed my_speed = SER_BAUD_9600;
 static uint8 fuji_send_ping(uint8 wait) {
   char c = 0xFF;
   simple_serial_putc(ENQ);
-
+  PC_DEBUG_PRINTF("Sending %02X\n", ENQ);
   while (wait--) {
     if (simple_serial_read_no_irq((char *)&c, 1) == 0)
       break;
@@ -219,11 +229,9 @@ static uint8 fuji_send_ping(uint8 wait) {
       break;
     }
   }
-
+  PC_DEBUG_PRINTF("Received %02X\n", c);
   if (c != ACK) {
-    if (do_debug) {
-      cputs("Ping failed\r\n");
-    }
+    PC_DEBUG_PRINTF("Ping failed\n");
     return -1;
   }
   return 0;
@@ -256,31 +264,22 @@ static uint8 fuji_set_speed(CamSpeed speed) {
 
   if (send_command(str_speed, sizeof str_speed) != 0) {
     cputs("Speed set command failed.\r\n");
-    if (do_debug) {
-      cgetc();
-    }
     return -1;
   }
   /* End session */
   end_session();
 
-  platform_msleep(500);
+  platform_msleep(50);
 
   /* Toggle speed */
   simple_serial_set_speed(speed);
 
   /* ping again */
   if (fuji_send_ping(STD_WAIT) != 0) {
-    if (do_debug) {
-      cputs("Communication check failed.\r\n");
-      cgetc();
-    }
     return -1;
   }
 
-  if (do_debug) {
-    cputs("Success.\r\n");
-  }
+  PC_DEBUG_PRINTF("Success.\n");
   if (speed != SER_BAUD_9600) {
     my_speed = speed;
   }
@@ -308,13 +307,15 @@ static uint8 fuji_get_information(camera_info *info) {
     return -1;
   }
   info->num_pics = (buffer[1] << 8) + buffer[0];
+  PC_DEBUG_PRINTF("Num pics %d\n", info->num_pics);
 
   cmd[1] = FUJI_CMD_GET_INFO;
   if (send_command(cmd, sizeof cmd) != 0) {
+    PC_DEBUG_PRINTF("Error getting info\n");
     fuji_stop();
     return -1;
   }
-  PC_DEBUG("cmd", buffer, response_len);
+  PC_DEBUG_BUFFER("cmd", buffer, response_len);
   buffer[response_len] = '\0';
 
   strncpy(info->name, (char *)buffer + 6, response_len - 4);
@@ -367,7 +368,7 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
 
   progress_bar(2, wherey(), scrw - 2, 0, num_blocks);
 
-  PC_DEBUG("cmd", data_cmd, sizeof data_cmd);
+  PC_DEBUG_BUFFER("cmd", data_cmd, sizeof data_cmd);
   if (send_command(data_cmd, sizeof data_cmd) != 0) {
     errno = EIO;
     return -1;
