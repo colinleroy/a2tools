@@ -159,16 +159,14 @@ again:
     cputs("Done.");
     PC_DEBUG_PRINTF("Getting information\n");
     fuji_get_information(&cam_info);
-    PC_DEBUG_PRINTF("Camera is %s\n", cam_info.name);
-    if (!strcmp(cam_info.name, "QT-200")) {
-      fuji_model = FUJI_QT200;
-      available_features = CAM_CAN_GET_THUMBNAIL;
-    } else if (!strncmp(cam_info.name, "DS-7", 4)) {
-      fuji_model = FUJI_DS7;
-      available_features = CAM_CAN_GET_THUMBNAIL;
-    } else if (!strncmp(cam_info.name, "DX-8", 4)) {
-      fuji_model = FUJI_DX8;
-      available_features = CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES;
+    switch (fuji_model) {
+      case FUJI_QT200:
+      case FUJI_DS7:
+        available_features = CAM_CAN_GET_THUMBNAIL;
+        break;
+      case FUJI_DX8:
+        available_features = CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES;
+        break;
     }
 
 #ifdef __CC65__
@@ -337,7 +335,7 @@ static uint8 fuji_get_information(camera_info *info) {
   if (send_command(cmd, sizeof cmd, 1) != 0) {
     return -1;
   }
-  info->num_pics = (buffer[1] << 8) + buffer[0];
+  info->num_pics = buffer[0];
   PC_DEBUG_PRINTF("Num pics %d\n", info->num_pics);
 
   cmd[1] = FUJI_CMD_GET_INFO;
@@ -351,6 +349,24 @@ static uint8 fuji_get_information(camera_info *info) {
 
   strncpy(info->name, (char *)buffer + 6, response_len - 4);
   info->name[response_len - 5] = '\0';
+
+  PC_DEBUG_PRINTF("Camera is %s\n", info->name);
+  if (!strcmp(info->name, "QT-200")) {
+    fuji_model = FUJI_QT200;
+  } else if (!strncmp(info->name, "DS-7", 4)) {
+    fuji_model = FUJI_DS7;
+  } else if (!strncmp(info->name, "DX-8", 4)) {
+    fuji_model = FUJI_DX8;
+  }
+
+  if (can_get_flash[fuji_model]) {
+    cmd[1] = FUJI_CMD_GET_FLASH;
+    if (send_command(cmd, sizeof cmd, 1) != 0) {
+      return -1;
+    }
+    info->flash_mode = buffer[0];
+    PC_DEBUG_PRINTF("Flash mode: %d\n", info->flash_mode);
+  }
 
   info->left_pics     = 0;
   info->battery_level = 0;
@@ -498,7 +514,16 @@ static uint8 fuji_set_quality(uint8 quality) {
 }
 
 static uint8 fuji_set_flash(uint8 mode) {
-  return -1;
+  char cmd[]  = {0x00,FUJI_CMD_SET_FLASH,0x01,0x00,0x00};
+  uint8 r = 0;
+
+  cmd[4] = mode % 4;
+  fuji_start();
+  if (send_command(cmd, sizeof cmd, 1) != 0) {
+    r = -1;
+  }
+  fuji_stop();
+  return r;
 }
 
 static uint8 fuji_take_picture(void) {
@@ -535,7 +560,14 @@ static const char *fuji_get_quality_str(uint8 mode) {
 }
 
 static const char *fuji_get_flash_str(uint8 mode) {
-  return "unknown";
+  mode = mode % 4;
+  switch (mode) {
+    case 0: return "disabled";
+    case 1: return "forced";
+    case 2: return "strobe";
+    case 3: return "automatic";
+    default: return "unknown";
+  }
 }
 
 #pragma warn(unused-param, pop)
