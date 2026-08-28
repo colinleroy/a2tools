@@ -26,6 +26,9 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
   sdl_set_pixel(screen, (x)*2+1, (y)*2+1, v, v/(1+h), v); \
 } while (0)
 
+uint16 histogram[256] = {0};
+uint8 opt_histogram[256];
+uint8 do_hist = 1;
 void main(int argc, char *argv[]) {
   FILE *fp = NULL;
   FILE *fp2 = NULL;
@@ -100,6 +103,22 @@ display:
     video_inited = 1;
   }
 
+  uint8 buf[512];
+  uint32 curr_hist;
+  int r;
+  fseek(fp, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
+  if ((r = fread(buf, 1, 512, fp)) < 512) {
+    printf(" Can't read histogram at %zu: %d\n", PNM_HEADER_SIZE + 256*192UL, r);
+    do_hist = 0;
+  }
+
+  curr_hist = 0;
+  for (int i = 0; i < 256; i++) {
+    curr_hist += (buf[i] | (buf[i+256] << 8));
+    uint32 tmp = (curr_hist*255) / (256*192);
+    opt_histogram[i] = tmp;
+  }
+
   fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
   if (fp2) {
     fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
@@ -126,6 +145,9 @@ display:
     for (y = 0; y < h; y++) {
       for (x = 0; x < w; x++) {
         fread(&c, 1, 1, fp);
+        if (do_hist) {
+          c = opt_histogram[c];
+        }
         if (fp2) {
           fread(&c2, 1, 1, fp2);
         } else {
@@ -236,10 +258,11 @@ display:
       }
     }
     if (e.type == SDL_KEYUP) {
-      if (e.key.keysym.sym == SDLK_ESCAPE) {
-        exit(0);
+      switch (e.key.keysym.sym) {
+        case SDLK_ESCAPE: exit(0);
+        case 'h': do_hist = !do_hist; break;
+        case 'd': blink = !blink; break;
       }
-      blink = !blink;
       goto display;
     }
     if (e.type == SDL_MOUSEMOTION) {

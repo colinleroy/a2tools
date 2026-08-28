@@ -244,7 +244,14 @@ try_again:
   /* Append histogram */
   lseek(ofd, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
 #ifndef __CC65__
-  write(ofd, histogram, sizeof(uint16)*256);
+  for (int i = 0; i < 256; i++) {
+    uint8 c = histogram[i] & 0xFF;
+    write(ofd, &c, 1);
+  }
+  for (int i = 256; i < 512; i++) {
+    uint8 c = (histogram[i-256] >> 8) & 0xFF;
+    write(ofd, &c, 1);
+  }
 #else
   // histogram_low and high must be contiguous
   write(ofd, histogram_low, sizeof(uint8)*512);
