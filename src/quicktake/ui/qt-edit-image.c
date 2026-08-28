@@ -427,9 +427,11 @@ start_edit:
       } else {
         /* will be divided by 2 if 320x240, we want it
          * to start on a band boundary */
-        uint8 move_offset;
+        uint8 move_offset_x, move_offset_y;
 crop_again:
-        move_offset = src_width == 640 ? BAND_HEIGHT : BAND_HEIGHT*2;
+        move_offset_x = BAND_HEIGHT;
+        move_offset_y = src_width == 640 ? BAND_HEIGHT*2 : BAND_HEIGHT*4;
+
         clrscr();
         if (src_width == 640) {
           cputs("+: Zoom in; -: Zoom out; ");
@@ -478,27 +480,27 @@ zoom_level_2:
               goto zoom_level_1;
             break;
           case CH_CURS_RIGHT:
-            if (crop_end_x + move_offset <= 640) {
-              crop_start_x += move_offset;
-              crop_end_x += move_offset;
+            if (crop_end_x + move_offset_x <= 640) {
+              crop_start_x += move_offset_x;
+              crop_end_x += move_offset_x;
             }
             break;
           case CH_CURS_LEFT:
             if (crop_start_x > 0) {
-              crop_start_x -= move_offset;
-              crop_end_x -= move_offset;
+              crop_start_x -= move_offset_x;
+              crop_end_x -= move_offset_x;
             }
             break;
           case CH_CURS_DOWN:
-            if (crop_end_y + move_offset <= 480) {
-              crop_start_y += move_offset;
-              crop_end_y += move_offset;
+            if (crop_end_y + move_offset_y <= 480) {
+              crop_start_y += move_offset_y;
+              crop_end_y += move_offset_y;
             }
             break;
           case CH_CURS_UP:
             if (crop_start_y > 0) {
-              crop_start_y -= move_offset;
-              crop_end_y -= move_offset;
+              crop_start_y -= move_offset_y;
+              crop_end_y -= move_offset_y;
             }
             break;
           default:
