@@ -93,6 +93,12 @@ uint8 can_get_flash[] = {
   1,  /* DX-8 */
 };
 
+uint8 can_get_id[] = {
+  0,  /* QT200 */
+  0,  /* DS-7 */
+  1,  /* DX-8 */
+};
+
 uint8 fuji_model;
 
 #define NUM_PIC_IDX 4
@@ -152,7 +158,10 @@ again:
 
   fuji_model = FUJI_UNKNOWN;
 #ifdef __CC65__
-  fuji_callbacks[CAM_FEATURES] &= ~(CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES|CAM_CAN_GET_THUMBNAIL);
+  fuji_callbacks[CAM_FEATURES] &= ~(CAM_SET_CAMERA_NAME|
+                                    CAM_CAN_TAKE_PICTURE|
+                                    CAM_CAN_DELETE_PICTURES|
+                                    CAM_CAN_GET_THUMBNAIL);
 #endif
 
   if (fuji_send_ping(SHORT_WAIT) == 0) {
@@ -165,7 +174,9 @@ again:
         available_features = CAM_CAN_GET_THUMBNAIL;
         break;
       case FUJI_DX8:
-        available_features = CAM_CAN_TAKE_PICTURE|CAM_CAN_DELETE_PICTURES;
+        available_features = CAM_SET_CAMERA_NAME|
+                             CAM_CAN_TAKE_PICTURE|
+                             CAM_CAN_DELETE_PICTURES;
         break;
     }
 
@@ -326,6 +337,13 @@ static uint8 fuji_stop(void) {
   return fuji_set_speed(SER_BAUD_9600);
 }
 
+static void trim_spaces(char *str) {
+  int8 len = strlen(str) - 1;
+  while (len >= 0 && str[len] == ' ') {
+    str[len--] = '\0';
+  }
+}
+
 /* Get information from the camera */
 static uint8 fuji_get_information(camera_info *info) {
   char cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
@@ -346,9 +364,8 @@ static uint8 fuji_get_information(camera_info *info) {
   }
   PC_DEBUG_BUFFER("cmd", buffer, response_len);
   buffer[response_len] = '\0';
-
-  strncpy(info->name, (char *)buffer + 6, response_len - 4);
-  info->name[response_len - 5] = '\0';
+  trim_spaces(buffer+6);
+  strcpy(info->name, (char *)(buffer + 6));
 
   PC_DEBUG_PRINTF("Camera is %s\n", info->name);
   if (!strcmp(info->name, "QT-200")) {
@@ -366,6 +383,16 @@ static uint8 fuji_get_information(camera_info *info) {
     }
     info->flash_mode = buffer[0];
     PC_DEBUG_PRINTF("Flash mode: %d\n", info->flash_mode);
+  }
+  
+  if (can_get_id[fuji_model]) {
+    cmd[1] = FUJI_CMD_GET_CAM_ID;
+    if (send_command(cmd, sizeof cmd, 1) != 0) {
+      return -1;
+    }
+    buffer[response_len] = '\0';
+    trim_spaces(buffer);
+    strcpy(info->name, (char *)(buffer));
   }
 
   info->left_pics     = 0;
@@ -500,11 +527,20 @@ static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   return fuji_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
 
-#pragma warn(unused-param, push, off)
 static uint8 fuji_set_camera_name(const char *name) {
-  return -1;
+  uint8 cmd[14] = {0}, len;
+  len = strlen(name);
+
+  if (len > 10) {
+    len = 10;
+  }
+  cmd[1] = FUJI_CMD_SET_CAM_ID;
+  cmd[2] = len;
+  memcpy(cmd+4, name, len);
+  return send_command(cmd, sizeof cmd - (10 - len), 1);
 }
 
+#pragma warn(unused-param, push, off)
 static uint8 fuji_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   return -1;
 }
