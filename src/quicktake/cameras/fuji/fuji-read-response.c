@@ -29,13 +29,24 @@ static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
 }
 #endif
 
+extern uint8 ack_timeout;
+
 /* Read a reply from the camera */
 uint8 fuji_read_response(void) {
   uint8 eot_buf[3];
   uint16 i, j;
 
+  /* Reset timeout if needed */
+  if (!ack_timeout) {
+    ack_timeout++;
+  }
+again:
   /* Read the header */
   if (simple_serial_read_no_irq((char *)buffer, 6) == EOF) {
+    if (ack_timeout--) {
+      goto again;
+    }
+
     if (do_debug) {
       cputs("Timeout reading response.\r\n");
     }

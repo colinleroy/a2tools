@@ -88,12 +88,7 @@ void *fuji_callbacks[] = {
 #define FUJI_DX8      0x02
 #define FUJI_UNKNOWN  0xFF
 
-uint8 can_get_flash[] = {
-  0,  /* QT200 */
-  0,  /* DS-7 */
-  1,  /* DX-8 */
-};
-
+uint8 ack_timeout;
 uint8 fuji_model;
 
 #define STD_WAIT 20
@@ -185,13 +180,12 @@ static void fuji_prepare_packet(uint8 command_code) {
 static uint8 send_command(uint8 send_ack) {
   uint8 header[] = {ESC, STX}, footer[] = {ESC, ETX};
   uint8 i, len, checksum = 0x00;
-  uint8 ack_timeout;
 
   len = command_packet[FUJI_LEN_IDX] + 4;
 
   switch(command_packet[FUJI_CMD_IDX]) {
     case FUJI_CMD_DELETE_PIC: ack_timeout = 20; break;
-    default:                  ack_timeout = 2;
+    default:                  ack_timeout = 1;
   }
 
   PC_DEBUG_PRINTF("Sending data: ");

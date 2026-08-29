@@ -1,7 +1,7 @@
         .export             _fuji_read_response
         .import             _response_len, _response_continues
 
-        .import             _buffer
+        .import             _buffer, _ack_timeout
         .import             _simple_serial_read_no_irq
         .import             _serial_read_byte_no_irq
 
@@ -12,6 +12,11 @@
         .include            "fuji.inc"
 
 .proc _fuji_read_response
+        lda       _ack_timeout; Set minimal timeout if needed
+        bne       try_read
+        inc       _ack_timeout
+
+try_read:
         lda       #<_buffer   ; read header
         ldx       #>_buffer
         jsr       pushax
@@ -20,13 +25,20 @@
 
         jsr       _simple_serial_read_no_irq
         cmp       #<EOF
-        bne       :+
+        bne       got_header
+
+        lda       _ack_timeout; Check again if needed
+        beq       err_out
+        dec       _ack_timeout
+        jmp       try_read
+
 err_out:
         lda       #<EOF
         tax
         rts
 
-:       lda       _buffer+0   ; does the response look good?
+got_header:
+        lda       _buffer+0   ; does the response look good?
         cmp       #_ESC
         bne       err_out
         lda       _buffer+1
