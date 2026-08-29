@@ -8,6 +8,11 @@
 #include "../qt-serial.h"
 #include "../../ui/ui.h"
 
+#pragma code-name(push, "DC50")
+#pragma rodata-name(push, "DC50")
+#pragma data-name(push, "DC50")
+#pragma bss-name(push, "DC50")
+
 extern uint16 response_len;
 extern uint8 response_continues;
 

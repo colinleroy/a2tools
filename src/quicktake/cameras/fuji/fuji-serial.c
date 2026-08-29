@@ -19,6 +19,7 @@
 #pragma code-name(push, "FUJI")
 #pragma rodata-name(push, "FUJI")
 #pragma data-name(push, "FUJI")
+#pragma bss-name(push, "FUJI")
 
 /* Camera features */
 #define fuji_features 0b0000000010100000

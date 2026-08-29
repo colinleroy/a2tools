@@ -18,6 +18,7 @@
 #pragma code-name(push, "SIERRA")
 #pragma rodata-name(push, "SIERRA")
 #pragma data-name(push, "SIERRA")
+#pragma bss-name(push, "SIERRA")
 
 /* Camera features */
 #define sierra_features 0b0000000011011111

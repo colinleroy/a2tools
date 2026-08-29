@@ -20,6 +20,7 @@
 #pragma code-name(push, "DC50")
 #pragma rodata-name(push, "DC50")
 #pragma data-name(push, "DC50")
+#pragma bss-name(push, "DC50")
 
 /* Camera features */
 #define dc50_features 0b0000000011111111

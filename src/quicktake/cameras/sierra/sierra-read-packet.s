@@ -127,5 +127,4 @@ read_more:
         rts
 .endproc
 
-        .segment "BSS"
-tries:          .res 1
+tries:          .byte 0

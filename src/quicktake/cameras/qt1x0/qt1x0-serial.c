@@ -22,6 +22,7 @@
 #pragma code-name(push, "QT1X0")
 #pragma rodata-name(push, "QT1X0")
 #pragma data-name(push, "QT1X0")
+#pragma bss-name(push, "QT1X0")
 
 /* Camera features */
 #define qt1x0_features 0b0000000011111111
