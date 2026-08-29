@@ -31,6 +31,7 @@ extern uint8 do_debug;
 #define FUJI_CMD_TAKE_PIC      0x27
 #define FUJI_CMD_GET_FLASH     0x30
 #define FUJI_CMD_SET_FLASH     0x32
+#define FUJI_CMD_CHARGE_FLASH  0x34
 #define FUJI_CMD_GET_CAM_ID    0x80
 #define FUJI_CMD_SET_CAM_ID    0x82
 #define FUJI_CMD_GET_DATE      0x84

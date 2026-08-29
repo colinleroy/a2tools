@@ -96,8 +96,6 @@ uint8 can_get_flash[] = {
 
 uint8 fuji_model;
 
-#define NUM_PIC_IDX 4
-
 #define STD_WAIT 20
 #define SHORT_WAIT 5
 
@@ -171,38 +169,54 @@ static void end_session(void) {
   simple_serial_putc(EOT);
 }
 
+static char command_packet[32];
+
+#define FUJI_CMD_IDX 1
+#define FUJI_LEN_IDX 2
+#define FUJI_ARG_IDX 4
+
+static void fuji_prepare_packet(uint8 command_code) {
+  bzero(command_packet, sizeof command_packet);
+  command_packet[FUJI_CMD_IDX] = command_code;
+}
+#define fuji_packet_set_numargs(n) do { command_packet[FUJI_LEN_IDX] = n; } while (0)
+
 /* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 send_ack) {
-  uint8 header[] = {ESC, STX};
-  uint8 cmd_buffer[32];
-  uint8 i, checksum = 0x00;
+static uint8 send_command(uint8 send_ack) {
+  uint8 header[] = {ESC, STX}, footer[] = {ESC, ETX};
+  uint8 i, len, checksum = 0x00;
   uint8 ack_timeout;
 
-  switch(cmd[1]) {
+  len = command_packet[FUJI_LEN_IDX] + 4;
+
+  switch(command_packet[FUJI_CMD_IDX]) {
     case FUJI_CMD_DELETE_PIC: ack_timeout = 20; break;
     default:                  ack_timeout = 2;
   }
-  memcpy(cmd_buffer, cmd, len);
 
-  for (i = 0; i < len; i++) {
-    checksum ^= cmd_buffer[i];
-    if (cmd_buffer[i] == ESC) {
-      memmove (cmd_buffer + i + 1, cmd_buffer + i, len - i);
-      cmd_buffer[i] = ESC;
-      i++;
-      len++;
-    }
-  }
-  cmd_buffer[len++] = ESC;
-  cmd_buffer[len++] = ETX;
-  checksum ^= ETX;
-  cmd_buffer[len++] = checksum;
-
-  PC_DEBUG_BUFFER("Sent header: ", header, sizeof header);
-  PC_DEBUG_BUFFER("Sent data: ", cmd_buffer, len);
+  PC_DEBUG_PRINTF("Sending data: ");
+  PC_DEBUG_PRINTF("%02X ", header[0]);
+  PC_DEBUG_PRINTF("%02X | ", header[1]);
 
   simple_serial_write((char *)header, sizeof header);
-  simple_serial_write((char *)cmd_buffer, len);
+
+  for (i = 0; i < len; i++) {
+    uint8 c = command_packet[i];
+    checksum ^= c;
+    simple_serial_putc(c);
+    PC_DEBUG_PRINTF("%02X ", c);
+    if (c == ESC) {
+      /* Escape escapes */
+      simple_serial_putc(c);
+      PC_DEBUG_PRINTF("%02X ", c);
+    }
+  }
+  checksum ^= ETX;
+  simple_serial_write((char *)footer, sizeof footer);
+  PC_DEBUG_PRINTF("| %02X ", footer[0]);
+  PC_DEBUG_PRINTF("%02X | ", footer[1]);
+  simple_serial_putc(checksum);
+  PC_DEBUG_PRINTF("%02X \n", checksum);
 
   response_len = 0;
   while (ack_timeout--) {
@@ -249,15 +263,6 @@ static uint8 fuji_send_ping(uint8 wait) {
   return 0;
 }
 
-static char command_packet[32];
-
-static void fuji_prepare_packet(uint8 command_code) {
-  bzero(command_packet, sizeof command_packet);
-  command_packet[1] = command_code;
-}
-#define fuji_packet_set_numargs(n) do { command_packet[2] = n; } while (0)
-#define FUJI_ARG_IDX 4
-
 /* Send the speed upgrade command */
 static uint8 fuji_set_speed(CamSpeed speed) {
   fuji_prepare_packet(FUJI_CMD_SPEED);
@@ -288,7 +293,7 @@ downgrade:
       break;
   }
 
-  if (send_command(command_packet, 5, 1) != 0) {
+  if (send_command(1) != 0) {
     cputs("Speed set command failed.\r\n");
     return -1;
   }
@@ -342,14 +347,14 @@ static uint8 fuji_get_information(camera_info *info) {
   fuji_start();
 
   fuji_prepare_packet(FUJI_CMD_PIC_COUNT);
-  if (send_command(command_packet, 4, 1) != 0) {
+  if (send_command(1) != 0) {
     return -1;
   }
   info->num_pics = buffer[0];
   PC_DEBUG_PRINTF("Num pics %d\n", info->num_pics);
 
   fuji_prepare_packet(FUJI_CMD_GET_INFO);
-  if (send_command(command_packet, 4, 1) != 0) {
+  if (send_command(1) != 0) {
     PC_DEBUG_PRINTF("Error getting info\n");
     fuji_stop();
     return -1;
@@ -398,7 +403,7 @@ static uint8 fuji_get_information(camera_info *info) {
   if (available_features & CAM_CAN_SET_FLASH) {
 
     fuji_prepare_packet(FUJI_CMD_GET_FLASH);
-    if (send_command(command_packet, 4, 1) != 0) {
+    if (send_command(1) != 0) {
       return -1;
     }
     info->flash_mode = buffer[0];
@@ -407,7 +412,7 @@ static uint8 fuji_get_information(camera_info *info) {
   
   if (available_features & CAM_CAN_SET_CAMERA_NAME) {
     fuji_prepare_packet(FUJI_CMD_GET_CAM_ID);
-    if (send_command(command_packet, 4, 1) != 0) {
+    if (send_command(1) != 0) {
       return -1;
     }
     buffer[response_len] = '\0';
@@ -417,7 +422,7 @@ static uint8 fuji_get_information(camera_info *info) {
 
   if (available_features & CAM_CAN_SET_CAMERA_TIME) {
     fuji_prepare_packet(FUJI_CMD_GET_DATE);
-    if (send_command(command_packet, 4, 1) != 0) {
+    if (send_command(1) != 0) {
       return -1;
     }
     buffer[12] = '\0';
@@ -447,7 +452,7 @@ static void fuji_get_filename(uint8 n_pic, char *dirname, char *filename) {
   fuji_packet_set_numargs(2);
   command_packet[FUJI_ARG_IDX] = n_pic;
 
-  if (send_command(command_packet, 6, 1) != 0) {
+  if (send_command(1) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
@@ -476,7 +481,7 @@ static uint8 fuji_get_image_data(uint8 n_pic, int fd, off_t picture_size, uint8 
   progress_bar(2, wherey(), scrw - 2, 0, num_blocks);
 
   PC_DEBUG_BUFFER("cmd", command_packet, 6);
-  if (send_command(command_packet, 6, 0) != 0) {
+  if (send_command(0) != 0) {
     errno = EIO;
     return -1;
   }
@@ -525,7 +530,7 @@ static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail) {
   fuji_packet_set_numargs(2);
   command_packet[FUJI_ARG_IDX] = n_pic;
 
-  if (send_command(command_packet, 6, 1) != 0) {
+  if (send_command(1) != 0) {
     fuji_stop();
     errno = EIO;
     return -1;
@@ -560,8 +565,18 @@ static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   return fuji_get_image_data(n_pic, fd, 60*175, FUJI_CMD_PIC_GET_THUMB);
 }
 
-static uint8 fuji_set_camera_name(const char *name) {
+static uint8 fuji_exec_simple_command(void) {
   uint8 r = 0;
+
+  if (send_command(1) != 0) {
+    r = -1;
+  }
+
+  fuji_stop();
+  return r;
+}
+
+static uint8 fuji_set_camera_name(const char *name) {
   uint8 len = strlen(name);
 
   if (len > 10) {
@@ -572,32 +587,20 @@ static uint8 fuji_set_camera_name(const char *name) {
 
   fuji_prepare_packet(FUJI_CMD_SET_CAM_ID);
   fuji_packet_set_numargs(len);
-  memcpy(command_packet+FUJI_ARG_IDX, name, len);
+  memcpy(command_packet + FUJI_ARG_IDX, name, len);
 
-  if (send_command(command_packet, 4 + len, 1) != 0) {
-    r = -1;
-  }
-
-  fuji_stop();
-  return r;
+  return fuji_exec_simple_command();
 }
 
 #pragma warn(unused-param, push, off)
 static uint8 fuji_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  uint8 r = 0;
-
   fuji_start();
 
   fuji_prepare_packet(FUJI_CMD_SET_DATE);
   fuji_packet_set_numargs(14);
-  sprintf(command_packet + 4, "%04d%02d%02d%02d%02d00",
+  sprintf(command_packet + FUJI_ARG_IDX, "%04d%02d%02d%02d%02d00",
           year, month, day, hour, minute);
-  if (send_command(command_packet, 18, 1) != 0) {
-    r = -1;
-  }
-
-  fuji_stop();
-  return r;
+  return fuji_exec_simple_command();
 }
 
 static uint8 fuji_set_quality(uint8 quality) {
@@ -605,35 +608,21 @@ static uint8 fuji_set_quality(uint8 quality) {
 }
 
 static uint8 fuji_set_flash(uint8 mode) {
-  uint8 r = 0;
-
   fuji_start();
 
   fuji_prepare_packet(FUJI_CMD_SET_FLASH);
   fuji_packet_set_numargs(1);
   command_packet[FUJI_ARG_IDX] = mode % 4;
+  return fuji_exec_simple_command();
 
-  if (send_command(command_packet, 5, 1) != 0) {
-    r = -1;
-  }
-  fuji_stop();
-  return r;
 }
 
 static uint8 fuji_take_picture(void) {
-  uint8 r = 0;
-
   fuji_start();
 
   fuji_prepare_packet(FUJI_CMD_TAKE_PIC);
   fuji_packet_set_numargs(0);
-
-  if (send_command(command_packet, 4, 1) != 0) {
-    r = -1;
-  }
-
-  fuji_stop();
-  return r;
+  return fuji_exec_simple_command();
 }
 
 static uint8 fuji_delete_pictures(void) {
@@ -647,7 +636,7 @@ static uint8 fuji_delete_pictures(void) {
   for (command_packet[FUJI_ARG_IDX] = cam_info.num_pics; 
        command_packet[FUJI_ARG_IDX] > 0;
        command_packet[FUJI_ARG_IDX]--) {
-    if (send_command(command_packet, 6, 1) != 0) {
+    if (send_command(1) != 0) {
       r = -1;
       break;
     }
