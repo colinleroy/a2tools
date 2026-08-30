@@ -488,9 +488,6 @@ uint8 decodeNextMCU(void)
   /* If H2V2, go back 4 lines and 4 pixels right */
   if (gScanType == PJPG_YH2V2) {
     uint16 page_shift = (RAW_WIDTH*4);
-    if (outputIdx == 0) {
-      page_shift+=512;
-    }
     printf("setting output0 back to %p from %p (Ofsset %d, idx %d)\n",
            output0-page_shift, output0,
            (output0-page_shift)-raw_image,

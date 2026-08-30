@@ -1178,7 +1178,7 @@ nextMcuBlock:
         lda     _output0+1    ; In which case, shift to next 4 lines, 8 pixels left to do the two blocks at Y=1
         adc     #7            ; (Carry set so eq -8 )
                               ; So add 8 pages as each line is 2 pages
-        ldy     _outputIdx    ; One less when Idx is 0
+        ldy     _outputIdx    ; One less when Idx is 0 as we just incremented.
         bne     :+
         sbc     #0            ; Carry clear, so -1
         clc
@@ -1348,11 +1348,7 @@ startUselessBlocks:
 
         lda     _output0+1    ; In which case, shift back 4 lines for next MCU
         sbc     #8            ; So remove 8 pages
-        ldy     _outputIdx
-        bne     :+
-        sbc     #2            ; Carry still set
-
-:       sta     _output0+1
+        sta     _output0+1
         adc     #1            ; Carry still set
         sta     _output1+1
         adc     #2
