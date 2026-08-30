@@ -300,14 +300,10 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
   }
 
   PC_DEBUG("write speed", str_speed, sizeof str_speed);
-  simple_serial_write(str_speed, sizeof str_speed);
-
-  /* get ack */
-  if (get_ack(5) != 0) {
+  if (send_command(str_speed, sizeof str_speed, 0, 1, 5) != 0) {
     cputs("Speed set command failed.\r\n");
     return -1;
   }
-  send_ack();
 
   platform_msleep(200);
   simple_serial_set_speed(speed);
