@@ -276,15 +276,11 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
     close(port);
     exit(1);
   }
+
+  tty.c_cflag = (CS8|CREAD|CLOCAL);
+
   cfsetispeed(&tty, baudrate);
   cfsetospeed(&tty, baudrate);
-
-  bps = baudrate;
-
-  tty.c_cflag &= ~PARENB;
-  tty.c_cflag &= ~CSTOPB;
-  tty.c_cflag |= CS8;
-  tty.c_cflag |= CREAD | CLOCAL;
 
   if (hw_flow_control)
     tty.c_cflag |= CRTSCTS;
@@ -308,6 +304,8 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
     printf("tcgetattr error: %s\n", strerror(errno));
     exit(1);
   }
+
+  bps = baudrate;
 }
 
 int simple_serial_open_file(char *tty_path, int tty_speed) {

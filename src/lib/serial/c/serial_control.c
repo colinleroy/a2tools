@@ -68,7 +68,7 @@ void simple_serial_dtr_onoff(unsigned char on) {
   }
 }
 
-
+/* Fixme only handles none/even on PC */
 void simple_serial_set_parity(unsigned int p) {
   struct termios tty;
   if (ttyfd < 0) {
@@ -82,7 +82,7 @@ void simple_serial_set_parity(unsigned int p) {
   tty.c_cflag &= ~(PARENB|PARODD);
   if (p != 0) {
     // tty.c_iflag |= INPCK;
-    tty.c_cflag |= p;
+    tty.c_cflag |= PARENB;
   }
 
   if (tcsetattr(ttyfd, TCSANOW, &tty) != 0) {
