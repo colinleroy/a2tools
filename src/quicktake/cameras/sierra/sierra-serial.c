@@ -36,7 +36,7 @@ static uint8 sierra_wakeup(CamSpeed speed);
 static uint8 sierra_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
-static uint8 sierra_get_information(camera_info *info);
+static uint8 sierra_get_information(void);
 
 /* Camera pictures functions */
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail);
@@ -99,12 +99,7 @@ static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
 }
 #endif
 
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
 extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 uint16 sierra_response_len;
 uint8 sierra_response_continues;
@@ -405,7 +400,7 @@ static uint8 sierra_set_speed(CamSpeed speed) {
 #pragma warn(unused-param, pop)
 
 /* Get information from the camera */
-static uint8 sierra_get_information(camera_info *info) {
+static uint8 sierra_get_information(void) {
   time_t cam_date;
   struct tm *tm_time;
 
@@ -465,7 +460,6 @@ static uint8 sierra_get_information(camera_info *info) {
   cam_info.date.hour   = tm_time->tm_hour;
   cam_info.date.minute = tm_time->tm_min;
 
-  memcpy(info, &cam_info, sizeof(cam_info));
   return 0;
 out_err:
   return -1;

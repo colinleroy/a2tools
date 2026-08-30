@@ -38,7 +38,7 @@ static uint8 dc50_wakeup(CamSpeed speed);
 static uint8 dc50_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
-static uint8 dc50_get_information(camera_info *info);
+static uint8 dc50_get_information(void);
 
 /* Camera pictures functions */
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail);
@@ -106,12 +106,7 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 }
 #endif
 
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
 extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a DC50 camera
@@ -250,7 +245,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
   simple_serial_set_speed(speed);
 
   /* Verify communication by getting info from the camera */
-  if (dc50_get_information(&cam_info) == 0) {
+  if (dc50_get_information() == 0) {
     my_speed = speed;
     return 0;
   }
@@ -286,7 +281,7 @@ static uint8 pics_left_on_card[] = {59, 61, 63};
 static uint8 pics_left_on_cam[] = {43, 45, 47};
 
 /* Get information from the camera */
-static uint8 dc50_get_information(camera_info *info) {
+static uint8 dc50_get_information(void) {
   time_t int_time;
 
   init_packet(CMD_GET_STATUS);
@@ -338,7 +333,6 @@ static uint8 dc50_get_information(camera_info *info) {
 #endif
 
   dc50_time_to_camera_date(int_time, &(cam_info.date));
-  memcpy(info, &cam_info, sizeof(cam_info));
   return 0;
 }
 

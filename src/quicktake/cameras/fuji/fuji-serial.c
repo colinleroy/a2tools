@@ -37,7 +37,7 @@ static uint8 fuji_wakeup(CamSpeed speed);
 static uint8 fuji_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
-static uint8 fuji_get_information(camera_info *info);
+static uint8 fuji_get_information(void);
 
 /* Camera pictures functions */
 static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail);
@@ -118,12 +118,7 @@ uint8 response_continues;
 static uint8 fuji_send_ping(uint8 wait);
 static void end_session(void);
 
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
 extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Fuji camera
@@ -147,7 +142,7 @@ again:
   if (fuji_send_ping(SHORT_WAIT) == 0) {
     cputs("Done.");
     PC_DEBUG_PRINTF("Getting information\n");
-    fuji_get_information(&cam_info);
+    fuji_get_information();
     return QT_MODEL_FUJI;
   } else {
     if (--tries) {
@@ -336,7 +331,7 @@ static void trim_spaces(char *str) {
 }
 
 /* Get information from the camera */
-static uint8 fuji_get_information(camera_info *info) {
+static uint8 fuji_get_information(void) {
   uint16 available_features = 0;
   fuji_start();
 
@@ -344,8 +339,8 @@ static uint8 fuji_get_information(camera_info *info) {
   if (send_command(1) != 0) {
     return -1;
   }
-  info->num_pics = buffer[0];
-  PC_DEBUG_PRINTF("Num pics %d\n", info->num_pics);
+  cam_info.num_pics = buffer[0];
+  PC_DEBUG_PRINTF("Num pics %d\n", cam_info.num_pics);
 
   fuji_prepare_packet(FUJI_CMD_GET_INFO);
   if (send_command(1) != 0) {
@@ -356,15 +351,15 @@ static uint8 fuji_get_information(camera_info *info) {
   PC_DEBUG_BUFFER("cmd", buffer, response_len);
   buffer[response_len] = '\0';
   trim_spaces((char *)buffer+6);
-  strcpy(info->name, (char *)(buffer + 6));
+  strcpy(cam_info.name, (char *)(buffer + 6));
 
   fuji_model = FUJI_UNKNOWN;
-  PC_DEBUG_PRINTF("Camera is %s\n", info->name);
-  if (!strcmp(info->name, "QT-200")) {
+  PC_DEBUG_PRINTF("Camera is %s\n", cam_info.name);
+  if (!strcmp(cam_info.name, "QT-200")) {
     fuji_model = FUJI_QT200;
-  } else if (!strncmp(info->name, "DS-7", 4)) {
+  } else if (!strncmp(cam_info.name, "DS-7", 4)) {
     fuji_model = FUJI_DS7;
-  } else if (!strncmp(info->name, "DX-8", 4)) {
+  } else if (!strncmp(cam_info.name, "DX-8", 4)) {
     fuji_model = FUJI_DX8;
   }
 
@@ -400,8 +395,8 @@ static uint8 fuji_get_information(camera_info *info) {
     if (send_command(1) != 0) {
       return -1;
     }
-    info->flash_mode = buffer[0];
-    PC_DEBUG_PRINTF("Flash mode: %d\n", info->flash_mode);
+    cam_info.flash_mode = buffer[0];
+    PC_DEBUG_PRINTF("Flash mode: %d\n", cam_info.flash_mode);
   }
   
   if (available_features & CAM_CAN_SET_CAMERA_NAME) {
@@ -410,8 +405,8 @@ static uint8 fuji_get_information(camera_info *info) {
       return -1;
     }
     buffer[response_len] = '\0';
-    trim_spaces(buffer);
-    strcpy(info->name, (char *)(buffer));
+    trim_spaces((char *)buffer);
+    strcpy(cam_info.name, (char *)(buffer));
   }
 
   if (available_features & CAM_CAN_SET_CAMERA_TIME) {
@@ -420,20 +415,20 @@ static uint8 fuji_get_information(camera_info *info) {
       return -1;
     }
     buffer[12] = '\0';
-    info->date.minute = atoi(buffer+10);
+    cam_info.date.minute = atoi((char *)buffer+10);
     buffer[10] = '\0';
-    info->date.hour = atoi(buffer+8);
+    cam_info.date.hour = atoi((char *)buffer+8);
     buffer[8] = '\0';
-    info->date.day = atoi(buffer+6);
+    cam_info.date.day = atoi((char *)buffer+6);
     buffer[6] = '\0';
-    info->date.month = atoi(buffer+4);
+    cam_info.date.month = atoi((char *)buffer+4);
     buffer[4] = '\0';
-    info->date.year = atoi(buffer);
+    cam_info.date.year = atoi((char *)buffer);
   }
 
-  info->left_pics     = 0;
-  info->battery_level = 0;
-  info->charging      = 0;
+  cam_info.left_pics     = 0;
+  cam_info.battery_level = 0;
+  cam_info.charging      = 0;
 
   fuji_stop();
   return 0;

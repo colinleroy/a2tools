@@ -42,7 +42,7 @@ static uint8 qt1x0_set_speed(CamSpeed speed);
 /* Camera settings functions */
 static uint8 qt1x0_set_camera_name(const char *name);
 static uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
-static uint8 qt1x0_get_information(camera_info *info);
+static uint8 qt1x0_get_information(void);
 static uint8 qt1x0_set_quality(uint8 quality);
 static uint8 qt1x0_set_flash(uint8 mode);
 
@@ -586,15 +586,10 @@ static uint8 qt1x0_set_flash(uint8 mode) {
   return send_command(str, sizeof str, 1, 0, 5);
 }
 
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
 extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 /* Get information from the camera */
-static uint8 qt1x0_get_information(camera_info *info) {
+static uint8 qt1x0_get_information(void) {
   static char c;
   #define BATTERY_IDX    0x02 /* ?? 0xA7 = charging, full ; 0x63 = not charging, full */
   #define NUM_PICS_IDX   0x04
@@ -646,7 +641,6 @@ static uint8 qt1x0_get_information(camera_info *info) {
     }
   }
   strcpy(cam_info.name, (char *)(buffer + NAME_IDX));
-  memcpy(info, &cam_info, sizeof(cam_info));
 
   return 0;
 }

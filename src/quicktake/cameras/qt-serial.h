@@ -99,7 +99,7 @@ uint8 cam_wakeup(CamSpeed speed);
 uint8 cam_set_speed(CamSpeed speed);
 uint8 cam_set_camera_name(const char *name);
 uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
-uint8 cam_get_information(camera_info *info);
+uint8 cam_get_information(void);
 uint8 cam_set_quality(uint8 quality);
 uint8 cam_set_flash(uint8 mode);
 uint8 cam_take_picture(void);

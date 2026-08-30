@@ -20,7 +20,7 @@ typedef uint8 (*impl_wakeup_func)(CamSpeed speed);
 typedef uint8 (*impl_set_speed_func)(CamSpeed speed);
 typedef uint8 (*impl_set_camera_name_func)(const char *name);
 typedef uint8 (*impl_set_camera_time_func)(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
-typedef uint8 (*impl_get_information_func)(camera_info *info);
+typedef uint8 (*impl_get_information_func)(void);
 typedef uint8 (*impl_set_quality_func)(uint8 quality);
 typedef uint8 (*impl_set_flash_func)(uint8 mode);
 typedef uint8 (*impl_take_picture_func)(void);
@@ -52,7 +52,7 @@ impl_thumb_load_data_func impl_thumb_load_data;
 impl_get_quality_str_func impl_get_quality_str;
 impl_get_flash_str_func   impl_get_flash_str;
 
-camera_info info;
+camera_info cam_info;
 
 unsigned char buffer[BUFFER_SIZE];
 int scrw, scrh;
@@ -86,7 +86,7 @@ static void list_images(void) {
   uint8 i;
   char filename[64];
 
-  for (i = 1; i <= info.num_pics; i++) {
+  for (i = 1; i <= cam_info.num_pics; i++) {
     cam_get_filename(i, NULL, filename);
     printf("%d: %s\n", i, filename);
   }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 
   printf("Getting information...\n");
 get_info:
-  if (cam_get_information(&info) != 0) {
+  if (cam_get_information() != 0) {
     printf("Failure.\n");
   }
   printf("  Pictures taken: %d\n"
@@ -145,15 +145,15 @@ get_info:
          "  Is charging:    %d\n"
          "  Name:           '%s'\n"
          "  Date:           %02d/%02d/%04d %02d:%02d\n",
-         info.num_pics,
-         info.left_pics,
-         info.quality_mode, cam_get_quality_str(info.quality_mode),
-         info.flash_mode, cam_get_flash_str(info.flash_mode),
-         info.battery_level,
-         info.charging,
-         info.name,
-         info.date.day, info.date.month, info.date.year,
-         info.date.hour, info.date.minute);
+         cam_info.num_pics,
+         cam_info.left_pics,
+         cam_info.quality_mode, cam_get_quality_str(cam_info.quality_mode),
+         cam_info.flash_mode, cam_get_flash_str(cam_info.flash_mode),
+         cam_info.battery_level,
+         cam_info.charging,
+         cam_info.name,
+         cam_info.date.day, cam_info.date.month, cam_info.date.year,
+         cam_info.date.hour, cam_info.date.minute);
 
   if (argc > 3) {
     /* handle command */
@@ -243,8 +243,8 @@ uint8 cam_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 
   return impl_set_camera_time(day, month, year, hour, minute, second);
 }
 
-uint8 cam_get_information(camera_info *info) {
-  return impl_get_information(info);
+uint8 cam_get_information(void) {
+  return impl_get_information();
 }
 
 uint8 cam_set_quality(uint8 quality) {

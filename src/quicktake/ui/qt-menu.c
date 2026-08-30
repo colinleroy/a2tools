@@ -728,7 +728,7 @@ menu:
 
   if (camera_connected) {
     cputs("Getting information... ");
-    if (cam_get_information(&cam_info) != 0) {
+    if (cam_get_information() != 0) {
       camera_connected = 0;
     }
   }

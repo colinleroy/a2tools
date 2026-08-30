@@ -35,7 +35,7 @@ static uint8 sierra_wakeup(CamSpeed speed);
 static uint8 sierra_set_speed(CamSpeed speed);
 
 /* Camera settings functions */
-static uint8 sierra_get_information(camera_info *info);
+static uint8 sierra_get_information(void);
 
 /* Camera pictures functions */
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail);
@@ -95,12 +95,7 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 }
 #endif
 
-#ifdef __CC65__
-/* Use UI's info struct to spare memory */
 extern camera_info cam_info;
-#else
-static camera_info cam_info;
-#endif
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Sierra camera
@@ -127,7 +122,7 @@ static uint8 sierra_set_speed(CamSpeed speed) {
 }
 
 /* Get information from the camera */
-static uint8 sierra_get_information(camera_info *info) {
+static uint8 sierra_get_information(void) {
   return -1;
 }
 
