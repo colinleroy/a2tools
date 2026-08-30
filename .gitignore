@@ -46,3 +46,4 @@ src/kept-around
 *.gz
 magic.mgc
 socket.localhost*
+hiscore
