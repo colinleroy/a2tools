@@ -590,6 +590,13 @@ static uint8 qt1x0_set_flash(uint8 mode) {
   return send_command(str, sizeof str, 1, 0, 5);
 }
 
+#ifdef __CC65__
+/* Use UI's info struct to spare memory */
+extern camera_info cam_info;
+#else
+static camera_info cam_info;
+#endif
+
 /* Get information from the camera */
 static uint8 qt1x0_get_information(camera_info *info) {
   static char c;
@@ -617,24 +624,24 @@ static uint8 qt1x0_get_information(camera_info *info) {
   }
   PC_DEBUG("read information", buffer, 128);
 
-  info->num_pics     = buffer[NUM_PICS_IDX];
-  info->left_pics    = buffer[LEFT_PICS_IDX];
-  info->quality_mode = buffer[QUAL_IDX] == QUALITY_HIGH ? 0:1;
-  info->flash_mode   = buffer[FLASH_IDX];
+  cam_info.num_pics     = buffer[NUM_PICS_IDX];
+  cam_info.left_pics    = buffer[LEFT_PICS_IDX];
+  cam_info.quality_mode = buffer[QUAL_IDX] == QUALITY_HIGH ? 0:1;
+  cam_info.flash_mode   = buffer[FLASH_IDX];
 
   if (buffer[BATTERY_IDX] > 100) {
-    info->battery_level = buffer[BATTERY_IDX] / 2;
-    info->charging = 1;
+    cam_info.battery_level = buffer[BATTERY_IDX] / 2;
+    cam_info.charging = 1;
   } else {
-    info->battery_level = buffer[BATTERY_IDX];
-    info->charging = 0;
+    cam_info.battery_level = buffer[BATTERY_IDX];
+    cam_info.charging = 0;
   }
 
-  info->date.day    = buffer[DAY_IDX];
-  info->date.month  = buffer[MONTH_IDX];
-  info->date.year   = buffer[YEAR_IDX] + 2000; /* Year 2256 bug, here we come */
-  info->date.hour   = buffer[HOUR_IDX];
-  info->date.minute = buffer[MIN_IDX];
+  cam_info.date.day    = buffer[DAY_IDX];
+  cam_info.date.month  = buffer[MONTH_IDX];
+  cam_info.date.year   = buffer[YEAR_IDX] + 2000; /* Year 2256 bug, here we come */
+  cam_info.date.hour   = buffer[HOUR_IDX];
+  cam_info.date.minute = buffer[MIN_IDX];
 
   for (c = 31; c ; c--) {
     if ((buffer+NAME_IDX)[c] != 0x20) {
@@ -642,7 +649,9 @@ static uint8 qt1x0_get_information(camera_info *info) {
       break;
     }
   }
-  strcpy(info->name, (char *)(buffer + NAME_IDX));
+  strcpy(cam_info.name, (char *)(buffer + NAME_IDX));
+  memcpy(info, &cam_info, sizeof(cam_info));
+
   return 0;
 }
 
