@@ -149,14 +149,18 @@ static uint8 card_present;
 static uint8 wait_command_completion(void) {
   char c;
   do {
+    /* Wait for a character... */
     while (simple_serial_read_no_irq((char *)&c, 1) == EOF);
     PC_DEBUG("completion", &c, 1);
+    /* Is camera still busy? If so wait */
     if (c == REP_BUSY) {
       continue;
     }
+    /* We're done! */
     if (c == REP_COMPLETE) {
       return 0;
     }
+    /* Anything else is an error. */
     return -1;
   } while (1);
 }
@@ -183,9 +187,8 @@ static uint8 dc50_send_command(void) {
   return 0;
 }
 
-/* Help: send a command and read the reply. Reserved for use with
- * commands that require a single packet response */
-static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 response_len) {
+/* Help: send a command and read the reply. */
+static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 block_len) {
   char *dest = (char *)buffer;
   uint8 i = num_blocks;
 
@@ -193,9 +196,9 @@ static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 response_len) 
     return -1;
   }
   while (i--) {
-    if (dc50_read_response(dest, response_len) == 0) {
-      dest += response_len;
-      if (response_len) {
+    if (dc50_read_response(dest, block_len) == 0) {
+      dest += block_len;
+      if (block_len) {
         /* FIXME: verify the checksum */
         simple_serial_putc(REP_CORRECT);
       }
@@ -203,7 +206,7 @@ static uint8 dc50_send_and_read_response(uint8 num_blocks, uint16 response_len) 
       return -1;
     }
   }
-  if (response_len) {
+  if (block_len) {
     return wait_command_completion();
   } else {
     return 0;
@@ -262,8 +265,6 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define TIMER_MODE_IDX        29
 #define NUM_INTERNAL_PIC_IDX  35
 #define NUM_CARD_PIC_IDX      51
-#define NUM_INTERNAL_LEFT_PIC_IDX 43
-#define NUM_CARD_LEFT_PIC_IDX 59
 #define CAMERA_NAME_IDX       80
 
 #define DC50_EPOCH            852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
@@ -298,30 +299,30 @@ static uint8 dc50_get_information(camera_info *info) {
   case 1: /* low   */ buffer[BATTERY_STATUS_IDX] = 50; break;
   case 2: /* empty */ buffer[BATTERY_STATUS_IDX] = 10; break;
   }
-  info->battery_level = buffer[BATTERY_STATUS_IDX];
+  cam_info.battery_level = buffer[BATTERY_STATUS_IDX];
 
-  info->flash_mode = buffer[FLASH_MODE_IDX];
-  info->quality_mode = buffer[COMPRESSION_MODE_IDX];
+  cam_info.flash_mode    = buffer[FLASH_MODE_IDX];
+  cam_info.quality_mode  = buffer[COMPRESSION_MODE_IDX];
 
-  info->charging      = buffer[AC_STATUS_IDX];
+  cam_info.charging      = buffer[AC_STATUS_IDX];
 
-  memcpy(info->name, buffer+CAMERA_NAME_IDX, 31);
-  info->name[31] = '\0';
+  memcpy(cam_info.name, buffer+CAMERA_NAME_IDX, 31);
+  cam_info.name[31] = '\0';
 
   /* Prepare data as if there is a card */
-  info->num_pics   = buffer[NUM_CARD_PIC_IDX];
-  info->left_pics  = buffer[pics_left_on_card[info->quality_mode]];
+  cam_info.num_pics   = buffer[NUM_CARD_PIC_IDX];
+  cam_info.left_pics  = buffer[pics_left_on_card[cam_info.quality_mode]];
   card_present     = 1;
-  info->name[31-8] = '\0'; /* room for " (card)" */
-  strcat(info->name, " (card)");
+  cam_info.name[31-8] = '\0'; /* room for " (card)" */
+  strcat(cam_info.name, " (card)");
 
-  if (info->num_pics == 0 && info->left_pics == 0) {
+  if (cam_info.num_pics == 0 && cam_info.left_pics == 0) {
     /* No card */
-    info->num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
-    info->left_pics   = buffer[pics_left_on_cam[info->quality_mode]];
+    cam_info.num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
+    cam_info.left_pics   = buffer[pics_left_on_cam[cam_info.quality_mode]];
     card_present      = 0;
-    info->name[31-12] = '\0'; /* room for " (internal)" */
-    strcat(info->name, " (internal)");
+    cam_info.name[31-12] = '\0'; /* room for " (internal)" */
+    strcat(cam_info.name, " (internal)");
   }
 
 #ifndef __CC65__
@@ -336,7 +337,8 @@ static uint8 dc50_get_information(camera_info *info) {
   ((unsigned char *)&int_time)[3] = buffer[TIME_IDX+0];
 #endif
 
-  dc50_time_to_camera_date(int_time, &(info->date));
+  dc50_time_to_camera_date(int_time, &(cam_info.date));
+  memcpy(info, &cam_info, sizeof(cam_info));
   return 0;
 }
 
@@ -491,6 +493,8 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 
   ui_get_image_str(640, 480, pic_size);
 
+  /* Images from card come with the EXIF header. From internal storage,
+   * they don't. Adapt accordingly. */
   if (card_present) {
     /* Verify data */
     if (memcmp(buffer, "MM\0*", 4)) {
@@ -514,7 +518,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
       write(fd, buffer, sizeof buffer);
     }
 
-    /* 0x6B is the offset in our minimal EXIF header. */
+    /* 0x6B is the CompressedBitsPerPixel offset in our minimal EXIF header. */
     lseek(fd, 0x6B, SEEK_SET);
     write(fd, &c, 1);
   }
