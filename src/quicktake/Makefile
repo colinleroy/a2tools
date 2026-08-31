@@ -51,6 +51,7 @@ slowtake_SOURCES := \
 	ui/qt-menu.c \
 	ui/ui.c \
 	ui/qt-edit-image.c \
+	ui/histogram.c \
 	ui/qt-state.c \
 	cameras/qt-serial.c \
 	cameras/qt-callbacks.s \

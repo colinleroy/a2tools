@@ -112,11 +112,32 @@ display:
     do_hist = 0;
   }
 
+  int black = 0, found_black = 0;
+  int white = 0, found_white = 0;
   curr_hist = 0;
   for (int i = 0; i < 256; i++) {
     curr_hist += (buf[i] | (buf[i+256] << 8));
-    uint32 tmp = (curr_hist*255) / (256*192);
-    opt_histogram[i] = tmp;
+    if (!found_black && curr_hist > 256) {
+      found_black = 1;
+      black = i;
+    }
+    if (!found_white && curr_hist > 49152-256) {
+      found_white = 1;
+      white = i;
+    }
+  }
+  uint8 range = (uint8)(white - black);
+  printf("w %d b %d r %d\n", white, black, range);
+
+  for (int i = 0; i < 256; i++) {
+      if (i < black) {
+        opt_histogram[i] = 0;
+      } else if (i < white) {
+        int v = (int)((i - black) * 255 / range);
+        opt_histogram[i] = (uint8_t)v;
+      } else {
+        opt_histogram[i] = 255;
+      }
   }
 
   fseek(fp, PNM_HEADER_SIZE, SEEK_SET);

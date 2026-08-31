@@ -21,6 +21,7 @@
 #include "qt-edit-image.h"
 #include "qt-state.h"
 #include "a2_features.h"
+#include "histogram.h"
 
 #ifndef __CC65__
 #include "tgi_compat.h"
@@ -46,10 +47,14 @@ extern uint8 scrw, scrh;
 #define DITHER_THRESHOLD 128U /* Must be 128 for sierra dithering sign check */
 #define DEFAULT_BRIGHTEN 0
 
+#define HISTOGRAM_NONE      0
+#define HISTOGRAM_AUTOLEVEL 1
+#define HISTOGRAM_CONTRAST  2
+
 int ifd, ofd;
 
 int16 angle = 0;
-uint8 auto_level = 1;
+uint8 auto_level = HISTOGRAM_AUTOLEVEL;
 uint8 dither_alg = DITHER_SIERRA;
 uint8 resize = 1;
 uint8 cropping = 0;
@@ -126,10 +131,7 @@ uint8 opt_histogram[256];
 #else
 extern int8 err_buf[512+2];
 extern uint8 opt_histogram[256];
-// static uint8 *histogram_low = err_buf;
-// static uint8 *histogram_high = err_buf + 256;
 #endif
-
 
 #ifndef __CC65__
 uint16 *cur_histogram;
@@ -137,12 +139,12 @@ uint8 *cur_opt_histogram;
 #endif
 
 static void histogram_equalize(void) {
+  uint16 r;
 #ifndef __CC65__
   uint8 x = 0;
 #endif
-  uint16 curr_hist = 0, r;
 
-  if (auto_level) {
+  if (auto_level != HISTOGRAM_NONE) {
     lseek(ifd, 256UL*192UL + PNM_HEADER_SIZE, SEEK_SET);
 #ifndef __CC65__
     r = read(ifd, histogram, 512);
@@ -154,58 +156,11 @@ static void histogram_equalize(void) {
       goto fallback_std;
     }
     cputs("Histogram equalization...\r\n");
-#ifndef __CC65__
-    cur_opt_histogram = opt_histogram;
-    cur_histogram = histogram;
-    do {
-      uint32 tmp;
-      curr_hist += *(cur_histogram++);
-      tmp = (curr_hist*255) / (256*192);
-      *(cur_opt_histogram++) = tmp;
-    } while (++x);
-#else
-    __asm__("ldx #0");
-    next_h:
-    __asm__("stx tmp1");
-    __asm__("clc");
-    __asm__("lda %v,x", err_buf);
-    __asm__("adc %v", curr_hist);
-    __asm__("sta %v", curr_hist);
-    /* curr_hist*255 done as curr_hist*256 - curr_hist */
-    __asm__("tay"); /* *256 mid-byte to Y */
-
-    __asm__("lda %v+256,x", err_buf);
-    __asm__("adc %v+1", curr_hist);
-    __asm__("sta %v+1", curr_hist);
-    __asm__("tax"); /* *256 high byte saved to X */
-
-    __asm__("lda #0"); /* *256 low-byte = 0 */
-
-    /* -curr_hist => curr_hist * 255 */
-    __asm__("sec");
-    __asm__("sbc %v", curr_hist); /* don't store low-byte, it'll be discarded on div 256 */
-    __asm__("tya");
-    __asm__("sbc %v+1", curr_hist);
-    __asm__("tay");               /* mid-byte back to Y */
-    __asm__("txa");
-    __asm__("sbc #0");
-    __asm__("tax");               /* high byte back to X */
-
-    /* /(width*height) done as /width /height */
-    /* / 256 */
-    __asm__("tya");               /* move mid-byte to A. AX now correct for last div */
-
-    /* / 192 */
-    __asm__("jsr pushax");
-    __asm__("lda #<%w", HGR_HEIGHT);
-    __asm__("jsr tosudiva0");
-    __asm__("ldx tmp1");
-
-    __asm__("sta %v,x", opt_histogram);
-
-    __asm__("inx");
-    __asm__("bne %g", next_h);
-#endif
+    if (auto_level == HISTOGRAM_AUTOLEVEL) {
+      histogram_autolevel();
+    } else if (auto_level == HISTOGRAM_CONTRAST) {
+      histogram_contrast();
+    }
   } else {
 fallback_std:
 #ifndef __CC65__
@@ -313,6 +268,13 @@ static unsigned char write_hgr_page_to_file() {
 
 void clear_dhgr(void);
 
+static char *histogram_mode(uint8 mode) {
+  switch (mode % 3) {
+    case HISTOGRAM_NONE:      return "Standard";
+    case HISTOGRAM_AUTOLEVEL: return "Auto";
+    case HISTOGRAM_CONTRAST:  return "Constrast";
+  }
+}
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
   char direct_print;
@@ -337,8 +299,9 @@ start_edit:
         cputs("; C: Uncrop");
       }
     }
-    cprintf("\r\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\r\n",
-           auto_level ? "off":"on",
+    cprintf("\r\nH: %s levels (Current: %s); B: Brighten - D: Darken (Current %s%d)\r\n",
+           histogram_mode(auto_level+1),
+           histogram_mode(auto_level),
            brighten > 0 ? "+":"",
            brighten);
     cprintf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\r\n"
@@ -372,7 +335,7 @@ start_edit:
             angle += 180;
             return 1;
           case 'h':
-            auto_level = !auto_level;
+            auto_level = (auto_level+1)%3;
             histogram_equalize();
             return 1;
           case 'c':
