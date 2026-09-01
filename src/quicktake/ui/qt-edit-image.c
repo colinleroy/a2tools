@@ -271,7 +271,7 @@ void clear_dhgr(void);
 static char *histogram_mode(uint8 mode) {
   switch (mode % 3) {
     case HISTOGRAM_NONE:      return "Original";
-    case HISTOGRAM_AUTOLEVEL: return "Auto";
+    case HISTOGRAM_AUTOLEVEL: return "Autolevel";
     case HISTOGRAM_CONTRAST:  return "Constrast";
   }
 }
