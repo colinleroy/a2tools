@@ -64,7 +64,8 @@ slowtake_SOURCES := \
 	cameras/sierra/sierra-read-packet.s \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
-	../lib/hgr_addrs.c
+	../lib/hgr_addrs.c \
+	../lib/zexec.c
 
 slowtake_CC65SOURCES := \
 	ui/qt-dither-common.s \
@@ -117,7 +118,8 @@ slowtake_GCCSOURCES := \
 qktkconv_SOURCES := \
 	decoders/qt-conv.c \
 	decoders/qktk/qktk_setup_decode.c \
-	../lib/progress_bar.c
+	../lib/progress_bar.c \
+	../lib/zexec.c
 
 qktkconv_CC65SOURCES := \
 	decoders/qktk/qktk.s \
@@ -135,7 +137,8 @@ radcconv_SOURCES := \
 	decoders/qt-conv.c \
 	decoders/radc/radc_setup_decode.c \
 	decoders/radc/radc.c \
-	../lib/progress_bar.c
+	../lib/progress_bar.c \
+	../lib/zexec.c
 
 radcconv_CC65SOURCES := \
 	../lib/square_table.s \
@@ -158,7 +161,8 @@ jpegconv_SOURCES := \
 	decoders/qt-conv.c \
 	decoders/jpeg/jpeg_setup_decode.c \
 	decoders/jpeg/jpeg.c \
-	../lib/progress_bar.c
+	../lib/progress_bar.c \
+	../lib/zexec.c
 
 jpegconv_CC65SOURCES := \
 	../lib/square_table.s \
@@ -206,7 +210,7 @@ qktkconv_CLCFLAGS = \
 	-DBAND_HEIGHT=20    --asm-define BAND_HEIGHT=20 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DQKTKCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg \
+	$(CLCFLAGS) -C ../../config/apple2enh-qktkconv.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 qktkconv_GCCCFLAGS = \
@@ -230,7 +234,7 @@ radcconv_CLCFLAGS = \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DRADCCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
+	$(CLCFLAGS) -C ../../config/apple2enh-radcconv.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 radcconv_GCCCFLAGS = \
@@ -255,7 +259,7 @@ jpegconv_CLCFLAGS = \
 	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
 	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
 	-DJPEGCONV=1        --asm-define JPEGCONV=1 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg \
+	$(CLCFLAGS) -C ../../config/apple2enh-jpegconv.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 jpegconv_GCCCFLAGS = \
@@ -290,6 +294,15 @@ ABOUT.ZX: ui/about.in
 	zx02 -f about.tmp ABOUT.ZX; \
 	rm about.tmp
 
+SLOWTAKE.BZX: slowtake.bin
+	zx02 -f $< $@
+QKTKCONV.BZX: qktkconv.bin
+	zx02 -f $< $@
+RADCCONV.BZX: radcconv.bin
+	zx02 -f $< $@
+JPEGCONV.BZX: jpegconv.bin
+	zx02 -f $< $@
+
 QT1X0.DRV: slowtake.bin
 FUJI.DRV: slowtake.bin
 DC50.DRV: slowtake.bin
@@ -298,15 +311,22 @@ SRRA.DRV: slowtake.bin
 %.ZX: %.DRV
 	zx02 -f $< $@
 
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX
-	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
+../zxloader/zxloader.system: ../zxloader/zxloader.s
+	make -C ../zxloader/ clean all
+
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX ../zxloader/zxloader.system
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../zxloader/zxloader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00 < FUJI.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC50.ZX BIN 0xC00 < DC50.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SRRA.ZX BIN 0xC00 < SRRA.ZX; \
-	for r in *.bin ../image-viewer/imgview.bin; do \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE BIN 0x1A00 < SLOWTAKE.BZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QKTKCONV BIN 0x1000 < QKTKCONV.BZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)RADCCONV BIN 0x1000 < RADCCONV.BZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)JPEGCONV BIN 0x1000 < JPEGCONV.BZX; \
+	for r in ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 

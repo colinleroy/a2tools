@@ -35,6 +35,7 @@
 #include "progress_bar.h"
 #include "check_floppy.h"
 #include "a2_features.h"
+#include "zexec.h"
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -119,17 +120,24 @@ void reload_menu(const char *filename) {
   char buffer[128];
   reopen_start_device();
 
+  zxloader_name = "SLOWTAKE.SYSTEM";
+
   if (filename) {
     #ifndef __CC65__
     sprintf(buffer, "%s %d", filename, effective_width);
     #else
-    strcpy(buffer, filename);
+    /* we're exec'ing SLOWTAKE.SYSTEM here which is a zx unpacker. It will
+     * decompress and run argv[1] instead of "SLOWTAKE" if the cmdline is
+     * not null, and it is not, so provide it. */
+    strcpy(buffer, "SLOWTAKE");
+    strcat(buffer, " ");
+    strcat(buffer, filename);
     strcat(buffer, " ");
     strcat(buffer, utoa(effective_width, buffer+sizeof(buffer)-5, 10));
     #endif
-    exec("slowtake", buffer);
+    zexec(buffer);
   } else {
-    exec("slowtake", NULL);
+    zexec(NULL);
   }
 }
 

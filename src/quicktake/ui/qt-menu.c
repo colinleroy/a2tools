@@ -25,12 +25,13 @@
 #include "runtime_once_clean.h"
 #include "a2_features.h"
 #include "zx02_decompress_in_place.h"
+#include "zexec.h"
 
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
 uint8 do_debug = 0;
-static unsigned char exec_pass = 0;
+unsigned char exec_pass = 0;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -603,16 +604,16 @@ static uint8 setup(int argc, char *argv[]) {
   if (argc == 1) {
     exec_pass = 1;
     #if DEBUG_HD==50
-    exec("RADCCONV","/HD/TEST50.KDC 0 0 640 480");
+    zexec("RADCCONV /HD/TEST50.KDC 0 0 640 480");
     #endif
     #if DEBUG_HD==100
-    exec("QKTKCONV","/HD/TEST100.QTK 0 0 640 480");
+    zexec("QKTKCONV /HD/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_HD==150
-    exec("RADCCONV","/HD/TEST150.QTK 0 0 640 480");
+    zexec("RADCCONV /HD/TEST150.QTK 0 0 640 480");
     #endif
     #if DEBUG_HD==200
-    exec("JPEGCONV","/HD/TEST200.JPG 0 0 640 480");
+    zexec("JPEGCONV /HD/TEST200.JPG 0 0 640 480");
     #endif
   }
 #endif
@@ -620,19 +621,19 @@ static uint8 setup(int argc, char *argv[]) {
   if (argc == 1) {
     exec_pass = 1;
     #if DEBUG_FLOPPY==50
-    exec("RADCCONV","/DC50/TEST50.KDC 0 0 640 480");
+    zexec("RADCCONV /DC50/TEST50.KDC 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==100
-    exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
+    zexec("QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==98
-    exec("QKTKCONV","/QT100/TEST100.QTK 0 0 640 480");
+    zexec("QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==150
-    exec("RADCCONV","/QT150/TEST150.QTK 0 0 640 480");
+    zexec("RADCCONV /QT150/TEST150.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==200
-    exec("JPEGCONV","/QT200/TEST200.JPG 0 0 640 480");
+    zexec("JPEGCONV /QT200/TEST200.JPG 0 0 640 480");
     #endif
   }
 #endif
@@ -707,6 +708,8 @@ int main(int argc, char *argv[])
   uint8 choice;
 
   clrscr();
+
+  zxloader_name = "SLOWTAKE.SYSTEM";
 
   if (!has_128k) {
     cputs("This program requires 128kB of memory.");
@@ -801,7 +804,7 @@ menu:
     }
   } else if (choice == 'r') {
     exec_pass = 1;
-    exec("slowtake", NULL);
+    zexec(NULL);
   }
 
   goto menu;
