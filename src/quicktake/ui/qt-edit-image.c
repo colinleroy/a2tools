@@ -41,9 +41,9 @@ extern uint8 scrw, scrh;
 
 #define BUF_SIZE 64
 
-#define DITHER_NONE   2
-#define DITHER_BAYER  1
 #define DITHER_SIERRA 0
+#define DITHER_BAYER  1
+#define DITHER_NONE   2
 #define DITHER_THRESHOLD 128U /* Must be 128 for sierra dithering sign check */
 #define DEFAULT_BRIGHTEN 0
 
@@ -52,6 +52,12 @@ extern uint8 scrw, scrh;
 #define HISTOGRAM_CONTRAST  2
 
 int ifd, ofd;
+
+char *dither_strs[] = {
+  "Sierra Lite",
+  "Bayer",
+  "None",
+};
 
 int16 angle = 0;
 uint8 auto_level = HISTOGRAM_AUTOLEVEL;
@@ -299,15 +305,14 @@ start_edit:
         cputs("; C: Uncrop");
       }
     }
-    cprintf("\r\nH: %s levels (Current: %s); B: Brighten - D: Darken (Current %s%d)\r\n",
-           histogram_mode(auto_level+1),
-           histogram_mode(auto_level),
-           brighten > 0 ? "+":"",
-           brighten);
-    cprintf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\r\n"
-           "S: Save - P: Save & Print - Escape: Exit - Any other key: Hide help",
-           dither_alg == DITHER_BAYER ? "Bayer"
-            : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
+    cprintf("\r\nH: %s levels (Current: %s); B: Brighten - D: Darken (Current %+d)\r\n"
+            "Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\r\n"
+            "S: Save - P: Save & Print - Escape: Exit - Any other key: Hide help",
+             histogram_mode(auto_level+1),
+             histogram_mode(auto_level),
+             brighten,
+             dither_strs[dither_alg]);
+
     c = tolower(cgetc());
       if (!cropping) {
         switch(c) {
@@ -327,17 +332,17 @@ start_edit:
             goto save;
           case 'r':
             angle += 90;
-            return 1;
+ret_again:  return 1;
           case 'l':
             angle -= 90;
-            return 1;
+            goto ret_again;
           case 'u':
             angle += 180;
-            return 1;
+            goto ret_again;
           case 'h':
             auto_level = (auto_level+1)%3;
             histogram_equalize();
-            return 1;
+            goto ret_again;
           case 'c':
             if (angle == 0) {
               if (!(src_width % 320)) {
@@ -353,32 +358,32 @@ start_edit:
                 clear_dhgr();
               }
             }
-            return 1;
+            goto ret_again;
           case 'y':
             dither_alg = DITHER_BAYER;
-            return 1;
+            goto ret_again;
           case 'e':
             dither_alg = DITHER_SIERRA;
-            return 1;
+            goto ret_again;
           case 'n':
             dither_alg = DITHER_NONE;
-            return 1;
+            goto ret_again;
           case 'b':
             brighten += 16;
-            return 1;
+            goto ret_again;
           case 'd':
             brighten -= 16;
-            return 1;
+            goto ret_again;
           case CH_CURS_UP:
             if (crop_pos > 0) {
               crop_pos--;
-              return 1;
+              goto ret_again;
             }
             break;
           case CH_CURS_DOWN:
             if (crop_pos < 2) {
               crop_pos++;
-              return 1;
+              goto ret_again;
             }
             break;
           default:
@@ -392,12 +397,14 @@ start_edit:
          * to start on a band boundary */
         uint8 move_offset_x, move_offset_y;
 crop_again:
-        move_offset_x = BAND_HEIGHT;
-        move_offset_y = src_width == 640 ? BAND_HEIGHT*2 : BAND_HEIGHT*4;
-
         clrscr();
+        move_offset_x = BAND_HEIGHT;
+
         if (src_width == 640) {
+          move_offset_y = BAND_HEIGHT*2;
           cputs("+: Zoom in; -: Zoom out; ");
+        } else {
+          move_offset_y = BAND_HEIGHT*4;
         }
         cputs("Arrow keys: Move selection\r\n"
                "Enter: Reframe; Escape: Cancel\r\n");
@@ -408,32 +415,32 @@ crop_again:
 zoom_level_1:
           zoom_level = 1;
           crop_start_x = crop_start_y = 0;
-          crop_end_x = crop_start_x + 512;
-          crop_end_y = crop_start_y + 384;
+          crop_end_x = 512;
+          crop_end_y = 384;
         }
         switch(c) {
           case CH_ESC:
             cropping = 0;
             zoom_level = 0;
-            return 1;
+            goto ret_again;
           case CH_ENTER:
             cropping = 0;
             zoom_level = 0;
             init_text();
             qt_convert_image_with_crop(ofname, crop_start_x, crop_start_y, crop_end_x, crop_end_y);
-            return 1;
+            goto ret_again;
           case '+':
             if (zoom_level == 1 && src_width == 640) {
 zoom_level_2:
               zoom_level = 2;
               crop_start_x = crop_start_y = 0;
-              crop_end_x = crop_start_x + 320;
-              crop_end_y = crop_start_y + 240;
+              crop_end_x = 320;
+              crop_end_y = 240;
             } else if (zoom_level == 2) {
               zoom_level = 3;
               crop_start_x = crop_start_y = 0;
-              crop_end_x = crop_start_x + 256;
-              crop_end_y = crop_start_y + 192;
+              crop_end_x = 256;
+              crop_end_y = 192;
             }
             break;
           case '-':
@@ -478,7 +485,7 @@ zoom_level_2:
 
 save:
   strcpy((char *)buffer, ofname);
-  /* Remove extension if existing */
+  /* Remove original extension if existing */
   if ((cp = strrchr((char *)buffer, '.')) > strrchr((char *)buffer, '/')) {
     *cp = 0;
   }
