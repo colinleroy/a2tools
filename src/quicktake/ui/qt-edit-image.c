@@ -82,6 +82,7 @@ static char args[FILENAME_MAX + FOUR_NUM_WIDTH];
 
 #pragma code-name(push, "SQUEEZE")
 
+extern unsigned char exec_pass;
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
   set_scrollwindow(0, scrh);
   clrscr();
@@ -109,8 +110,11 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 
     reopen_start_device();
 
-    snprintf(args, FILENAME_MAX + FOUR_NUM_WIDTH - 1, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
+    snprintf(args, FILENAME_MAX + FOUR_NUM_WIDTH - 1, 
+             "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 
+    /* Don't unlink AUXHGR file */
+    exec_pass = 1;
     if (!strcmp(magic, QKTK_MAGIC)) {
       exec("qktkconv", args);
     } else if (!strcmp(magic, QKTN_MAGIC)) {
@@ -269,7 +273,7 @@ static void invert_selection(void) {
 #pragma code-name(pop)
 
 static unsigned char write_hgr_page_to_file() {
-  return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
+  return (write(ofd, (char *)HGR_PAGE, HGR_LEN) != HGR_LEN);
 }
 
 void clear_dhgr(void);
@@ -1001,6 +1005,7 @@ uint8 qt_view_image(const char *filename, const char *cmd) {
   }
 
   init_text();
+  exec_pass = 1;
   return exec("imgview", (char *)args);
 }
 
