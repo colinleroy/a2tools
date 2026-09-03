@@ -398,20 +398,21 @@ auto_str:         .asciiz "Auto"
         jmp     @update_ui
 .endproc
 
-.proc _simple_serial_write_config
-        ; Save settings to disk
-        lda     #<simple_serial_disk_settings
-        ldx     #>simple_serial_disk_settings
-        jsr     pushax
-        lda     #<(O_WRONLY|O_CREAT)
-        ldx     #>(O_WRONLY|O_CREAT)
-        jsr     _simple_serial_settings_io
-
-        ; And in RAM
-        lda     #<simple_serial_ram_settings
-        ldx     #>simple_serial_ram_settings
+.proc do_write_config
         jsr     pushax
         lda     #<(O_WRONLY|O_CREAT)
         ldx     #>(O_WRONLY|O_CREAT)
         jmp     _simple_serial_settings_io
+.endproc
+
+.proc _simple_serial_write_config
+        ; Save settings to disk
+        lda     #<simple_serial_disk_settings
+        ldx     #>simple_serial_disk_settings
+        jsr     do_write_config
+
+        ; And in RAM
+        lda     #<simple_serial_ram_settings
+        ldx     #>simple_serial_ram_settings
+        jmp     do_write_config
 .endproc
