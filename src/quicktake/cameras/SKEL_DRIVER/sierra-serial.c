@@ -39,7 +39,7 @@ static uint8 sierra_get_information(void);
 
 /* Camera pictures functions */
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 sierra_get_thumbnail(uint8 n_pic, int fd);
 static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
@@ -96,6 +96,7 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 #endif
 
 extern camera_info cam_info;
+extern thumb_info th_info;
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Sierra camera
@@ -139,8 +140,10 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   return -1;
 }
 
-static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 sierra_get_thumbnail(uint8 n_pic, int fd) {
   ui_get_thumbnail_str(n_pic);
+  th_info.flash_mode   = 0xFF;
+  th_info.quality_mode = 0xFF;
   return -1;
 }
 

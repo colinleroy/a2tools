@@ -40,7 +40,7 @@ static uint8 sierra_get_information(void);
 
 /* Camera pictures functions */
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 sierra_get_thumbnail(uint8 n_pic, int fd);
 static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
@@ -100,6 +100,7 @@ static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
 #endif
 
 extern camera_info cam_info;
+extern thumb_info th_info;
 
 uint16 sierra_response_len;
 uint8 sierra_response_continues;
@@ -535,7 +536,9 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   return sierra_get_picture_data(n_pic, fd, avail, 1);
 }
 
-static uint8 sierra_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 sierra_get_thumbnail(uint8 n_pic, int fd) {
+  th_info.flash_mode   = 0xFF;
+  th_info.quality_mode = 0xFF;
   return sierra_get_picture_data(n_pic, fd, 0, 0);
 }
 
@@ -577,23 +580,27 @@ static uint8 sierra_delete_pictures(void) {
 }
 
 static const char *sierra_get_quality_str(uint8 mode) {
+  if (mode == 0xFF) {
+    return "unknown";
+  }
   if (mode > 2) {
     mode = 1;
   }
   switch(mode) {
-  case 2: return "high";
-  case 1: return "low";
+  case 2:  return "high";
+  case 1:  return "low";
   }
-  return "unknown";
 }
 
 static const char *sierra_get_flash_str(uint8 mode) {
-  switch(mode % 3) {
-  case 0: return "automatic";
-  case 1: return "forced";
-  case 2: return "off";
+  if (mode == 0xFF) {
+    return "unknown";
   }
-  return "unknown";
+  switch(mode % 3) {
+  case 0:  return "automatic";
+  case 1:  return "forced";
+  case 2:  return "off";
+  }
 }
 
 #pragma warn(unused-param, pop)

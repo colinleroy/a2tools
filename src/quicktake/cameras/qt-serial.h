@@ -104,7 +104,7 @@ uint8 cam_set_quality(uint8 quality);
 uint8 cam_set_flash(uint8 mode);
 uint8 cam_take_picture(void);
 uint8 cam_get_picture(uint8 n_pic, int fd, off_t avail);
-uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+uint8 cam_get_thumbnail(uint8 n_pic, int fd);
 uint8 cam_delete_pictures(void);
 void cam_get_filename(uint8 n_pic, char *dirname, char *filename);
 

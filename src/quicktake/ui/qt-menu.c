@@ -30,6 +30,7 @@
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
+thumb_info th_info;
 uint8 do_debug = 0;
 unsigned char exec_pass = 0;
 
@@ -425,7 +426,6 @@ void clear_dhgr(void);
 static void show_thumbnails(uint8 num_pics) {
   int8 i = 1;
   uint16 tmp;
-  thumb_info info;
   char c = 0;
   char thumb_buf[32];
   int fd;
@@ -455,7 +455,7 @@ static void show_thumbnails(uint8 num_pics) {
     clrscr();
     gotoxy(0,20);
 
-    c = cam_get_thumbnail(i, fd, &info);
+    c = cam_get_thumbnail(i, fd);
     close(fd);
 
     if (c != 0) {
@@ -471,14 +471,15 @@ err_thumb_io:
     clear_dhgr();
     qt_edit_image(thumb_buf, THUMB_WIDTH*2);
 
+    set_scrollwindow(0, scrh);
     clrscr();
     gotoxy(0,20);
 
     cprintf("%s (%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
-           thumb_buf, cam_get_quality_str(info.quality_mode),
-           cam_get_flash_str(info.flash_mode), info.date.day, info.date.month,
-           info.date.year, info.date.hour, info.date.minute);
+           thumb_buf, cam_get_quality_str(th_info.quality_mode),
+           cam_get_flash_str(th_info.flash_mode), th_info.date.day, th_info.date.month,
+           th_info.date.year, th_info.date.hour, th_info.date.minute);
 
 get_key:
     c = tolower(cgetc());

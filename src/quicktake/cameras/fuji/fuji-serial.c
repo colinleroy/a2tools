@@ -41,7 +41,7 @@ static uint8 fuji_get_information(void);
 
 /* Camera pictures functions */
 static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 fuji_get_thumbnail(uint8 n_pic, int fd);
 static void fuji_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
@@ -119,6 +119,7 @@ static uint8 fuji_send_ping(uint8 wait);
 static void end_session(void);
 
 extern camera_info cam_info;
+extern thumb_info th_info;
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a Fuji camera
@@ -544,8 +545,10 @@ static uint8 fuji_get_picture(uint8 n_pic, int fd, off_t avail) {
   return fuji_get_image_data(n_pic, fd, picture_size, FUJI_CMD_PIC_GET_DATA);
 }
 
-static uint8 fuji_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 fuji_get_thumbnail(uint8 n_pic, int fd) {
   ui_get_thumbnail_str(n_pic);
+  th_info.flash_mode   = 0xFF;
+  th_info.quality_mode = 0xFF;
 
   if (fuji_start() != 0) {
     errno = EIO;
@@ -640,13 +643,14 @@ static const char *fuji_get_quality_str(uint8 mode) {
 }
 
 static const char *fuji_get_flash_str(uint8 mode) {
-  mode = mode % 4;
-  switch (mode) {
-    case 0: return "disabled";
-    case 1: return "forced";
-    case 2: return "strobe";
-    case 3: return "automatic";
-    default: return "unknown";
+  if (mode == 0xFF) {
+    return "unknown";
+  }
+  switch (mode % 4) {
+    case 0:  return "disabled";
+    case 1:  return "forced";
+    case 2:  return "strobe";
+    case 3:  return "automatic";
   }
 }
 

@@ -49,7 +49,7 @@ static uint8 qt1x0_set_flash(uint8 mode);
 /* Camera pictures functions */
 static uint8 qt1x0_take_picture(void);
 static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd);
 static uint8 qt1x0_delete_pictures(void);
 static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename);
 
@@ -93,6 +93,9 @@ extern uint8 do_debug;
 #define FLASH_OFF        1
 #define FLASH_ON         2
 #define FLASH_UNKNOWN    0xFF
+
+extern camera_info cam_info;
+extern thumb_info th_info;
 
 uint8 is_qt100; /* helper for thumbnailer */
 #ifdef DEBUG_THUMB
@@ -503,7 +506,7 @@ static uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
 }
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd) {
 
   /* Seems useless but needed for IIc+ */
   sleep(1);
@@ -521,15 +524,13 @@ static uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
     return -1;
   }
 
-  if (info) {
-    info->quality_mode = buffer[IMG_QUALITY_IDX] == QUALITY_HIGH ? 0:1;
-    info->flash_mode   = buffer[IMG_FLASH_IDX];
-    info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
-    info->date.month   = buffer[IMG_MONTH_IDX];
-    info->date.day     = buffer[IMG_DAY_IDX];
-    info->date.hour    = buffer[IMG_HOUR_IDX];
-    info->date.minute  = buffer[IMG_MINUTE_IDX];
-  }
+  th_info.quality_mode = buffer[IMG_QUALITY_IDX] == QUALITY_HIGH ? 0:1;
+  th_info.flash_mode   = buffer[IMG_FLASH_IDX];
+  th_info.date.year    = buffer[IMG_YEAR_IDX] + 2000;
+  th_info.date.month   = buffer[IMG_MONTH_IDX];
+  th_info.date.day     = buffer[IMG_DAY_IDX];
+  th_info.date.hour    = buffer[IMG_HOUR_IDX];
+  th_info.date.minute  = buffer[IMG_MINUTE_IDX];
 
   ui_get_thumbnail_str(n_pic);
 
@@ -585,8 +586,6 @@ static uint8 qt1x0_set_flash(uint8 mode) {
 
   return send_command(str, sizeof str, 1, 0, 5);
 }
-
-extern camera_info cam_info;
 
 /* Get information from the camera */
 static uint8 qt1x0_get_information(void) {
@@ -648,24 +647,17 @@ static uint8 qt1x0_get_information(void) {
 
 static const char *qt1x0_get_quality_str(uint8 mode) {
   switch(mode % 2) {
-    case 0:
-      return "high";
-    case 1:
-      return "standard";
-    default:
-      return "unknown";
+  case 0:  return "high";
+  case 1:  return "standard";
+  default: return "unknown";
   }
 }
 
 static const char *qt1x0_get_flash_str(uint8 mode) {
   switch(mode % 3) {
-    case FLASH_AUTO:
-      return "automatic";
-    case FLASH_OFF:
-      return "disabled";
-    case FLASH_ON:
-      return "forced";
-    default:
-      return "unknown";
+  case FLASH_AUTO: return "automatic";
+  case FLASH_OFF:  return "disabled";
+  case FLASH_ON:   return "forced";
+  default:         return "unknown";
   }
 }

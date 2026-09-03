@@ -25,7 +25,7 @@ typedef uint8 (*impl_set_quality_func)(uint8 quality);
 typedef uint8 (*impl_set_flash_func)(uint8 mode);
 typedef uint8 (*impl_take_picture_func)(void);
 typedef uint8 (*impl_get_picture_func)(uint8 n_pic, int fd, off_t avail);
-typedef uint8 (*impl_get_thumbnail_func)(uint8 n_pic, int fd, thumb_info *info);
+typedef uint8 (*impl_get_thumbnail_func)(uint8 n_pic, int fd);
 typedef uint8 (*impl_delete_pictures_func)(void);
 typedef void  (*impl_get_filename_func)(uint8 n_pic, char *dirname, char *filename);
 typedef void  (*impl_thumb_histogram_func)(void);
@@ -53,6 +53,7 @@ impl_get_quality_str_func impl_get_quality_str;
 impl_get_flash_str_func   impl_get_flash_str;
 
 camera_info cam_info;
+thumb_info th_info;
 
 unsigned char buffer[BUFFER_SIZE];
 int scrw, scrh;
@@ -176,7 +177,12 @@ get_info:
       } else {
         int r;
         if (thumb) {
-          r = cam_get_thumbnail(n_pic, fd, NULL);
+          r = cam_get_thumbnail(n_pic, fd);
+          cprintf("(%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\n",
+                 cam_get_quality_str(th_info.quality_mode),
+                 cam_get_flash_str(th_info.flash_mode), th_info.date.day, th_info.date.month,
+                 th_info.date.year, th_info.date.hour, th_info.date.minute);
+
         } else {
           r = cam_get_picture(n_pic, fd, (off_t)1024*1024*1024UL);
         }
@@ -267,8 +273,8 @@ uint8 cam_delete_pictures(void) {
   return impl_delete_pictures();
 }
 
-uint8 cam_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
-  return impl_get_thumbnail(n_pic, fd, info);
+uint8 cam_get_thumbnail(uint8 n_pic, int fd) {
+  return impl_get_thumbnail(n_pic, fd);
 }
 
 void cam_get_filename(uint8 n_pic, char *dirname, char *filename) {

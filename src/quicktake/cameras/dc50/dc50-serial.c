@@ -42,7 +42,7 @@ static uint8 dc50_get_information(void);
 
 /* Camera pictures functions */
 static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
+static uint8 dc50_get_thumbnail(uint8 n_pic, int fd);
 static void dc50_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
@@ -107,6 +107,7 @@ static void PC_DEBUG(char *op, const char *str, int len) {
 #endif
 
 extern camera_info cam_info;
+extern thumb_info th_info;
 
 #pragma warn(unused-param, push, off)
 /* Wakeup and detect a DC50 camera
@@ -541,16 +542,12 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
   return wait_command_completion();
 }
 
-static uint8 dc50_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
+static uint8 dc50_get_thumbnail(uint8 n_pic, int fd) {
   uint8 blocks_to_read, d;
 
   ui_get_thumbnail_str(n_pic);
-  // 
-  // if (dc50_get_picture_info(n_pic) == 0) {
-  //   info->flash_mode = 
-  //   info->quality_mode = 
-  //   dc50_time_to_camera_date(int_time, &(info->date));
-  // }
+  th_info.flash_mode   = 0xFF;
+  th_info.quality_mode = 0xFF;
 
   init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
   command_packet[CMD_PIC_NUM+1] = n_pic;
@@ -674,22 +671,26 @@ static uint8 dc50_delete_pictures(void) {
 
 
 static const char *dc50_get_quality_str(uint8 mode) {
-  switch (mode % 3) {
-    /* we return %s quality, not compression, so invert */
-    case 0: return "high";
-    case 1: return "medium";
-    case 2: return "low";
+  if (mode == 0xFF) {
+    return "unknown";
   }
-  return NULL;
+  /* we return %s quality, not compression, so invert */
+  switch (mode % 3) {
+  case 0:  return "high";
+  case 1:  return "medium";
+  case 2:  return "low";
+  }
 }
 
 static const char *dc50_get_flash_str(uint8 mode) {
-  switch(mode % 3) {
-    case 0: return "automatic";
-    case 1: return "forced";
-    case 2: return "disabled";
+  if (mode == 0xFF) {
+    return "unknown";
   }
-  return NULL;
+  switch(mode % 3) {
+  case 0:  return "automatic";
+  case 1:  return "forced";
+  case 2:  return "disabled";
+  }
 }
 
 #pragma warn(unused-param, pop)
