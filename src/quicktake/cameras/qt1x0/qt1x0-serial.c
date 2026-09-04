@@ -654,6 +654,9 @@ static const char *qt1x0_get_quality_str(uint8 is_pic, uint8 mode) {
 }
 
 static const char *qt1x0_get_flash_str(uint8 is_pic, uint8 mode) {
+  if (is_pic) {
+    return mode == 1 ? "on":"off";
+  }
   switch(mode % 3) {
   case FLASH_AUTO: return "automatic";
   case FLASH_OFF:  return "disabled";

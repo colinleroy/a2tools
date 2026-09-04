@@ -547,7 +547,7 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 
 static uint8 dc50_get_thumbnail(uint8 n_pic, int fd) {
   uint8 blocks_to_read, d;
-
+  time_t int_time;
   ui_get_image_header_str();
   if (dc50_get_picture_info(n_pic) != 0) {
     return -1;
@@ -556,6 +556,19 @@ static uint8 dc50_get_thumbnail(uint8 n_pic, int fd) {
   ui_get_thumbnail_str(n_pic);
   th_info.flash_mode   = buffer[PIC_FLASH_IDX];   /* 0 = not fired, 1 = fired */
   th_info.quality_mode = buffer[PIC_QUALITY_IDX]; /* same as cam_get_quality_str */
+
+#ifndef __CC65__
+  int_time     =  buffer[TIME_IDX+3]
+               + (buffer[TIME_IDX+2] << 8)
+               + (buffer[TIME_IDX+1] << 16)
+               + (buffer[TIME_IDX+0] << 24);
+#else
+  ((unsigned char *)&int_time)[0] = buffer[TIME_IDX+3];
+  ((unsigned char *)&int_time)[1] = buffer[TIME_IDX+2];
+  ((unsigned char *)&int_time)[2] = buffer[TIME_IDX+1];
+  ((unsigned char *)&int_time)[3] = buffer[TIME_IDX+0];
+#endif
+  dc50_time_to_camera_date(int_time, &(th_info.date));
 
   init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
   command_packet[CMD_PIC_NUM+1] = n_pic;
@@ -693,6 +706,9 @@ static const char *dc50_get_quality_str(uint8 is_pic, uint8 mode) {
 static const char *dc50_get_flash_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
+  }
+  if (is_pic) {
+    return mode ? "on":"off";
   }
   switch(mode % 3) {
   case 0:  return "automatic";
