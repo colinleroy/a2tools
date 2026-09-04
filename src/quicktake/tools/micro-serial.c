@@ -30,8 +30,8 @@ typedef uint8 (*impl_delete_pictures_func)(void);
 typedef void  (*impl_get_filename_func)(uint8 n_pic, char *dirname, char *filename);
 typedef void  (*impl_thumb_histogram_func)(void);
 typedef void  (*impl_thumb_load_data_func)(uint8 line);
-typedef const char * (*impl_get_quality_str_func)(uint8 mode);
-typedef const char * (*impl_get_flash_str_func)(uint8 mode);
+typedef const char * (*impl_get_quality_str_func)(uint8 is_pic, uint8 mode);
+typedef const char * (*impl_get_flash_str_func)(uint8 is_pic, uint8 mode);
 
 uint8                     camera_connected;
 uint16                    cam_features;
@@ -148,8 +148,8 @@ get_info:
          "  Date:           %02d/%02d/%04d %02d:%02d\n",
          cam_info.num_pics,
          cam_info.left_pics,
-         cam_info.quality_mode, cam_get_quality_str(cam_info.quality_mode),
-         cam_info.flash_mode, cam_get_flash_str(cam_info.flash_mode),
+         cam_info.quality_mode, cam_get_quality_str(0, cam_info.quality_mode),
+         cam_info.flash_mode, cam_get_flash_str(0, cam_info.flash_mode),
          cam_info.battery_level,
          cam_info.charging,
          cam_info.name,
@@ -179,8 +179,8 @@ get_info:
         if (thumb) {
           r = cam_get_thumbnail(n_pic, fd);
           cprintf("(%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\n",
-                 cam_get_quality_str(th_info.quality_mode),
-                 cam_get_flash_str(th_info.flash_mode), th_info.date.day, th_info.date.month,
+                 cam_get_quality_str(1, th_info.quality_mode),
+                 cam_get_flash_str(1, th_info.flash_mode), th_info.date.day, th_info.date.month,
                  th_info.date.year, th_info.date.hour, th_info.date.minute);
 
         } else {
@@ -289,10 +289,10 @@ void cam_thumb_load_data (uint8 line) {
   return impl_thumb_load_data(line);
 }
 
-const char *cam_get_quality_str (uint8 mode) {
-  return impl_get_quality_str(mode);
+const char *cam_get_quality_str (uint8 is_pic, uint8 mode) {
+  return impl_get_quality_str(is_pic, mode);
 }
 
-const char *cam_get_flash_str (uint8 mode) {
-  return impl_get_flash_str(mode);
+const char *cam_get_flash_str (uint8 is_pic, uint8 mode) {
+  return impl_get_flash_str(is_pic, mode);
 }

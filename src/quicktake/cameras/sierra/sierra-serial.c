@@ -58,8 +58,8 @@ void sierra_thumb_histogram(void);
 void sierra_load_thumb_data(uint8 line);
 
 /* Modes strings */
-static const char *sierra_get_quality_str(uint8 mode);
-static const char *sierra_get_flash_str(uint8 mode);
+static const char *sierra_get_quality_str(uint8 is_pic, uint8 mode);
+static const char *sierra_get_flash_str(uint8 is_pic, uint8 mode);
 
 /* Camera callbacks */
 void *sierra_callbacks[] = {
@@ -579,7 +579,7 @@ static uint8 sierra_delete_pictures(void) {
   return sierra_action(SIERRA_ACTION_DELETE_ALL, 0);
 }
 
-static const char *sierra_get_quality_str(uint8 mode) {
+static const char *sierra_get_quality_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }
@@ -592,7 +592,7 @@ static const char *sierra_get_quality_str(uint8 mode) {
   }
 }
 
-static const char *sierra_get_flash_str(uint8 mode) {
+static const char *sierra_get_flash_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }

@@ -55,8 +55,8 @@ static void print_header(void) {
           cam_info.name, cam_info.battery_level, cam_info.charging? " (charging)":"",
           cam_info.date.day, cam_info.date.month, cam_info.date.year,
           cam_info.date.hour, cam_info.date.minute,
-          cam_info.num_pics, cam_info.left_pics, cam_get_quality_str(cam_info.quality_mode),
-          cam_get_flash_str(cam_info.flash_mode));
+          cam_info.num_pics, cam_info.left_pics, cam_get_quality_str(0, cam_info.quality_mode),
+          cam_get_flash_str(0, cam_info.flash_mode));
   } else {
     cputs("No camera detected\r\n");
   }
@@ -167,8 +167,6 @@ handle_early_err:
   }
 }
 
-#pragma code-name(push, "LC")
-
 static int8 check_file_existence(char *filename, uint8 silent) {
   int fd = open(filename, O_RDONLY);
   if (fd > 0) {
@@ -186,6 +184,8 @@ static int8 check_file_existence(char *filename, uint8 silent) {
   }
   return 0;
 }
+
+#pragma code-name(push, "LC")
 
 static uint8 print_menu(void) {
   cputs("Menu\r\n\r\n");
@@ -205,10 +205,10 @@ static uint8 print_menu(void) {
       cputs(" T. Set camera time\r\n");
     if (cam_features & CAM_CAN_SET_QUALITY)
       cprintf(" Q. Set quality to %s\r\n", 
-              cam_get_quality_str(cam_info.quality_mode + 1));
+              cam_get_quality_str(0, cam_info.quality_mode + 1));
     if (cam_features & CAM_CAN_SET_FLASH)
       cprintf(" F. Set flash to %s\r\n",
-              cam_get_flash_str(cam_info.flash_mode + 1));
+              cam_get_flash_str(0, cam_info.flash_mode + 1));
   } else {
     cputs(" R. Retry connecting camera\r\n");
   }
@@ -477,8 +477,8 @@ err_thumb_io:
 
     cprintf("%s (%s quality, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G: get full picture, Esc: exit, N: next thumbnail, P: previous thumbnail",
-           thumb_buf, cam_get_quality_str(th_info.quality_mode),
-           cam_get_flash_str(th_info.flash_mode), th_info.date.day, th_info.date.month,
+           thumb_buf, cam_get_quality_str(1, th_info.quality_mode),
+           cam_get_flash_str(1, th_info.flash_mode), th_info.date.day, th_info.date.month,
            th_info.date.year, th_info.date.hour, th_info.date.minute);
 
 get_key:

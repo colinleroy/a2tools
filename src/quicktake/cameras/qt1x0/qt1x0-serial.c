@@ -58,8 +58,8 @@ void qt1x0_thumb_histogram(void);
 void qt1x0_load_thumb_data(uint8 line);
 
 /* Modes strings */
-static const char *qt1x0_get_quality_str(uint8 mode);
-static const char *qt1x0_get_flash_str(uint8 mode);
+static const char *qt1x0_get_quality_str(uint8 is_pic, uint8 mode);
+static const char *qt1x0_get_flash_str(uint8 is_pic, uint8 mode);
 
 /* Camera callbacks */  
 void *qt1x0_callbacks[] = {
@@ -645,7 +645,7 @@ static uint8 qt1x0_get_information(void) {
 }
 
 
-static const char *qt1x0_get_quality_str(uint8 mode) {
+static const char *qt1x0_get_quality_str(uint8 is_pic, uint8 mode) {
   switch(mode % 2) {
   case 0:  return "high";
   case 1:  return "standard";
@@ -653,7 +653,7 @@ static const char *qt1x0_get_quality_str(uint8 mode) {
   }
 }
 
-static const char *qt1x0_get_flash_str(uint8 mode) {
+static const char *qt1x0_get_flash_str(uint8 is_pic, uint8 mode) {
   switch(mode % 3) {
   case FLASH_AUTO: return "automatic";
   case FLASH_OFF:  return "disabled";

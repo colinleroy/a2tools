@@ -59,8 +59,8 @@ static uint8 dc50_delete_pictures(void);
 void dc50_thumb_histogram(void);
 void dc50_load_thumb_data(uint8 line);
 
-static const char *dc50_get_quality_str(uint8 mode);
-static const char *dc50_get_flash_str(uint8 mode);
+static const char *dc50_get_quality_str(uint8 is_pic, uint8 mode);
+static const char *dc50_get_flash_str(uint8 is_pic, uint8 mode);
 
 /* Camera callbacks */
 void *dc50_callbacks[] = {
@@ -678,7 +678,7 @@ static uint8 dc50_delete_pictures(void) {
 }
 
 
-static const char *dc50_get_quality_str(uint8 mode) {
+static const char *dc50_get_quality_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }
@@ -690,7 +690,7 @@ static const char *dc50_get_quality_str(uint8 mode) {
   }
 }
 
-static const char *dc50_get_flash_str(uint8 mode) {
+static const char *dc50_get_flash_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }

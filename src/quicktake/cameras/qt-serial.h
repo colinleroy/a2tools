@@ -90,8 +90,8 @@ extern char *cam_file_extension[];
 uint8 cam_serial_connect(CamSpeed speed);
 
 /* Helper functions */
-const char *cam_get_quality_str(uint8 mode);
-const char *cam_get_flash_str(uint8 mode);
+const char *cam_get_quality_str(uint8 is_pic, uint8 mode);
+const char *cam_get_flash_str(uint8 is_pic, uint8 mode);
 
 /* Callbacks */
 extern uint16 cam_features;
@@ -111,9 +111,6 @@ void cam_get_filename(uint8 n_pic, char *dirname, char *filename);
 /* Camera thumbnail functions */
 void cam_thumb_histogram(void);
 void cam_load_thumb_data(uint8 line);
-
-const char *cam_get_quality_str(uint8 mode);
-const char *cam_get_flash_str(uint8 mode);
 
 /* Debug helpers */
 #ifndef __CC65__

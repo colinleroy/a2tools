@@ -59,8 +59,8 @@ void fuji_thumb_histogram(void);
 void fuji_load_thumb_data(uint8 line);
 
 /* Modes strings */
-static const char *fuji_get_quality_str(uint8 mode);
-static const char *fuji_get_flash_str(uint8 mode);
+static const char *fuji_get_quality_str(uint8 is_pic, uint8 mode);
+static const char *fuji_get_flash_str(uint8 is_pic, uint8 mode);
 
 /* Camera callbacks */
 void *fuji_callbacks[] = {
@@ -638,11 +638,11 @@ static uint8 fuji_delete_pictures(void) {
   return r;
 }
 
-static const char *fuji_get_quality_str(uint8 mode) {
+static const char *fuji_get_quality_str(uint8 is_pic, uint8 mode) {
   return "unknown";
 }
 
-static const char *fuji_get_flash_str(uint8 mode) {
+static const char *fuji_get_flash_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }
