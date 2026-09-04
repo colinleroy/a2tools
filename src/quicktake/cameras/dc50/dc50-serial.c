@@ -263,6 +263,9 @@ static uint8 dc50_set_speed(CamSpeed speed) {
 #define NUM_CARD_PIC_IDX      51
 #define CAMERA_NAME_IDX       80
 
+#define PIC_QUALITY_IDX       4
+#define PIC_FLASH_IDX         16
+
 #define DC50_EPOCH            852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
 
 static void dc50_time_to_camera_date(time_t int_time, camera_date *date) {
@@ -545,9 +548,14 @@ static uint8 dc50_get_picture(uint8 n_pic, int fd, off_t avail) {
 static uint8 dc50_get_thumbnail(uint8 n_pic, int fd) {
   uint8 blocks_to_read, d;
 
+  ui_get_image_header_str();
+  if (dc50_get_picture_info(n_pic) != 0) {
+    return -1;
+  }
+
   ui_get_thumbnail_str(n_pic);
-  th_info.flash_mode   = 0xFF;
-  th_info.quality_mode = 0xFF;
+  th_info.flash_mode   = buffer[PIC_FLASH_IDX];   /* 0 = not fired, 1 = fired */
+  th_info.quality_mode = buffer[PIC_QUALITY_IDX]; /* same as cam_get_quality_str */
 
   init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
   command_packet[CMD_PIC_NUM+1] = n_pic;
