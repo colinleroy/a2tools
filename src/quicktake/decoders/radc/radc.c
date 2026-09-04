@@ -106,10 +106,10 @@ uint8 qt_load_raw(uint16 top)
       return -1;
     }
 
-    /* Skip first 16 lines if 768x512 */
+    /* Skip first 16 lines, divided by two for scaling, if 768x512 */
     if (width == 384) {
       row_idx = raw_image - RAW_WIDTH;
-      for (row = 0; row < 16; row += 2) {
+      for (row = 0; row < 8; row += 2) {
         factor = getfactor();
         getfactor();
         getfactor();

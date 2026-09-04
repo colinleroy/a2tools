@@ -111,7 +111,9 @@ void __fastcall__ build_scale_table(const char *ofname) {
   
   printf("Band height %d to %d, %zu bytes per band\n",
          BAND_HEIGHT, scaled_band_height, output_write_len);
-  /* Hack for 768px wide pics */
+  /* Hack for 768px wide pics, keep the center 640.
+   * Those (DC50 KDC) pics are also 512 pixels, high,
+   * this is taken care of in radc.c */
   if (width == 384) {
     crop_start_x += 32;
     crop_end_x -= 32;
