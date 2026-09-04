@@ -42,11 +42,11 @@ void gotoxy(int x, int y) {
   // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1);
 }
 void gotox(int x) {
-  int y = wherey();
+  // int y = wherey();
   // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 y */
 }
 void gotoy(int y) {
-  int x = wherex();
+  // int x = wherex();
   // fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 x */
 }
 
