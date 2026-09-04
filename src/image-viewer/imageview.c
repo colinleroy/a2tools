@@ -82,12 +82,14 @@ start_from_first:
 
 static void print_help(void) {
   gotoxy(0, 20);
-  if (has_128k)
+  if (has_128k) {
     cputs("P: print to Imagewriter - C: toggle color - Space: next\r\n"
-          "Esc: exit - Any other key: toggle help.");
-  else
+          "S: Toggle slideshow - Esc: exit - Any other key: toggle help.\r\n");
+    cprintf("Free memory: %zuB", _heapmaxavail());
+  } else {
     cputs("P: print - Space: next - Esc: exit\r\n"
-          "Any other key: show help.");
+          "S: Slideshow - Any other key: show help.");
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -96,10 +98,11 @@ int main(int argc, char *argv[]) {
   uint16 len;
   uint8 i, tries = 0, do_print = 0;
   static char cmdline[127];
-  #define BLOCK_SIZE 512
+  #define BLOCK_SIZE 4096
   const char *filename = NULL;
   static char rambuf[BLOCK_SIZE];
   uint8 monochrome = 0;
+  uint8 slideshow = 0;
 
   register_start_device();
 
@@ -116,6 +119,7 @@ int main(int argc, char *argv[]) {
   }
 
 choose_again:
+  slideshow = 0;
   init_text();
   set_scrollwindow(0, scrh);
   clrscr();
@@ -151,12 +155,14 @@ next_image:
     goto out;
   }
 
-  memset((char *)HGR_PAGE, 0x0, HGR_LEN);
-  init_text();
-  gotoxy(0, 17);
-  cprintf("Loading image %s...               ", imgname);
-  print_help();
-  progress_bar(0, 18, scrw, 0, HGR_LEN*2);
+  if (!slideshow) {
+    memset((char *)HGR_PAGE, 0x0, HGR_LEN);
+    init_text();
+    gotoxy(0, 17);
+    cprintf("Loading image %s...               ", imgname);
+    print_help();
+    progress_bar(0, 18, scrw, 0, HGR_LEN*2);
+  }
 
   len = 0;
 
@@ -198,11 +204,21 @@ again:
     i = 'p';
     do_print = 0;
   } else {
+    if (slideshow) {
+      platform_interruptible_msleep(1000*10);
+      if (!kbhit()) {
+        get_next_image(imgname);
+        goto next_image;
+      }
+    }
     i = tolower(cgetc());
   }
   switch(i) {
     case 'c':
       monochrome = !monochrome;
+      goto redisplay;
+    case 's':
+      slideshow = !slideshow;
       goto redisplay;
     case 'p':
       if (is_dhgr)
