@@ -47,7 +47,7 @@
 #define SER_BAUD_57600  B57600
 #define SER_BAUD_115200 B115200
 #define SER_PAR_EVEN    PARENB
-#define SER_PAR_NONE    (~PARENB)
+#define SER_PAR_NONE    0
 #endif
 
 extern uint8 camera_connected;
