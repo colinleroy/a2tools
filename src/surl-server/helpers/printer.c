@@ -210,7 +210,7 @@ static void handle_document(unsigned char first_byte) {
   int cups_status = -1;
   cups_dest_t *dest = NULL;
   cups_dinfo_t *info = NULL;
-  FILE *fp;
+  FILE *fp = NULL, *debug_fp = NULL;
   size_t r;
 
   strftime(timestamp, sizeof timestamp, "%Y-%m-%d-%H-%M-%S", localtime(&now));
@@ -218,14 +218,27 @@ static void handle_document(unsigned char first_byte) {
 
   LOG("Printer: Receiving data to %s\n", filename);
 
+  if (getenv("DEBUG_PRINTER")) {
+    debug_fp = fopen(getenv("DEBUG_PRINTER"), "wb");
+    if (!debug_fp) {
+      LOG("Printer: could not open %s debug file (%s)\n", getenv("DEBUG_PRINTER"), strerror(errno));
+    }
+  }
+
   imagewriter_init(g_imagewriter_dpi, default_papersize_num, g_imagewriter_banner, filename,
                    g_imagewriter_multipage, default_charset_num);
   imagewriter_loop(first_byte);
+  if (debug_fp) {
+    fputc(first_byte, debug_fp);
+  }
 
   while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, job_timeout, 0)) != EOF) {
     c = (unsigned char)i;
     if (n_bytes && (n_bytes % 2048) == 0) {
       LOG("Printer: got %zu bytes...\n", n_bytes);
+    }
+    if (debug_fp) {
+      fputc(c, debug_fp);
     }
     imagewriter_loop(c);
     // if (n_bytes % 5000 == 0) {
@@ -237,6 +250,11 @@ static void handle_document(unsigned char first_byte) {
     //   printf("XONing\n");
     // }
     n_bytes++;
+  }
+
+  if (debug_fp) {
+    fclose(debug_fp);
+    LOG("Printer: wrote raw data to %s.\n", getenv("DEBUG_PRINTER"));
   }
 
   LOG("Printer: End of data after %zu bytes.\n", n_bytes);
