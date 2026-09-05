@@ -47,6 +47,17 @@ microserial_SOURCES := \
 	../lib/progress_bar.c \
 	../lib/strtrim.c \
 
+config_SOURCES := \
+	ui/configuration.c \
+	../lib/a2_features.s \
+	../lib/asm/path_helper.s \
+	../lib/serial/asm/ser_params.s \
+	../lib/serial/asm/simple_serial_configure.s \
+	../lib/asm/scrollwindow.s \
+	../lib/FVTABZ.s \
+	../lib/platform_sleep.s \
+	../lib/zexec.c
+
 slowtake_SOURCES := \
 	ui/qt-menu.c \
 	ui/ui.c \
@@ -78,9 +89,9 @@ slowtake_CC65SOURCES := \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
+	../lib/serial/asm/ser_params.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/asm/simple_serial_read_no_irq.s \
 	../lib/a2_features.s \
 	../lib/asm/zx02_decompress_in_place.s \
@@ -192,6 +203,11 @@ CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(de
 microserial_GCCCFLAGS = \
 	-DBUFFER_SIZE=2048 -DEXTRA_SERIAL_CONFIG
 
+config_CLCFLAGS = $(CLCFLAGS) \
+	-DEXTRA_SERIAL_CONFIG --asm-define EXTRA_SERIAL_CONFIG \
+	--start-addr 0xC00 \
+	-C ../../config/apple2enh-slowtake-config.cfg
+
 slowtake_CLCFLAGS = $(CLCFLAGS) \
 	-DPROGRAM_NAME='"SLOWTAKE"' \
 	-DBUFFER_SIZE=2048  --asm-define BUFFER_SIZE=2048 \
@@ -294,6 +310,8 @@ ABOUT.ZX: ui/about.in
 	zx02 -f about.tmp ABOUT.ZX; \
 	rm about.tmp
 
+CONFIG.BZX: config.bin
+	zx02 -f $< $@
 SLOWTAKE.BZX: slowtake.bin
 	zx02 -f $< $@
 QKTKCONV.BZX: qktkconv.bin
@@ -314,14 +332,15 @@ SRRA.DRV: slowtake.bin
 ../zxloader/zxloader.system: ../zxloader/zxloader.s
 	make -C ../zxloader/ clean all
 
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX ../zxloader/zxloader.system
-	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE.SYSTEM SYS < ../zxloader/zxloader.system; \
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX ../zxloader/zxloader.system
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG.SYSTEM SYS < ../zxloader/zxloader.system; \
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00 < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00 < FUJI.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC50.ZX BIN 0xC00 < DC50.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SRRA.ZX BIN 0xC00 < SRRA.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG BIN 0xC00 < CONFIG.BZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SLOWTAKE BIN 0x1A00 < SLOWTAKE.BZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QKTKCONV BIN 0x1000 < QKTKCONV.BZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)RADCCONV BIN 0x1000 < RADCCONV.BZX; \
@@ -330,7 +349,7 @@ add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX SRRA.ZX SLOWTAKE.BZX QKTKCONV.BZX RA
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-quicktake.po: splash.h slowtake.bin qktkconv.bin radcconv.bin jpegconv.bin loader.x86_64 qktkconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
+quicktake.po: splash.h config.bin slowtake.bin qktkconv.bin radcconv.bin jpegconv.bin loader.x86_64 qktkconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
@@ -343,6 +362,9 @@ splash.h: ui/splash.png
 	../surl-server/hgr-convert $<
 	../../bin/make-splash.sh ui/splash.png
 	rm -f ui/splash.png.hgr*
+
+config.bin: $(config_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"config.dbg" $(CFLAGS) $(config_CLCFLAGS) -vm -m config.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES) 
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o

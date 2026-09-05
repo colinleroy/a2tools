@@ -24,6 +24,7 @@ homectrl_CL65SOURCES = \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
+	../lib/serial/asm/ser_params.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/asm/simple_serial_io.s \
@@ -65,6 +66,7 @@ grphview_CL65SOURCES = \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
+	../lib/serial/asm/ser_params.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/asm/surl_core.s \

@@ -16,11 +16,10 @@
 ;
 
         .export         _simple_serial_configure
-        .export         _simple_serial_write_config
 
         .import         _ser_params
         .import         _simple_serial_settings_io
-        .import         _simple_serial_close
+        .import         _simple_serial_write_config
 
         .import         simple_serial_ram_settings
         .import         simple_serial_disk_settings
@@ -180,9 +179,6 @@ auto_str:         .asciiz "Auto"
         inx
         cpx     #(MAX_SPEED_IDX+1)
         bne     @next_x
-
-        ; Make sure we don't have a port opened
-        jsr     _simple_serial_close
 
         ; Print instructions
         jsr     _clrscr
@@ -396,23 +392,4 @@ auto_str:         .asciiz "Auto"
 :       lda     #MAX_SPEED_IDX
 :       sta     printer_speed_idx
         jmp     @update_ui
-.endproc
-
-.proc do_write_config
-        jsr     pushax
-        lda     #<(O_WRONLY|O_CREAT)
-        ldx     #>(O_WRONLY|O_CREAT)
-        jmp     _simple_serial_settings_io
-.endproc
-
-.proc _simple_serial_write_config
-        ; Save settings to disk
-        lda     #<simple_serial_disk_settings
-        ldx     #>simple_serial_disk_settings
-        jsr     do_write_config
-
-        ; And in RAM
-        lda     #<simple_serial_ram_settings
-        ldx     #>simple_serial_ram_settings
-        jmp     do_write_config
 .endproc

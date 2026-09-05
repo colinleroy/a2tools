@@ -120,8 +120,9 @@ void reload_menu(const char *filename) {
   char buffer[128];
   reopen_start_device();
 
-  zxloader_name = "SLOWTAKE.SYSTEM";
+  zxloader_name = "CONFIG.SYSTEM";
 
+  strcpy(buffer, "SLOWTAKE");
   if (filename) {
     #ifndef __CC65__
     sprintf(buffer, "%s %d", filename, effective_width);
@@ -129,16 +130,13 @@ void reload_menu(const char *filename) {
     /* we're exec'ing SLOWTAKE.SYSTEM here which is a zx unpacker. It will
      * decompress and run argv[1] instead of "SLOWTAKE" if the cmdline is
      * not null, and it is not, so provide it. */
-    strcpy(buffer, "SLOWTAKE");
     strcat(buffer, " ");
     strcat(buffer, filename);
     strcat(buffer, " ");
     strcat(buffer, utoa(effective_width, buffer+sizeof(buffer)-5, 10));
     #endif
-    zexec(buffer);
-  } else {
-    zexec(NULL);
   }
+  zexec(buffer);
 }
 
 int main (int argc, const char **argv)

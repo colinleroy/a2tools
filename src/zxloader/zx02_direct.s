@@ -10,6 +10,8 @@
 
         .export         _decompress_zx02_direct
 
+CH := $24
+
 .proc _decompress_zx02_direct
         ; Init values
         lda     #$80
@@ -31,8 +33,14 @@ cop0:
         inc     ZX0_src
         bne     :+
         inc     ZX0_src+1
-        lda     #'.'|$80
+
+indicator = *+1
+        lda     #'-'|$80
+        eor     #%00001100    ; switch between '!' (00100001) and '-' (00101101)
+        sta     indicator
+
         jsr     COUT
+        dec     CH
 
 :       inc     ZX0_dst
         bne     :+

@@ -22,14 +22,6 @@
 
 extern uint8 scrw, scrh;
 
-static char *camera_drivers[] = {
-  "QT1X0.ZX",
-  "FUJI.ZX",
-  "DC50.ZX",
-  "SRRA.ZX",
-  NULL
-};
-
 uint8 serial_model = QT_MODEL_UNKNOWN;
 char *cam_file_extension[] = {
   ".???", /* QT_MODEL_UNKNOWN */
@@ -72,8 +64,6 @@ static uint8 load_driver(char *drv, CamSpeed speed) {
 
 /* Connect to a QuickTake and detect its model */
 uint8 cam_serial_connect(CamSpeed speed) {
-  uint8 i;
-
   simple_serial_read_config();
 
   /* Set initial settings */
@@ -87,24 +77,7 @@ uint8 cam_serial_connect(CamSpeed speed) {
   }
 
   /* Get last driver used, from extra serial parameters */
-  if (ser_params.extra_parameters[0] && load_driver(ser_params.extra_parameters, speed) == 0) {
-    goto load_done;
-  }
-
-  for (i = 0; IS_NOT_NULL(camera_drivers[i]); i++) {
-    /* Don't retry the last driver, it just failed. */
-    if (strcmp(ser_params.extra_parameters, camera_drivers[i]) && load_driver(camera_drivers[i], speed) == 0) {
-      /* Register new default driver */
-      strcpy(ser_params.extra_parameters, camera_drivers[i]);
-      simple_serial_write_config();
-      break;
-    }
-  }
-
-load_done:
-  cputs("\r\n");
-
-  if (serial_model == QT_MODEL_UNKNOWN) {
+  if (load_driver(ser_params.extra_parameters, speed) != 0) {
     cputs("No camera detected. ");
     return -1;
   }

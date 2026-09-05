@@ -16,42 +16,33 @@
 ;
 
         .export         _baudrate, _flow_control, _open_slot
-        .export         _ser_params
 
-        .export         _simple_serial_read_config
         .export         _simple_serial_open
         .export         _simple_serial_open_printer
         .export         _simple_serial_close
-        .export         _simple_serial_settings_io
 
 .ifdef SERIAL_ENABLE_IRQ
         .export         _simple_serial_getc_with_timeout
         .export         _simple_serial_getc
 .endif
 
-        .export         simple_serial_ram_settings
-        .export         simple_serial_disk_settings
-        .export         read_mode_str, write_mode_str
+        .import         sser_c
 
+        .import         _ser_params
+        .import         _simple_serial_read_config
         .import         _simple_serial_setup_no_irq_regs
 
         .import         __filetype, __auxtype
         .import         _open, _read, _write, _close, _unlink
         .import         pusha, pusha0, pushax, return0, returnFFFF
         
-        .import         _reopen_start_device
-        .import         _register_start_device
-
         .import         _serial_open, _serial_close
         .import         _serial_get_async
 
         .importzp       ptr1
 
         .import         _get_iigs_speed
-        .import         _set_iigs_speed, ostype
-
-        .constructor    setup_serial_defaults
-        .destructor     unlink_tmpfile
+        .import         _set_iigs_speed
 
         .include        "../../simple_serial.inc"
         .include        "fcntl.inc"
@@ -60,48 +51,11 @@
         .include        "ser-error.inc"
         .include        "accelerator.inc"
 
-        .segment "ONCE"
-
-; Used to fix default serial port (2) to 0 (modem) on IIgs
-setup_serial_defaults:
-        bit     ostype
-        bpl     :+
-        lda     #0
-        sta     _ser_params+SIMPLE_SERIAL_PARAMS::DATA_SLOT
-        ; IIgs printer port: same as default 8-bits printer slot
-        ; lda     #1
-        ; sta     _ser_params+SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
-:       rts
-
-        .data
+        .segment "DATA"
 
 _baudrate:      .byte $00
 _flow_control:  .byte SER_HS_HW
 _open_slot:     .byte 0
-
-; Our own serial parameters
-_ser_params:    .byte SER_BAUD_115200   ; Data speed
-                .byte 2                 ; Data slot
-                .byte SER_BAUD_9600     ; Printer speed
-                .byte 1                 ; Printer slot
-.ifdef EXTRA_SERIAL_CONFIG
-                .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.endif
-
-; CC65's serial parameters
-default_params: .byte SER_BAUD_115200
-                .byte SER_BITS_8
-                .byte SER_STOP_1
-                .byte SER_PAR_NONE
-                .byte SER_HS_HW
-
-        .rodata
-
-simple_serial_ram_settings:   .asciiz "/RAM/serialcfg"
-simple_serial_disk_settings:= simple_serial_ram_settings+5 ; "serialcfg"
-; Fixme incorrect place
-read_mode_str:  .asciiz "r"
-write_mode_str: .asciiz "w"
 
         .segment "RT_ONCE"
 
@@ -145,93 +99,12 @@ write_mode_str: .asciiz "w"
         rts
 .endproc
 
-.proc simple_serial_read_from_AX: near
-        jsr     pushax
-        lda     #<(O_RDONLY)
-        ldx     #>(O_RDONLY)
-        jmp     _simple_serial_settings_io
-.endproc
-
-.proc _simple_serial_read_config: near
-        jsr     _register_start_device
-
-        lda     #<simple_serial_ram_settings
-        ldx     #>simple_serial_ram_settings
-        jsr     simple_serial_read_from_AX
-
-        cmp     #$00
-        beq     :+
-
-        jsr     _reopen_start_device
-        lda     #<simple_serial_disk_settings
-        ldx     #>simple_serial_disk_settings
-        jsr     simple_serial_read_from_AX
-
-:       jmp     _reopen_start_device
-.endproc
-
 ;char __fastcall__ simple_serial_close(void);
 .proc _simple_serial_close: near
         lda     #$00
         sta     _baudrate
         sta     _open_slot
         jmp     _serial_close
-.endproc
-
-;char __fastcall__ simple_serial_settings_io(const char *path, int flags);
-.proc _simple_serial_settings_io: near
-        ; Store mode temporarily in c
-        sta     c
-
-        ; Set filetype
-        lda     #$06          ; PRODOS_T_BIN
-        sta     __filetype
-        lda     #$00
-        sta     __auxtype
-
-        lda     c
-        jsr     pushax
-        ldy     #$04          ; _open is variadic
-
-        ; Open file (path, flags already set)
-        jsr     _open
-        cmp     #$FF
-        bne     @sss_open_ok
-        cpx     #$FF
-        beq     @sss_err_open
-
-@sss_open_ok:
-        sta     settings_fd
-
-        ; Prepare read/write call
-
-        ldx     #$00
-        jsr     pushax
-
-        lda     #<_ser_params
-        ldx     #>_ser_params
-        jsr     pushax
-
-        lda     #<.sizeof (SIMPLE_SERIAL_PARAMS)
-        ldx     #>.sizeof (SIMPLE_SERIAL_PARAMS)
-
-        ; Call correct function
-        ldy     c
-        cpy     #(O_RDONLY)
-        beq     @sss_read
-
-        jsr     _write
-        jmp     @sss_close
-@sss_read:
-        jsr     _read
-@sss_close:
-        lda     settings_fd
-        ldx     #$00
-        jsr     _close
-        jmp     return0
-
-@sss_err_open:
-        jmp     returnFFFF
 .endproc
 
         .ifdef SURL_TO_LANGCARD
@@ -258,10 +131,10 @@ write_mode_str: .asciiz "w"
         ldx     #>10000
         stx     ser_timeout_cycles+1
 
-        ; Init c
+        ; Init sser_c
         lda     #$00
-        sta     c
-        sta     c+1
+        sta     sser_c
+        sta     sser_c+1
 
         ; Slow down IIgs
         jsr     _get_iigs_speed
@@ -271,8 +144,8 @@ write_mode_str: .asciiz "w"
 
 @getc_try:
         lda     #$00
-        sta     c+1
-        ; Try to get char (into c)
+        sta     sser_c+1
+        ; Try to get char (into sser_c)
         jsr     _serial_get_async
         bcc     @getc_out
 
@@ -287,30 +160,22 @@ write_mode_str: .asciiz "w"
 
         ; We got no data
         lda     #$FF
-        sta     c+1
+        sta     sser_c+1
 
         ; Done
 @getc_out:
-        sta     c
+        sta     sser_c
         lda     orig_speed_reg
         jsr     _set_iigs_speed
 
-        lda     c
-        ldx     c+1
+        lda     sser_c
+        ldx     sser_c+1
         rts
 .endproc
 
 .endif
 
-.proc unlink_tmpfile
-        lda     #<simple_serial_ram_settings
-        ldx     #>simple_serial_ram_settings
-        jmp     _unlink
-.endproc
-
         .bss
 
 ser_timeout_cycles: .res 2
-c:                  .res 2
-settings_fd:        .res 1
 orig_speed_reg:     .res 1

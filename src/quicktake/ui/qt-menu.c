@@ -675,8 +675,7 @@ static uint8 setup(int argc, char *argv[]) {
       init_text();
       set_scrollwindow(0, scrh);
       clrscr();
-      simple_serial_configure();
-      print_welcome();
+      zexec("CONFIG 1");
     }
   }
   return 1;
@@ -710,13 +709,7 @@ int main(int argc, char *argv[])
 
   clrscr();
 
-  zxloader_name = "SLOWTAKE.SYSTEM";
-
-  if (!has_128k) {
-    cputs("This program requires 128kB of memory.");
-    cgetc();
-    exit(1);
-  }
+  zxloader_name = "CONFIG.SYSTEM";
 
   __asm__("bit $C061");     /* Open-Apple ? */
   __asm__("bpl %g", nodebug);
@@ -805,7 +798,7 @@ menu:
     }
   } else if (choice == 'r') {
     exec_pass = 1;
-    zexec(NULL);
+    zexec("SLOWTAKE");
   }
 
   goto menu;
