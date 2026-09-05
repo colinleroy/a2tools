@@ -105,12 +105,22 @@ setting_offset:   .byte 0
 cur_setting:      .byte 0
 modified:         .byte 0
 
+.ifndef SERIAL_CONFIGURE_NO_SCREEN_SETUP
 DATA_SLOT_UI_LINE    = 2
 DATA_BAUD_UI_LINE    = 3
 PRINTER_SLOT_UI_LINE = 5
 PRINTER_BAUD_UI_LINE = 6
+.else
+DATA_SLOT_UI_LINE    = 0
+DATA_BAUD_UI_LINE    = 1
+PRINTER_SLOT_UI_LINE = 3
+PRINTER_BAUD_UI_LINE = 4
+.endif
 
-ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
+ui_base:
+.ifndef SERIAL_CONFIGURE_NO_SCREEN_SETUP
+                  .byte "Serial connection",$0D,$0A,$0D,$0A
+.endif
                   .byte "Data slot:      ",$0D,$0A
                   .byte "Baud rate:      ",$0D,$0A
                   .byte $0D,$0A
@@ -134,11 +144,12 @@ auto_str:         .asciiz "Auto"
 ;void simple_serial_configure(void);
 .proc _simple_serial_configure: near
         jsr     _switch_text
+.ifndef SERIAL_CONFIGURE_NO_SCREEN_SETUP
         lda     #00
         jsr     pusha
         lda     #24
         jsr     _set_scrollwindow
-
+.endif
         ; Figure out current slots
         lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
         sta     slot_idx

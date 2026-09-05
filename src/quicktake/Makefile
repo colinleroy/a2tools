@@ -205,6 +205,7 @@ microserial_GCCCFLAGS = \
 
 config_CLCFLAGS = $(CLCFLAGS) \
 	-DEXTRA_SERIAL_CONFIG --asm-define EXTRA_SERIAL_CONFIG \
+	-DSERIAL_CONFIGURE_NO_SCREEN_SETUP --asm-define SERIAL_CONFIGURE_NO_SCREEN_SETUP \
 	--start-addr 0xC00 \
 	-C ../../config/apple2enh-slowtake-config.cfg
 

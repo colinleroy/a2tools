@@ -67,6 +67,15 @@ select:
   strcpy(ser_params.extra_parameters, cameras[i].driver_name);
 }
 
+static void header(char *str) {
+  set_scrollwindow(0, 24);
+  clrscr();
+  cputs("Quicktake for Apple II - configuration\r\n");
+  chline(80);
+  cputs(str);
+  set_scrollwindow(3, 24);
+}
+
 void main(int argc, char *argv) {
   if (!has_128k) {
     cputs("This program requires 128kB of memory.");
@@ -85,21 +94,18 @@ void main(int argc, char *argv) {
   }
 #endif
 
-  clrscr();
-
   simple_serial_read_config();
 
   /* Configure when forced (by param) or no config exists */
   if (argc > 1 || ser_params.extra_parameters[0] == 0) {
-    cputs("Quicktake for Apple II - configuration\r\n");
-    chline(80);
-    cputs("Please select your camera:\r\n");
-    set_scrollwindow(3, 24);
-
     /* Camera selector */
+    header("Please select your camera:\r\n");
     camera_configure();
+
     /* Serial ports configuration */
+    header("Please enter your serial ports settings:\r\n");
     simple_serial_configure();
+
     /* And save ! */
     simple_serial_write_config();
   }
