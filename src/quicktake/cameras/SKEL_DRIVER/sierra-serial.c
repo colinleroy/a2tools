@@ -18,6 +18,7 @@
 #pragma code-name(push, "SIERRA")
 #pragma rodata-name(push, "SIERRA")
 #pragma data-name(push, "SIERRA")
+#pragma bss-name(push, "SIERRA")
 
 /* Camera features */
 #define sierra_features 0b0000000010000000
@@ -82,9 +83,12 @@ void *sierra_callbacks[] = {
 };
 
 #ifdef __CC65__
-#define PC_DEBUG(op, str, len)
+#define PC_DEBUG_BUFFER(op, str, len)
+#define PC_DEBUG_PRINTF(...)
 #else
-static void PC_DEBUG(char *op, const char *str, int len) {
+#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
+
+static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
   if (do_debug) {
     printf("%s:", op);
     for (int i = 0; i < len; i++) {
