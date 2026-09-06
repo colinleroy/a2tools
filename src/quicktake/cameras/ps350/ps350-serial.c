@@ -108,9 +108,18 @@ uint8 count = 0;
 static void ps350_prepare_packet(uint16 len) {
   bzero(command_packet, sizeof command_packet);
   command_packet[0]   = 0xC0;
-  command_packet[1]   = count++;
   command_packet[3]   = len & 0xFF;
   command_packet[4]   = len >> 8;
+
+  /* 0x01 = computer to camera, 0x02 vice versa ? */
+  /* 0x60 = ?? */
+  command_packet[11]             = 0x01;
+  command_packet[12]             = 0x60;
+
+  /* Total length */
+  command_packet[13]  = len & 0xFF;
+  command_packet[14]  = len >> 8;
+
   command_packet[299] = 0xC1;
 }
 
@@ -138,27 +147,25 @@ static void ps350_send_packet(void) {
   command_packet[PS350_CHK_IDX]   = chksum & 0xFF;
   command_packet[PS350_CHK_IDX+1] = chksum >> 8;
 
-  simple_serial_write(command_packet, PS350_PKT_LEN);
+  simple_serial_write((char *)command_packet, PS350_PKT_LEN);
   PC_DEBUG_BUFFER("Sent: ", command_packet, PS350_PKT_LEN);
 }
 
 static void ps350_send_ack(void) {
   ps350_prepare_packet(4);
-  command_packet[PS350_CMD_IDX] = CMD_ACK;
+  command_packet[1]              = count;
+  command_packet[PS350_TYPE_IDX] = CMD_ACK;
+  count++;
+  PC_DEBUG_PRINTF("ACK - count now %d\n", count);
   ps350_send_packet();
 }
 
 static void ps350_send_ping(void) {
   ps350_prepare_packet(12);
-  command_packet[PS350_CNT_IDX] = 0;
-  command_packet[PS350_CMD_IDX] = CMD_PING;
-  command_packet[9]             = 0x31;
-  command_packet[11]            = 0x01;
-  command_packet[12]            = 0x60;
-  command_packet[13]            = 12;       /* total length */
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[9]              = CMD_CODE_PING;
   ps350_send_packet();
 }
-
 
 static uint8 ps350_get_ping_reply(void) {
 #ifndef __CC65__
@@ -169,12 +176,11 @@ static uint8 ps350_get_ping_reply(void) {
     return -1;
   } else {
   }
-  if (buffer[PS350_CMD_IDX] != CMD_PING) {
+  if (buffer[PS350_CMD_IDX] != CMD_CODE_PING_REPLY) {
     PC_DEBUG_BUFFER("Not Ping reply: ", buffer, PS350_PKT_LEN);
     return -1;
   }
   PC_DEBUG_BUFFER("Got Ping reply: ", buffer, PS350_PKT_LEN);
-  // count = buffer[PS350_CNT_IDX];
 
   return 0;
 }
@@ -190,13 +196,19 @@ static uint8 ps350_get_eot(void) {
     return -1;
   } else {
   }
-  if (buffer[PS350_CMD_IDX] != CMD_EOT) {
+  if (buffer[PS350_TYPE_IDX] != CMD_EOT) {
     PC_DEBUG_BUFFER("Not EOT: ", buffer, PS350_PKT_LEN);
     return -1;
   }
-  PC_DEBUG_BUFFER("Got EOT: ", buffer, PS350_PKT_LEN);
-  // count = buffer[PS350_CNT_IDX];
 
+  return 0;
+}
+
+static uint8 ps350_get_eot_and_ack(void) {
+  if (ps350_get_eot() != 0) {
+    return -1;
+  }
+  ps350_send_ack();
   return 0;
 }
 
@@ -219,7 +231,7 @@ static uint8 ps350_wakeup(CamSpeed speed) {
   command_packet[0] = 0x00;
   command_packet[1] = 0x53;
 
-  simple_serial_write(command_packet, 6);
+  simple_serial_write((char *)command_packet, 6);
   PC_DEBUG_BUFFER("Sending ping: ", command_packet, 6);
 
   if (simple_serial_read_no_irq((char *)buffer, PS350_PKT_LEN) != EOF) {
@@ -232,10 +244,9 @@ static uint8 ps350_wakeup(CamSpeed speed) {
     goto no_cam;
   }
 
-  if (ps350_get_eot() != 0) {
+  if (ps350_get_eot_and_ack() != 0) {
     goto no_cam;
   }
-  ps350_send_ack();
   return QT_MODEL_PS350;
 
 no_cam:
@@ -270,12 +281,12 @@ again:
   simple_serial_putc(0x42);
   platform_msleep(500);
   simple_serial_putc(ps350_speed);
-  if (simple_serial_read_no_irq(&c, 1) == EOF) {
+  if (simple_serial_read_no_irq((char*)&c, 1) == EOF) {
     if (tries--) {
       goto again;
     }
     cputs("No reply.\r\n");
-    return -1;
+    goto err_out;
   }
 
   PC_DEBUG_PRINTF("Upgrading speed\n");
@@ -287,12 +298,66 @@ again:
   platform_msleep(500);
 
   ps350_send_ping();
-  return ps350_get_ping_reply();
+  if (ps350_get_ping_reply() != 0) {
+    goto err_out;
+  }
+
+  return ps350_get_eot_and_ack();
+err_out:
+  return -1;
 }
 
+static char disk_name[35];
+
+static uint8 ps350_send_command_and_get_result(void) {
+  ps350_send_packet();
+
+  if (simple_serial_read_no_irq((char *)buffer, PS350_PKT_LEN) == EOF) {
+    goto err_out;
+  }
+  if (buffer[PS350_TYPE_IDX] != command_packet[PS350_TYPE_IDX]
+   || buffer[PS350_CMD_IDX] != command_packet[PS350_CMD_IDX]) {
+    goto err_out;
+  }
+  PC_DEBUG_BUFFER("Got reply: ", buffer, PS350_PKT_LEN);
+  return 0;
+
+err_out:
+  return -1;
+}
 /* Get information from the camera */
 static uint8 ps350_get_information(void) {
-  return -1;
+  /* GET DISKS */
+  ps350_prepare_packet(20);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DISKS;
+  command_packet[17]             = count;
+  command_packet[21]             = 0x1E;
+
+  if (ps350_send_command_and_get_result() != 0) {
+err_out:
+    return -1;
+  }
+  strcpy(disk_name, (char *)buffer+25);
+  PC_DEBUG_PRINTF("Disk name %s\n", disk_name);
+  if (ps350_get_eot_and_ack() != 0) {
+    goto err_out;
+  }
+
+  /* USE DISK */
+  ps350_prepare_packet(33);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_USE_DISK;
+  command_packet[11]             = 0x21;
+  command_packet[12]             = 0xA0;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, disk_name, strlen(disk_name));
+
+  if (ps350_send_command_and_get_result() != 0) {
+    goto err_out;
+  }
+
+  return ps350_get_eot_and_ack();
 }
 
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
