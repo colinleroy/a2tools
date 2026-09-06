@@ -362,49 +362,63 @@ static uint8 ps350_select_disk(void) {
   return ps350_send_command_and_get_result();
 }
 
-static char dir_name[35];
+static char dir_name[64];
 static char dir_id[4];
+
+static uint8 do_get_dir(char *dir) {
+  uint8 pkt_len;
+
+  PC_DEBUG_PRINTF("Checking for %s\n", dir);
+  pkt_len = strlen(dir) + 17;
+  ps350_prepare_packet(pkt_len);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_PTR;
+  command_packet[11]             = 0x21;
+  command_packet[12]             = 0xA0;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, dir, strlen(dir));
+
+  /* Operations split because we need the buffer contents */
+  if (ps350_send_command_and_get_result() != 0) {
+    goto err_out;
+  }
+  if (buffer[21] == 0x00 && buffer[24] == 0x00) {
+    /* found directory */
+    PC_DEBUG_PRINTF("Directory %s exists\n", dir);
+    memcpy(dir_id, buffer+25, 4);
+    return 0;
+  }
+err_out:
+  return -1;
+}
+
 #define NUM_DIRS 2
 static char *directories[NUM_DIRS] = {"DC97", "PWRSHOT"};
 
 static uint8 ps350_select_dir(void) {
-  uint8 pkt_len, cur_dir, tries = 0;
+  uint8 cur_dir, tries = 0;
 
   do {
     strcpy(dir_name, disk_name);
     strcat(dir_name, directories[tries]);
     PC_DEBUG_PRINTF("Checking for %s directory\n", dir_name);
-    pkt_len = strlen(dir_name) + 17;
 
     /* GET DIR */
-    ps350_prepare_packet(pkt_len);
-    command_packet[PS350_TYPE_IDX] = CMD_PACKET;
-    command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_PTR;
-    command_packet[11]             = 0x21;
-    command_packet[12]             = 0xA0;
-    command_packet[17]             = count;
-    memcpy(command_packet+PS350_DATA_IDX, dir_name, strlen(dir_name));
-
-    /* Operations split because we need the buffer contents */
-    if (ps350_send_command_and_get_result() != 0) {
-      goto err_out;
-    }
-    if (buffer[21] == 0x00 && buffer[24] == 0x00) {
-      /* found directory */
-      memcpy(dir_id, buffer+25, 4);
+    if (do_get_dir(dir_name) == 0) {
       return 0;
     }
   } while (++tries < NUM_DIRS);
 
   PC_DEBUG_PRINTF("No directory found\n");
-err_out:
   return -1;
 }
 
 uint16 num_files;
-static uint8 ps350_get_dir_list(void) {
+static uint8 ps350_select_subdir(void) {
   uint16 pos;
   uint8 ent_len;
+
+  PC_DEBUG_PRINTF("Listing subdirectory %s\n", dir_name);
   /* Prepare for dir download */
   ps350_prepare_packet(20);
   command_packet[PS350_TYPE_IDX] = CMD_PACKET;
@@ -443,12 +457,85 @@ err_out:
   // ln <--?????--> <--date---> <--name ... --
 
   pos = 27;
-  while((ent_len = buffer[pos]) != 0x00) {
+  while(buffer[pos] != 0x00) { /* 0x10 = DIR, 0x20 = FILE */
     char *cur_dir = buffer+pos+9;
     if (isalnum(*cur_dir)) {
       PC_DEBUG_PRINTF("Directory: %s\n", buffer+pos+9);
+      strcat(dir_name, "\\");
+      strcat(dir_name, buffer+pos+9);
+      break;
     }
-    pos += ent_len + 5;
+    pos += 21;
+  }
+
+  return do_get_dir(dir_name);
+}
+
+/* FIXME Factorize and cleanup */
+static uint8 ps350_list_subdir(void) {
+  uint16 pos;
+  uint8 ent_len;
+
+  PC_DEBUG_PRINTF("Listing subdirectory\n");
+  /* Prepare for dir download */
+  ps350_prepare_packet(20);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_PREPARE_GET_DIR_LIST;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, dir_id, 4);
+  if (ps350_send_command_and_get_result() != 0) {
+err_out:
+    return -1;
+  }
+
+  /* Dir download */
+  ps350_prepare_packet(28);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_LIST;
+  command_packet[PS350_CMD_IDX+2]= 0x81;
+  command_packet[PS350_CMD_IDX+3]= 0xA0;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, dir_id, 4);
+  command_packet[25]             = 0xE8;
+  command_packet[26]             = 0x03;
+
+  if (ps350_send_command_and_get_result() != 0) {
+    goto err_out;
+  }
+
+  /* FIXME handled multi-packet answer */
+
+  num_files = buffer[25] | (buffer[26]<<8);
+
+  // data format:
+  // 10 00 00 00 00 40 EC 6D 38 2E 00 00 00 00 00 00 00 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 2E 2E 00 00 00 00 00 00 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 43 54 47 5F 30 30 31 30 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 E5 54 47 5F 30 30 31 30
+  // ln <--?????--> <--date---> <--name ... --
+
+  pos = 27;
+  while(buffer[pos] != 0x00) {
+    uint32 file_size;
+    char filename[13];
+
+#ifndef __CC65__
+    file_size     =  buffer[pos+1]
+                 + (buffer[pos+2] << 8)
+                 + (buffer[pos+3] << 16)
+                 + (buffer[pos+4] << 24);
+#else
+    /* Get size (24 bits big endian)*/
+    ((unsigned char *)&file_size)[0] = buffer[pos+1];
+    ((unsigned char *)&file_size)[1] = buffer[pos+2];
+    ((unsigned char *)&file_size)[2] = buffer[pos+3];
+    ((unsigned char *)&file_size)[3] = buffer[pos+4];
+#endif
+
+    memcpy(filename, buffer+pos+9, 12);
+    filename[12] = '\0';
+    PC_DEBUG_PRINTF("Entry: %s, size %d\n", filename, file_size);
+    pos += 21;
   }
 
   return 0;
@@ -463,7 +550,10 @@ err_out:
   if (ps350_select_dir() != 0) {
     goto err_out;
   }
-  if (ps350_get_dir_list() != 0) {
+  if (ps350_select_subdir() != 0) {
+    goto err_out;
+  }
+  if (ps350_list_subdir() != 0) {
     goto err_out;
   }
   return 0;
