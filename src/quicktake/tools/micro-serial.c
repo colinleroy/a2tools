@@ -13,6 +13,7 @@ extern void *qt1x0_callbacks[];
 extern void *fuji_callbacks[];
 extern void *dc50_callbacks[];
 extern void *sierra_callbacks[];
+extern void *ps350_callbacks[];
 extern char *opt_tty_path;
 extern int opt_tty_speed;
 
@@ -101,11 +102,17 @@ int main(int argc, char *argv[]) {
   if (argc < 3) {
     printf("Usage: %s camera_model tty_path [command] [command parameter]\n"
            "\n"
-           "       camera_models: qt1x0, fuji, dc50, sierra\n"
+           "       camera_models: qt1x0, fuji, dc50, sierra, ps350\n"
            "       tty_path:      /dev/ttyUSB0 for example\n"
            "       command:       get (parameter: picture number)\n"
            "                      thumb (parameter: picture number)\n"
            "                      set_name (parameter: new name)\n"
+           "                      set_date (no parameter, takes current date)\n"
+           "                      set_flash (parameter: mode as int)\n"
+           "                      set_quality (parameter: mode as int)\n"
+           "                      list (no parameter)\n"
+           "                      delete (no parameter, deletes every picture)\n"
+           "                      snap (no parameter)\n"
            "\n",
            argv[0]);
     exit(1);
@@ -118,6 +125,8 @@ int main(int argc, char *argv[]) {
     setup_pointers(dc50_callbacks);
   } else if (!strcmp(argv[1], "sierra")) {
     setup_pointers(sierra_callbacks);
+  } else if (!strcmp(argv[1], "ps350")) {
+    setup_pointers(ps350_callbacks);
   } else {
     printf("Unknown model '%s'\n", argv[1]);
     exit(1);

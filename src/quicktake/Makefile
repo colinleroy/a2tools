@@ -38,6 +38,8 @@ microserial_SOURCES := \
 	cameras/sierra/sierra-serial.c \
 	cameras/sierra/sierra-read-packet.c \
 	cameras/sierra/sierra-thumbs.c \
+	cameras/ps350/ps350-serial.c \
+	cameras/ps350/ps350-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -73,6 +75,7 @@ slowtake_SOURCES := \
 	cameras/dc50/dc50-read-response.c \
 	cameras/sierra/sierra-serial.c \
 	cameras/sierra/sierra-read-packet.s \
+	cameras/ps350/ps350-serial.c \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
@@ -86,6 +89,7 @@ slowtake_CC65SOURCES := \
 	cameras/fuji/fuji-thumbs.s \
 	cameras/dc50/dc50-thumbs.s \
 	cameras/sierra/sierra-thumbs.s \
+	cameras/ps350/ps350-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \

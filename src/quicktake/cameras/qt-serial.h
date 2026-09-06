@@ -11,6 +11,7 @@
 #define QT_MODEL_FUJI    3
 #define QT_MODEL_DC50    4
 #define QT_MODEL_SIERRA  5
+#define QT_MODEL_PS350   6
 
 #define CAM_FEATURES        0
 #define CAM_WAKEUP          1
@@ -42,6 +43,7 @@
 #define CamSpeed uint8
 #else
 #define CamSpeed int
+#define SER_BAUD_50     B50
 #define SER_BAUD_9600   B9600
 #define SER_BAUD_19200  B19200
 #define SER_BAUD_57600  B57600
