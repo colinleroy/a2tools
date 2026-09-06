@@ -22,10 +22,13 @@ extern uint8 do_debug;
 #define CMD_PACKET    0x10
 #define CMD_SPD       0x42
 
-#define CMD_CODE_PING        0x31
-#define CMD_CODE_PING_REPLY  0x09
-#define CMD_CODE_USE_DISK    0x14
-#define CMD_CODE_GET_DISKS   0x18
+#define CMD_CODE_GET_DIR_PTR          0x02
+#define CMD_CODE_PREPARE_GET_DIR_LIST 0x04
+#define CMD_CODE_PING_REPLY           0x09
+#define CMD_CODE_USE_DISK             0x14
+#define CMD_CODE_GET_DISKS            0x18
+#define CMD_CODE_PING                 0x31
+#define CMD_CODE_GET_DIR_LIST         0x2A
 
 #define PS350_SPEED_9600   0x00
 #define PS350_SPEED_19200  0x01

@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -152,6 +153,7 @@ static void ps350_send_packet(void) {
 }
 
 static void ps350_send_ack(void) {
+  PC_DEBUG_PRINTF("Sending ACK\n");
   ps350_prepare_packet(4);
   command_packet[1]              = count;
   command_packet[PS350_TYPE_IDX] = CMD_ACK;
@@ -191,13 +193,16 @@ static void ps350_flush(void) {
 }
 
 static uint8 ps350_get_eot(void) {
-  if (simple_serial_read_no_irq((char *)buffer, PS350_PKT_LEN) == EOF) {
-    PC_DEBUG_BUFFER("EOT short read: ", buffer, PS350_PKT_LEN);
+  PC_DEBUG_PRINTF("Getting EOT\n");
+  /* EOTs are read at +512 to preserve the previous command's
+   * output */
+  if (simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN) == EOF) {
+    PC_DEBUG_BUFFER("EOT short read: ", buffer+512, PS350_PKT_LEN);
     return -1;
   } else {
   }
-  if (buffer[PS350_TYPE_IDX] != CMD_EOT) {
-    PC_DEBUG_BUFFER("Not EOT: ", buffer, PS350_PKT_LEN);
+  if (buffer[PS350_TYPE_IDX+512] != CMD_EOT) {
+    PC_DEBUG_BUFFER("Not EOT: ", buffer+512, PS350_PKT_LEN);
     return -1;
   }
 
@@ -307,8 +312,6 @@ err_out:
   return -1;
 }
 
-static char disk_name[35];
-
 static uint8 ps350_send_command_and_get_result(void) {
   ps350_send_packet();
 
@@ -320,13 +323,15 @@ static uint8 ps350_send_command_and_get_result(void) {
     goto err_out;
   }
   PC_DEBUG_BUFFER("Got reply: ", buffer, PS350_PKT_LEN);
-  return 0;
+  return ps350_get_eot_and_ack();
 
 err_out:
   return -1;
 }
-/* Get information from the camera */
-static uint8 ps350_get_information(void) {
+
+static char disk_name[35];
+static uint8 ps350_select_disk(void) {
+  char *ptr;
   /* GET DISKS */
   ps350_prepare_packet(20);
   command_packet[PS350_TYPE_IDX] = CMD_PACKET;
@@ -334,15 +339,16 @@ static uint8 ps350_get_information(void) {
   command_packet[17]             = count;
   command_packet[21]             = 0x1E;
 
+  /* Split command and EOT/ACK because we need the buffer */
   if (ps350_send_command_and_get_result() != 0) {
-err_out:
     return -1;
   }
   strcpy(disk_name, (char *)buffer+25);
-  PC_DEBUG_PRINTF("Disk name %s\n", disk_name);
-  if (ps350_get_eot_and_ack() != 0) {
-    goto err_out;
+
+  if (IS_NOT_NULL(ptr = strchr(disk_name, '/'))) {
+    *ptr = '\\';
   }
+  PC_DEBUG_PRINTF("Disk name %s\n", disk_name);
 
   /* USE DISK */
   ps350_prepare_packet(33);
@@ -353,11 +359,114 @@ err_out:
   command_packet[17]             = count;
   memcpy(command_packet+PS350_DATA_IDX, disk_name, strlen(disk_name));
 
+  return ps350_send_command_and_get_result();
+}
+
+static char dir_name[35];
+static char dir_id[4];
+#define NUM_DIRS 2
+static char *directories[NUM_DIRS] = {"DC97", "PWRSHOT"};
+
+static uint8 ps350_select_dir(void) {
+  uint8 pkt_len, cur_dir, tries = 0;
+
+  do {
+    strcpy(dir_name, disk_name);
+    strcat(dir_name, directories[tries]);
+    PC_DEBUG_PRINTF("Checking for %s directory\n", dir_name);
+    pkt_len = strlen(dir_name) + 17;
+
+    /* GET DIR */
+    ps350_prepare_packet(pkt_len);
+    command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+    command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_PTR;
+    command_packet[11]             = 0x21;
+    command_packet[12]             = 0xA0;
+    command_packet[17]             = count;
+    memcpy(command_packet+PS350_DATA_IDX, dir_name, strlen(dir_name));
+
+    /* Operations split because we need the buffer contents */
+    if (ps350_send_command_and_get_result() != 0) {
+      goto err_out;
+    }
+    if (buffer[21] == 0x00 && buffer[24] == 0x00) {
+      /* found directory */
+      memcpy(dir_id, buffer+25, 4);
+      return 0;
+    }
+  } while (++tries < NUM_DIRS);
+
+  PC_DEBUG_PRINTF("No directory found\n");
+err_out:
+  return -1;
+}
+
+uint16 num_files;
+static uint8 ps350_get_dir_list(void) {
+  uint16 pos;
+  uint8 ent_len;
+  /* Prepare for dir download */
+  ps350_prepare_packet(20);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_PREPARE_GET_DIR_LIST;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, dir_id, 4);
+  if (ps350_send_command_and_get_result() != 0) {
+err_out:
+    return -1;
+  }
+
+  /* Dir download */
+  ps350_prepare_packet(28);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_LIST;
+  command_packet[PS350_CMD_IDX+2]= 0x81;
+  command_packet[PS350_CMD_IDX+3]= 0xA0;
+  command_packet[17]             = count;
+  memcpy(command_packet+PS350_DATA_IDX, dir_id, 4);
+  command_packet[25]             = 0xE8;
+  command_packet[26]             = 0x03;
+
   if (ps350_send_command_and_get_result() != 0) {
     goto err_out;
   }
 
-  return ps350_get_eot_and_ack();
+  /* FIXME handled multi-packet answer */
+
+  num_files = buffer[25] | (buffer[26]<<8);
+
+  // data format:
+  // 10 00 00 00 00 40 EC 6D 38 2E 00 00 00 00 00 00 00 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 2E 2E 00 00 00 00 00 00 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 43 54 47 5F 30 30 31 30 00 00 00 00 
+  // 10 00 00 00 00 40 EC 6D 38 E5 54 47 5F 30 30 31 30
+  // ln <--?????--> <--date---> <--name ... --
+
+  pos = 27;
+  while((ent_len = buffer[pos]) != 0x00) {
+    char *cur_dir = buffer+pos+9;
+    if (isalnum(*cur_dir)) {
+      PC_DEBUG_PRINTF("Directory: %s\n", buffer+pos+9);
+    }
+    pos += ent_len + 5;
+  }
+
+  return 0;
+}
+
+/* Get information from the camera */
+static uint8 ps350_get_information(void) {
+  if (ps350_select_disk() != 0) {
+err_out:
+    return -1;
+  }
+  if (ps350_select_dir() != 0) {
+    goto err_out;
+  }
+  if (ps350_get_dir_list() != 0) {
+    goto err_out;
+  }
+  return 0;
 }
 
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
