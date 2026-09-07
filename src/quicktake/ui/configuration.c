@@ -17,14 +17,12 @@ typedef struct _cam_driver {
 static cam_driver cameras[] = {
   {"QT1X0.ZX", "Apple Quicktake 100"},
   {"QT1X0.ZX", "Apple Quicktake 150"},
-
   {"FUJI.ZX",  "Apple Quicktake 200"},
+  {"SRRA.ZX",  "Epson PhotoPC PCDC001"},
+  {"PS350.ZX", "Canon PowerShot 350"},
   {"FUJI.ZX",  "Fujifilm DS-7"},
   {"FUJI.ZX",  "Fujifilm DX-8"},
-
   {"DC50.ZX",  "Kodak DC50 Zoom"},
-
-  {"SRRA.ZX",  "Epson PhotoPC PCDC001"},
   {"SRRA.ZX",  "Sanyo VPC-G1"},
   {"SRRA.ZX",  "Sanyo VPC-G200"},
   {"SRRA.ZX",  "Sierra Imaging SD640"},

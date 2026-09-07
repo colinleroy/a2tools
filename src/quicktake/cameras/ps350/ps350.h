@@ -10,6 +10,7 @@ extern uint8 do_debug;
 
 #define PS350_CNT_IDX       1
 #define PS350_TYPE_IDX      2
+#define PS350_LEN_IDX       3
 #define PS350_CMD_IDX       9
 #define PS350_CHK_IDX       297
 #define PS350_DATA_IDX      21
@@ -34,5 +35,8 @@ extern uint8 do_debug;
 #define PS350_SPEED_19200  0x01
 #define PS350_SPEED_57600  0x03
 #define PS350_SPEED_115200 0x04
+
+uint8 ps350_get_eot_and_ack(void);
+uint8 ps350_send_packet(void);
 
 #endif
