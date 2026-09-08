@@ -159,7 +159,9 @@ uint8 ps350_send_packet(void) {
   command_packet[PS350_CHK_IDX]   = chksum & 0xFF;
   command_packet[PS350_CHK_IDX+1] = chksum >> 8;
 #endif
-  PC_DEBUG_BUFFER("Sent: ", command_packet, PS350_PKT_LEN);
+  if (command_packet[PS350_TYPE_IDX] != CMD_ACK) {
+    PC_DEBUG_BUFFER("Sent: ", command_packet, PS350_PKT_LEN);
+  }
   return 0;
 }
 
@@ -377,7 +379,7 @@ static uint8 ps350_send_command_and_get_result(void) {
 }
 
 static char root_dir_name[64];
-static char cur_dir_id[4];
+static char cur_entity_id[4];
 
 static uint8 ps350_select_disk(void) {
   char *ptr;
@@ -408,29 +410,37 @@ static uint8 ps350_select_disk(void) {
   return ps350_send_command_and_get_result();
 }
 
-static uint8 get_dir_id(char *dir) {
+static uint8 get_ent_id(uint8 is_file, char *entity) {
   uint8 pkt_len;
 
-  PC_DEBUG_PRINTF("Checking for %s\n", dir);
-  pkt_len = strlen(dir) + 17;
+  PC_DEBUG_PRINTF("Checking for %s\n", entity);
+  /* +4 if looking for a file */
+  pkt_len = strlen(entity) + 17 + (is_file << 2);
   ps350_prepare_packet(pkt_len);
   command_packet[PS350_TYPE_IDX] = CMD_PACKET;
-  command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_PTR;
-  command_packet[11]             = 0x21;
+  if (is_file) {
+    command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_FILE_PTR;
+    command_packet[11]             = 0x41;
+    command_packet[PS350_DATA_IDX] = 0x01;
+    memcpy(command_packet+PS350_DATA_IDX+4, entity, strlen(entity));
+  } else {
+    command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_PTR;
+    command_packet[11]             = 0x21;
+    memcpy(command_packet+PS350_DATA_IDX, entity, strlen(entity));
+  }
   command_packet[12]             = 0xA0;
-  memcpy(command_packet+PS350_DATA_IDX, dir, strlen(dir));
 
   if (ps350_send_command_and_get_result() != 0) {
     goto err_out;
   }
   if (buffer[21] == 0x00 && buffer[24] == 0x00) {
     /* found directory */
-    PC_DEBUG_PRINTF("Directory %s exists\n", dir);
-    memcpy(cur_dir_id, buffer+25, 4);
+    PC_DEBUG_PRINTF("Entity %s exists\n", entity);
+    memcpy(cur_entity_id, buffer+25, 4);
     return 0;
   }
 err_out:
-  PC_DEBUG_PRINTF("Directory %s does not exist\n", dir);
+  PC_DEBUG_PRINTF("Entity %s does not exist\n", entity);
   return -1;
 }
 
@@ -444,6 +454,17 @@ uint8 cur_ent;
 extern uint8 read_to_get_ent;
 extern uint8 ent_to_get;
 
+static uint8 ps350_open_entity(uint8 is_file) {
+  PC_DEBUG_PRINTF("Listing entity %02X%02X%02X%02X\n",
+                  cur_entity_id[0],cur_entity_id[1],cur_entity_id[2],cur_entity_id[3]);
+  /* "Open" entity */
+  ps350_prepare_packet(20);
+  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+  command_packet[PS350_CMD_IDX]  = is_file ? CMD_CODE_OPEN_FILE : CMD_CODE_OPEN_DIR;
+  memcpy(command_packet+PS350_DATA_IDX, cur_entity_id, 4);
+  return ps350_send_command_and_get_result();
+}
+
 static uint8 ps350_list_dir(uint8 *num_entries, uint8 get_ent) {
   uint8 had_multi = 0;
 
@@ -454,14 +475,7 @@ static uint8 ps350_list_dir(uint8 *num_entries, uint8 get_ent) {
   read_to_get_ent = get_ent;
   ent_to_get = *num_entries;
 
-  PC_DEBUG_PRINTF("Listing subdirectory %02X%02X%02X%02X\n",
-                  cur_dir_id[0],cur_dir_id[1],cur_dir_id[2],cur_dir_id[3]);
-  /* Prepare for dir download */
-  ps350_prepare_packet(20);
-  command_packet[PS350_TYPE_IDX] = CMD_PACKET;
-  command_packet[PS350_CMD_IDX]  = CMD_CODE_PREPARE_GET_DIR_LIST;
-  memcpy(command_packet+PS350_DATA_IDX, cur_dir_id, 4);
-  if (ps350_send_command_and_get_result() != 0) {
+  if (ps350_open_entity(0) != 0) {
 err_out:
     return -1;
   }
@@ -472,7 +486,7 @@ err_out:
   command_packet[PS350_CMD_IDX]  = CMD_CODE_GET_DIR_LIST;
   command_packet[PS350_CMD_IDX+2]= 0x81;
   command_packet[PS350_CMD_IDX+3]= 0xA0;
-  memcpy(command_packet+PS350_DATA_IDX, cur_dir_id, 4);
+  memcpy(command_packet+PS350_DATA_IDX, cur_entity_id, 4);
   command_packet[25]             = 0xE8;
   command_packet[26]             = 0x03;
 
@@ -518,7 +532,7 @@ err_out:
     }
     strcat(root_dir_name, directories[i]);
 
-    if (get_dir_id(root_dir_name) != 0) {
+    if (get_ent_id(0, root_dir_name) != 0) {
       goto err_out;
     }
     if (ps350_list_dir(&num_subdirs, 0) == 0) {
@@ -538,7 +552,7 @@ static uint8 get_subdir_path(uint8 subdir_idx) {
     return 0;
   }
   strcpy(subdir_path, root_dir_name);
-  if (get_dir_id(root_dir_name) != 0) {
+  if (get_ent_id(0, root_dir_name) != 0) {
     goto err_out;
   }
   if (ps350_list_dir(&subdir_idx, 1) != 0) {
@@ -550,7 +564,7 @@ err_out:
   strcat(subdir_path, ent_name);
   last_subdir = subdir_idx;
 
-  return get_dir_id(subdir_path);
+  return get_ent_id(0, subdir_path);
 }
 
 /* Get information from the camera */
@@ -599,11 +613,130 @@ err_out:
   }
 }
 
-static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
-  ui_get_image_header_str();
-  ui_get_image_str(640, 480, 0UL);
+#define DATABUF_SIZE 0x2000
+#ifdef __CC65__
+  char *databuf = (char *)0x2000;
+#else
+  char databuf[8192];
+#endif
+#define FIRST_HEADER_SIZE 41
+#define NEXT_HEADERS_SIZE 5
+#define FOOTER_SIZE 3
+#define DATA_SIZE_FIRST_BLOCK (PS350_PKT_LEN-FIRST_HEADER_SIZE-FOOTER_SIZE)
+#define DATA_SIZE_NEXT_BLOCKS  (PS350_PKT_LEN-NEXT_HEADERS_SIZE-FOOTER_SIZE)
+#define NUM_MULTIPACKETS (1+(DATABUF_SIZE-256)/292)
+#define WIRE_SIZE ((NUM_MULTIPACKETS)*PS350_PKT_LEN)
+#define READ_BLOCK_SIZE (DATA_SIZE_FIRST_BLOCK + (NUM_MULTIPACKETS-1)*DATA_SIZE_NEXT_BLOCKS)
+#if READ_BLOCK_SIZE > 8192
+#error
+#endif
+#define TEMP_FILENAME (buffer+1024) /* Use a safe buffer place to build the absolute name */
 
-  return -1;
+static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
+  register char *packet_walker, *buffer_walker;
+  uint8 cont = 0;
+  uint32 rem_bytes;
+  uint16 wire_read_len = WIRE_SIZE, to_write = READ_BLOCK_SIZE;
+  ui_get_image_header_str();
+  /* At that point, we just called _get_filename, so the pic's name
+   * is stored in ent_name, and the dir name in subdir_path.
+   */
+  strcpy(TEMP_FILENAME, subdir_path);
+  strcat(TEMP_FILENAME, "\\");
+  strcat(TEMP_FILENAME, ent_name);
+  if (get_ent_id(1, TEMP_FILENAME) != 0) {
+    goto err_out;
+  }
+  PC_DEBUG_PRINTF("%s: Got picture pointer %02X%02X%02X%02X\n",
+                  TEMP_FILENAME, cur_entity_id[0],cur_entity_id[1],cur_entity_id[2],cur_entity_id[3]);
+
+  rem_bytes = ent_size;
+  if (rem_bytes > avail) {
+    errno = ENOSPC;
+    goto err_out;
+  }
+
+  if (ps350_open_entity(1) != 0) {
+err_out:
+    return -1;
+  }
+
+  do {
+    ps350_prepare_packet(24);
+    command_packet[PS350_TYPE_IDX] = CMD_PACKET;
+    command_packet[PS350_CMD_IDX]  = CMD_CODE_READ_FILE;
+    memcpy(command_packet+PS350_DATA_IDX, cur_entity_id, 4);
+
+    if (rem_bytes >= READ_BLOCK_SIZE) {
+      command_packet[PS350_DATA_IDX+5] = READ_BLOCK_SIZE >> 8;
+      rem_bytes -= READ_BLOCK_SIZE;
+    } else {
+      uint16 last_batch_size;
+      command_packet[PS350_DATA_IDX+4] = rem_bytes & 0xFF;
+      command_packet[PS350_DATA_IDX+5] = rem_bytes >> 8;
+
+      if (rem_bytes < 256) {
+        last_batch_size = 1;
+      } else {
+        last_batch_size = 1 + 1 /* 256 bytes */ 
+                        + (rem_bytes-DATA_SIZE_FIRST_BLOCK)/DATA_SIZE_NEXT_BLOCKS;
+      }
+      wire_read_len = last_batch_size*300;
+      to_write = rem_bytes;
+      rem_bytes = 0;
+      PC_DEBUG_PRINTF("Last block, updated read_len: %zu bytes on serial (%zu remaining)\n",
+                      wire_read_len, rem_bytes);
+    }
+
+    ps350_send_packet();
+    PC_DEBUG_PRINTF("Reading %zu bytes on serial (%zu remaining)\n",
+                    wire_read_len, rem_bytes);
+    if (simple_serial_read_no_irq((char *)databuf, wire_read_len) != 0) {
+      PC_DEBUG_BUFFER("End of photo response", databuf, 48);
+      goto err_out;
+    }
+    PC_DEBUG_BUFFER("Photo response", databuf, 48);
+    PC_DEBUG_PRINTF("Remaining to read: %zu bytes\n", rem_bytes);
+
+    /* Pack buffer */
+    packet_walker = buffer_walker = databuf;
+    cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
+    memmove(buffer_walker, packet_walker+FIRST_HEADER_SIZE, DATA_SIZE_FIRST_BLOCK);
+    PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_FIRST_BLOCK,
+          packet_walker+FIRST_HEADER_SIZE-databuf,
+          buffer_walker-databuf);
+    buffer_walker += DATA_SIZE_FIRST_BLOCK;
+    while(cont) {
+      packet_walker += PS350_PKT_LEN;
+      cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
+      memmove(buffer_walker, packet_walker+NEXT_HEADERS_SIZE, DATA_SIZE_NEXT_BLOCKS);
+      PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_NEXT_BLOCKS,
+             packet_walker+NEXT_HEADERS_SIZE-databuf,
+             buffer_walker-databuf);
+      buffer_walker += DATA_SIZE_NEXT_BLOCKS;
+    }
+
+    /* Write buffer */
+    PC_DEBUG_PRINTF("Writing %zu bytes\n", to_write);
+    write(fd, databuf, to_write);
+
+#ifndef __CC65__
+    if (ps350_get_eot_and_ack() != 0) {
+      PC_DEBUG_PRINTF("EOT/ACK fail\n");
+      goto err_out;
+    }
+#else
+    /* Let's just not read EOT, we were busy writing. We'll send the ACK
+     * and hope for the best */
+    ps350_send_ack();
+#endif
+
+#ifdef __CC65__
+#endif
+} while (rem_bytes);
+
+  ui_get_image_str(640, 480, ent_size);
+  return 0;
 }
 
 static uint8 ps350_get_thumbnail(uint8 n_pic, int fd) {

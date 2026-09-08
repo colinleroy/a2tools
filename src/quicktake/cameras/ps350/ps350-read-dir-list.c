@@ -71,8 +71,14 @@ file_loop:
     goto file_loop_done;
   }
   /* Get size */
-  if (simple_serial_read_no_irq((char *)&ent_size, 4) != 0) {
-    goto err_out;
+  if (read_to_get_ent && !found_ent) {
+    if (simple_serial_read_no_irq((char *)&ent_size, 4) != 0) {
+      goto err_out;
+    }
+  } else {
+    if (simple_serial_read_no_irq(buffer, 4) != 0) {
+      goto err_out;
+    }
   }
   /* Skip date */
   if (simple_serial_read_no_irq(buffer, 4) != 0) {
