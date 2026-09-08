@@ -624,10 +624,12 @@ err_out:
 #define FOOTER_SIZE 3
 #define DATA_SIZE_FIRST_BLOCK (PS350_PKT_LEN-FIRST_HEADER_SIZE-FOOTER_SIZE)
 #define DATA_SIZE_NEXT_BLOCKS  (PS350_PKT_LEN-NEXT_HEADERS_SIZE-FOOTER_SIZE)
-#define NUM_MULTIPACKETS (1+(DATABUF_SIZE-256)/292)
+#define NUM_MULTIPACKETS ((DATABUF_SIZE-256)/292)
 #define WIRE_SIZE ((NUM_MULTIPACKETS)*PS350_PKT_LEN)
-#define READ_BLOCK_SIZE (DATA_SIZE_FIRST_BLOCK + (NUM_MULTIPACKETS-1)*DATA_SIZE_NEXT_BLOCKS)
-#if READ_BLOCK_SIZE > 8192
+#define READ_BLOCK_MAX_SIZE (DATA_SIZE_FIRST_BLOCK + (NUM_MULTIPACKETS-1)*DATA_SIZE_NEXT_BLOCKS)
+/* Camera sends in batches of 256 bytes anyway: the last packet is not full */
+#define READ_BLOCK_SIZE (READ_BLOCK_MAX_SIZE-(READ_BLOCK_MAX_SIZE%256))
+#if WIRE_SIZE > 8192
 #error
 #endif
 #define TEMP_FILENAME (buffer+1024) /* Use a safe buffer place to build the absolute name */
@@ -701,6 +703,8 @@ err_out:
     /* Pack buffer */
     packet_walker = buffer_walker = databuf;
     cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
+    PC_DEBUG_PRINTF("Buffer claims offset %02X%02X%02X%02X\n",
+            packet_walker[32], packet_walker[31], packet_walker[30], packet_walker[29]);
     memmove(buffer_walker, packet_walker+FIRST_HEADER_SIZE, DATA_SIZE_FIRST_BLOCK);
     PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_FIRST_BLOCK,
           packet_walker+FIRST_HEADER_SIZE-databuf,
@@ -709,6 +713,7 @@ err_out:
     while(cont) {
       packet_walker += PS350_PKT_LEN;
       cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
+
       memmove(buffer_walker, packet_walker+NEXT_HEADERS_SIZE, DATA_SIZE_NEXT_BLOCKS);
       PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_NEXT_BLOCKS,
              packet_walker+NEXT_HEADERS_SIZE-databuf,
