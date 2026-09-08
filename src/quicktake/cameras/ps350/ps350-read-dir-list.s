@@ -99,10 +99,12 @@ file_loop:                              ; Loop for each entry
         sta     _ent_name+12
 
         lda     _ent_name               ; Verify if it's valid (starts with [A-Z])
-        cmp     #$41
+        cmp     #'A'
         bcc     dec_and_cont
-        cmp     #$5B
+        cmp     #('Z'+1)
         bcs     dec_and_cont
+        cmp     #'T'
+        beq     dec_and_cont
 
         lda     _cur_ent                ; Check if that's the one we need
         cmp     _ent_to_get
@@ -117,11 +119,13 @@ skip_ent_name:                          ; Already found so don't overwrite ent_n
         jsr     read_to_buffer
 
         lda     _buffer                 ; Check validity of entity for counting
-        cmp     #$41
+        cmp     #'A'
         bcc     dec_and_cont
-        cmp     #$5B
+        cmp     #('Z'+1)
         bcs     dec_and_cont
-;
+        cmp     #'T'
+        beq     dec_and_cont
+
 ; cur_ent++;
 ;
 count_ent:

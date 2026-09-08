@@ -83,7 +83,8 @@ file_loop:
     goto err_out;
     }
     ent_name[12] = '\0';
-    if (ent_name[0] >= 'A' && ent_name[0] <= 'Z') {
+    /* Skip T*, the thumbnails */
+    if (ent_name[0] >= 'A' && ent_name[0] <= 'Z' && ent_name[0] != 'T') {
       if (cur_ent == ent_to_get) {
         PC_DEBUG_PRINTF("found file %s (%d bytes)\n", ent_name, ent_size);
         found_ent = 1;
@@ -94,7 +95,8 @@ file_loop:
     if (simple_serial_read_no_irq(buffer, 12) != 0) {
       goto err_out;
     }
-    if (buffer[0] >= 'A' && buffer[0] <= 'Z') {
+    /* Skip T*, the thumbnails */
+    if (buffer[0] >= 'A' && buffer[0] <= 'Z' && ent_name[0] != 'T') {
       cur_ent++;
     }
   }

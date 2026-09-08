@@ -553,7 +553,6 @@ err_out:
   return get_dir_id(subdir_path);
 }
 
-#define IDX_FOR_PIC(n) ((n-1)*2)
 /* Get information from the camera */
 static uint8 ps350_get_information(void) {
   uint8 i, total_pics = 0;
@@ -583,7 +582,7 @@ err_out:
 
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
   uint8 idx_dir = n_pic/100;
-  uint8 idx_img = IDX_FOR_PIC(n_pic);
+  uint8 idx_img = n_pic-1; /* Counted from 0 */
  
   if (get_subdir_path(idx_dir) != 0) {
     goto err_out;
