@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "DIN5")(type "KiCad")(uri "/home/colin/Documents/git-oss/a2tools/qt-connector/DIN5")(options "")(descr ""))
+)
