@@ -108,5 +108,5 @@ void main(int argc, char *argv) {
     simple_serial_write_config();
   }
   zxloader_name = "CONFIG.SYSTEM";
-  zexec("SLOWTAKE");
+  zexec("-SLOWTAKE");
 }

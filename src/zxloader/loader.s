@@ -1,6 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;                                                                               ;
 ; LOADER.SYSTEM - an Apple][ ProDOS 8 loader for cc65 programs (Oliver Schmidt) ;
+; define ZXLOADER for ZX-compressed binary handling (Colin Leroy-Mira)          ;
 ;                                                                               ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -15,6 +16,16 @@ RDKEY           := $FD0C
 PRBYTE          := $FDDA
 COUT            := $FDED
 
+.ifndef ENABLE_DECOMPRESSOR
+; We want the ProDOS IO buffer as high as possible, as we'll read from start
+; address and up.
+PRODOS_BUF      := MLI - 1024
+.else
+; We want to ProDOS IO buffer as low as possible, so we can put the compressed
+; data as high as possible in order to decompress in-place without overwriting.
+PRODOS_BUF      := $800
+.endif
+
 QUIT_CALL          = $65
 GET_FILE_INFO_CALL = $C4
 OPEN_CALL          = $C8
@@ -22,17 +33,18 @@ READ_CALL          = $CA
 CLOSE_CALL         = $CC
 FILE_NOT_FOUND_ERR = $46
 
+.ifdef ENABLE_DECOMPRESSOR
 ; Decompressor variables
 offset_hi = $80
 bitr      = $81
 ZX0_src   = $82
 ZX0_dst   = $84
 pntr      = $86
-
+.endif
 ; ------------------------------------------------------------------------
 
-        .import __CODE_0300_SIZE__, __DATA_0300_SIZE__
-        .import __CODE_0300_LOAD__, __CODE_0300_RUN__
+        .import __CODE_0280_SIZE__, __DATA_0280_SIZE__
+        .import __CODE_0280_LOAD__, __CODE_0280_RUN__
 
 ; ------------------------------------------------------------------------
 
@@ -54,19 +66,19 @@ FILE_BLOCKS:    .word   $0000           ;BLOCKS_USED
 OPEN_PARAM:
                 .byte   $03             ;PARAM_COUNT
                 .addr   PATHNAME        ;PATHNAME
-                .addr   MLI - 1024      ;IO_BUFFER
+                .addr   PRODOS_BUF      ;IO_BUFFER
 OPEN_REF:       .byte   $00             ;REF_NUM
 
 LOADING:
                 .byte   $0D
-                .asciiz "LOADING "
+                .asciiz "Loading "
 
 ELLIPSES:
-                .byte   "...", $00
+                .byte   " ...", $00
 
 ; ------------------------------------------------------------------------
 
-        .segment        "DATA_0300"
+        .segment        "DATA_0280"
 
 READ_PARAM:
                 .byte   $04             ;PARAM_COUNT
@@ -86,17 +98,19 @@ QUIT_PARAM:
                 .byte   $00             ;RESERVED
                 .word   $0000           ;RESERVED
 
+.ifdef ENABLE_DECOMPRESSOR
 FINAL_START_ADDR:
                 .addr   $0000
+.endif
 
 FILE_NOT_FOUND:
-                .asciiz "... FILE NOT FOUND"
+                .asciiz "... File not found"
 
 ERROR_NUMBER:
-                .asciiz "... ERROR $"
+                .asciiz "... Error $"
 
 PRESS_ANY_KEY:
-                .asciiz " - PRESS ANY KEY "
+                .asciiz " - Press Any Key "
 
 ; ------------------------------------------------------------------------
 
@@ -112,7 +126,7 @@ PARAMS: .res    $7F
 :       ldx     #$FF
         txs
 
-        ; Remove ".SYSTEM" from pathname
+        ; Remove ".SYSTEM" from pathname - this is our default bin file to exec.
         lda     PATHNAME
         sec
         sbc     #.strlen(".SYSTEM")
@@ -123,27 +137,39 @@ PARAMS: .res    $7F
         lda     #$00
         sta     PATHNAME+1,x
 
-        ; Copy parameters and trailing '\0' to stack
-        ; 
+        ; Handle command-line:
+        ; - no parameters at all: go exec bin file
+        ; - any parameters, not starting with '-': copy to STACK,
+        ;   where cc65 lib will look for parameters
+        ; - any parameters, starting with '-': use the first parameter as binary
+        ;   file to load, and the rest as actual parameters
+
         ldx     PARAMS
-        beq     finish_copy
-        ldx     #$FF
-:       inx
-        lda     PARAMS+1,x
-        beq     execname_copied
+        beq     load_file
+
+        ldx     #$00            ; Does the first arg start with -?
+        lda     PARAMS+1
+        cmp     #'-'
+        bne     copy_parameters
+
+copy_pathname:
+        lda     PARAMS+2,x      ; Yes, so start copying it (minus the dash) to PATHNAME
+        beq     execname_copied ; We're done on NULL or space.
         cmp     #' '
         beq     execname_copied
         sta     PATHNAME+1,x
-        bne     :-
-execname_copied:
+        inx
+        bne     copy_pathname
+
+execname_copied:                ; Terminate PATNAME again and store its length
         lda     #$00
         sta     PATHNAME+1,x
         stx     PATHNAME
 
-        ; Move the rest of the parameters to STACK
-        inx
-finish_copy:
-        ldy     #$00
+        inx                     ; Increment to compensate for the dash,
+        inx                     ; increment to avoid doubling the argument separator
+copy_parameters:
+        ldy     #$00            ; And copy the rest to STACK.
 :       lda     PARAMS+1,x
         sta     STACK,y
         beq     load_file
@@ -172,55 +198,71 @@ load_file:
 :       jsr     MLI
         .byte   OPEN_CALL
         .word   OPEN_PARAM
-        bcc     opened
-        brk
+        bcc     file_opened
         jmp     ERROR_2000
 
-opened:
-        ; Now we don't need PATHNAME anymore and can relocate CODE_0300 and DATA_0300
-        ; We expect to copy more than one full page and less than three.
-        .assert (>(__CODE_0300_SIZE__ + __DATA_0300_SIZE__)) = 1, error
+file_opened:
+        ; Now we don't need PATHNAME anymore, and can relocate CODE_0280 and DATA_0280.
+.ifndef ENABLE_DECOMPRESSOR
+        .assert (__CODE_0280_SIZE__ + __DATA_0280_SIZE__) < $100, error
+.endif
         ldx     #$00
-:       lda     __CODE_0300_LOAD__,x
-        sta     __CODE_0300_RUN__,x
-        dex
-        bne     :-
-        ; and second page
-        ldx     #<(__CODE_0300_SIZE__ + __DATA_0300_SIZE__)
-        beq     moved
-:       lda     __CODE_0300_LOAD__+256-1,x
-        sta     __CODE_0300_RUN__+256-1,x
+:       lda     __CODE_0280_LOAD__,x
+        sta     __CODE_0280_RUN__,x
         dex
         bne     :-
 
-moved:
+.ifdef ENABLE_DECOMPRESSOR
+        ; We expect to copy more than one full page and less than three.
+        .assert (>(__CODE_0280_SIZE__ + __DATA_0280_SIZE__)) = 1, error
+        ; and second page
+        ldx     #<(__CODE_0280_SIZE__ + __DATA_0280_SIZE__)
+        beq     relocate_done
+:       lda     __CODE_0280_LOAD__+256-1,x
+        sta     __CODE_0280_RUN__+256-1,x
+        dex
+        bne     :-
+.endif
+
+relocate_done:
         ; Copy file reference number
         lda     OPEN_REF
         sta     READ_REF
         sta     CLOSE_REF
 
-        ; Blocks to bytes - caveat: limited to $FF blocks, which will be enough
-        ; anyway as we can, globally, use $800-$BEFF.
+.ifdef ENABLE_DECOMPRESSOR
+        ; Compute where to place compressed data, at top of memory, so we can
+        ; uncompress in-place without overwriting the compressed data.
+
+        ; Blocks to bytes - caveat: limited to $7F blocks, which will be enough
+        ; anyway (65024 bytes...).
+        lda     FILE_BLOCKS
         asl     FILE_BLOCKS   ; Blocks are 512 bytes
 
-        lda     #<($BEFF-$200)
+        lda     #<MLI  ; Make sure we don't touch ProDOS's zone
         sta     READ_ADDR
         sta     ZX0_src
 
         sec
-        lda     #>($BEFF-$200)
+        lda     #>MLI
         sbc     FILE_BLOCKS
         sta     READ_ADDR+1
         sta     ZX0_src+1
-
+.else
+        ; Read directly to the program's start address.
+        lda     FILE_INFO_ADDR
+        ldx     FILE_INFO_ADDR+1
+        sta     READ_ADDR
+        stx     READ_ADDR+1
+.endif
         ; It's high time to leave this place
-        jmp     __CODE_0300_RUN__
+        jmp     __CODE_0280_RUN__
 
 ; ------------------------------------------------------------------------
 
-        .segment        "CODE_0300"
+        .segment        "CODE_0280"
 
-        ; Read compressed data
+        ; Read data
         jsr     MLI
         .byte   READ_CALL
         .word   READ_PARAM
@@ -232,16 +274,19 @@ moved:
         .word   CLOSE_PARAM
         bcs     ERROR
 
-        ; Get uncompress start address from aux-type
+.ifdef ENABLE_DECOMPRESSOR
+        ; Get program start address from aux-type. That's where we'll
+        ; uncompress.
         lda     FILE_INFO_ADDR
         ldx     FILE_INFO_ADDR+1
         ; Store it as destination for zx decompression,
         sta     ZX0_dst
         stx     ZX0_dst+1
-        ; And remember it for jumping as both ZX0_dst and FILE_INFO_ADDR
-        ; will be overwritten after decompression.
+        ; And remember it for the final jump, as both ZX0_dst and
+        ; FILE_INFO_ADDR will/might be overwritten during decompression.
         sta     FINAL_START_ADDR
         stx     FINAL_START_ADDR+1
+.endif
 
         ; Copy REM and startup filename to BASIC input buffer
         ldx     #$00
@@ -252,34 +297,59 @@ moved:
 :       sta     BUF,x
         bne     :--
 
-        ; We've loaded our compressed program.
+.ifdef ENABLE_DECOMPRESSOR
+        ; We've loaded our compressed program, decompress it now.
         jsr     _decompress_zx02_direct
+.endif
 
-        ; Go for it ...
+        ; Clear two lines
+        lda     #($0D|$80)
+        jsr     COUT
+        jsr     COUT
+
+        ; And go for it!
+.ifdef ENABLE_DECOMPRESSOR
         jmp     (FINAL_START_ADDR)
+.else
+        jmp     (READ_ADDR)
+.endif
 
-PRINT_2000 = * - __CODE_0300_RUN__ + __CODE_0300_LOAD__
+; Define PRINT_2000 entrypoint for use before relocation
+PRINT_2000 = * - __CODE_0280_RUN__ + __CODE_0280_LOAD__
 PRINT:
         sta     A1L
         stx     A1H
+        ldx     VERSION
         ldy     #$00
 :       lda     (A1L),y
+        beq     :++
+        cpx     #$06            ; //e ?
         beq     :+
-        ora     #$80
+        cmp     #$60            ; lowercase ?
+        bcc     :+
+        and     #$5F            ; -> uppercase
+:       ora     #$80
         jsr     COUT
         iny
-        bne     :-              ; Branch always
+        bne     :--             ; Branch always
 :       rts
 
-ERROR_2000 = * - __CODE_0300_RUN__ + __CODE_0300_LOAD__
+; Define ERROR_2000 entrypoint for use before relocation
+ERROR_2000 = * - __CODE_0280_RUN__ + __CODE_0280_LOAD__
 ERROR:
-        pha
+        cmp     #FILE_NOT_FOUND_ERR
+        bne     :+
+        lda     #<FILE_NOT_FOUND
+        ldx     #>FILE_NOT_FOUND
+        jsr     PRINT
+        beq     :++             ; Branch always
+:       pha
         lda     #<ERROR_NUMBER
         ldx     #>ERROR_NUMBER
         jsr     PRINT
         pla
         jsr     PRBYTE
-        lda     #<PRESS_ANY_KEY
+:       lda     #<PRESS_ANY_KEY
         ldx     #>PRESS_ANY_KEY
         jsr     PRINT
         jsr     RDKEY
@@ -287,4 +357,6 @@ ERROR:
         .byte   QUIT_CALL
         .word   QUIT_PARAM
 
-.include "zx02_direct.s"
+.ifdef ENABLE_DECOMPRESSOR
+        .include "zx02_direct.s"
+.endif

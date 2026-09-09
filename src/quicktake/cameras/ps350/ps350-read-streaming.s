@@ -1,4 +1,5 @@
         .export  _ps350_read_dir_list
+        .export  _ps350_read_file
         .import  _buffer
         .import  _ps350_get_eot_and_ack
         .import  _ps350_send_packet
@@ -13,6 +14,18 @@
 
 .segment "PS350"
 
+FIRST_HEADER_SIZE     = 41
+NEXT_HEADERS_SIZE     = 5
+FOOTER_SIZE           = 3
+DATABUF_SIZE          = $2000
+PS350_PKT_LEN         = 300
+DATA_SIZE_FIRST_BLOCK = (PS350_PKT_LEN-FIRST_HEADER_SIZE-FOOTER_SIZE)
+DATA_SIZE_NEXT_BLOCKS = (PS350_PKT_LEN-NEXT_HEADERS_SIZE-FOOTER_SIZE)
+NUM_MULTIPACKETS      = ((DATABUF_SIZE-256)/292)
+READ_BLOCK_MAX_SIZE   = (DATA_SIZE_FIRST_BLOCK + (NUM_MULTIPACKETS-1)*DATA_SIZE_NEXT_BLOCKS)
+READ_BLOCK_SIZE       = (READ_BLOCK_MAX_SIZE-(READ_BLOCK_MAX_SIZE .mod 256))
+PS350_LEN_IDX         = 3
+
 _rem_bytes_in_pack: .res 2,$00
 _offset_in_pack:    .res 1,$00
 _read_to_get_ent:   .res 1,$00
@@ -26,8 +39,10 @@ _ent_to_get:        .res 1,$00
         ldx     #>_buffer
 .endproc
 .proc read_to_dest
-        sta     dest
-        stx     dest+1
+        sta     bufdest
+        stx     bufdest+1
+.endproc
+.proc read_to_preset_dest
         ldx     #$00
 read_again:
         jsr     _serial_read_byte_direct
@@ -39,6 +54,7 @@ dest = *+1
         bne     read_again
         rts
 .endproc
+bufdest = read_to_preset_dest::dest
 
 .proc _get_packet_length: near
         ldy     #$05                    ; Read 5 first bytes of packet
@@ -50,7 +66,6 @@ dest = *+1
 .endproc
 
 .proc _ps350_read_dir_list
-
         jsr     _ps350_send_packet      ; Send the command,
         jsr     _get_packet_length      ; Read (part of) the length to check for multi-packet response
 
@@ -79,8 +94,15 @@ file_loop:                              ; Loop for each entry
         lda     _buffer                 ; Are we done?
         beq     file_loop_done
 
+        lda     #<_buffer               ; Read size at the correct place
+        ldx     #>_buffer
+        ldy     _read_to_get_ent        ; Check if should remember name (if search for an entity by index)
+        beq     skip_ent_size
+        ldy     _found_ent              ; Already found so don't overwrite its name
+        bne     skip_ent_size
         lda     #<_ent_size             ; Read size
         ldx     #>_ent_size
+skip_ent_size:
         ldy     #4
         jsr     read_to_dest
 
@@ -96,6 +118,7 @@ file_loop:                              ; Loop for each entry
         ldx     #>_ent_name
         ldy     #12
         jsr     read_to_dest
+        lda     #$00                    ; Zero-terminate
         sta     _ent_name+12
 
         lda     _ent_name               ; Verify if it's valid (starts with [A-Z])
@@ -160,5 +183,78 @@ file_loop_done:
 
 ret_all_done:                           ; All done, time to ack.
         jmp     _ps350_get_eot_and_ack
+.endproc
 
+cont:   .res 1
+
+.proc set_cont
+        lda     read_to_preset_dest::dest
+        ldx     read_to_preset_dest::dest+1
+        sta     check_cont
+        stx     check_cont+1
+check_cont = *+1
+        lda     $FFFF,y
+        and     #$80
+        sta     cont
+        rts
+.endproc
+
+; Input: AX destination buffer
+.proc _ps350_read_file
+        sta     read_to_preset_dest::dest
+        stx     read_to_preset_dest::dest+1
+
+        jsr     _ps350_send_packet      ; Send the command,
+
+        ; Get first header
+        ldy     #FIRST_HEADER_SIZE
+        jsr     read_to_preset_dest
+
+        ; Get cont flag
+        ldy     #PS350_LEN_IDX+1
+        jsr     set_cont
+
+        ; Read first page
+        .assert DATA_SIZE_FIRST_BLOCK = 256, error
+        ldy     #<256
+        jsr     read_to_preset_dest
+
+        ; buffer_walker += DATA_SIZE_FIRST_BLOCK;
+        inc     read_to_preset_dest::dest+1
+
+        ; while cont
+next_packet:
+        lda     cont
+        beq     done
+
+        ; Skip footer/next header
+        ldy     #FOOTER_SIZE+NEXT_HEADERS_SIZE
+        jsr     read_to_preset_dest
+
+        ldy     #FOOTER_SIZE+PS350_LEN_IDX+1
+        jsr     set_cont
+
+        ldy     #<256
+        jsr     read_to_preset_dest
+
+        ; Get and store data block
+        inc     read_to_preset_dest::dest+1
+        ldy     #<(DATA_SIZE_NEXT_BLOCKS-256)
+        jsr     read_to_preset_dest
+
+        ; And increment dest
+        clc
+        lda     #<(DATA_SIZE_NEXT_BLOCKS-256)
+        adc     read_to_preset_dest::dest
+        sta     read_to_preset_dest::dest
+        lda     #>(DATA_SIZE_NEXT_BLOCKS-256)
+        adc     read_to_preset_dest::dest+1
+        sta     read_to_preset_dest::dest+1
+        bne     next_packet             ; eq. jmp here
+
+done:
+        ldy     #<FOOTER_SIZE
+        jsr     read_to_preset_dest
+
+        jmp     _ps350_get_eot_and_ack
 .endproc

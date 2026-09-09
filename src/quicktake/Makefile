@@ -39,7 +39,7 @@ microserial_SOURCES := \
 	cameras/sierra/sierra-read-packet.c \
 	cameras/sierra/sierra-thumbs.c \
 	cameras/ps350/ps350-serial.c \
-	cameras/ps350/ps350-read-dir-list.c \
+	cameras/ps350/ps350-read-streaming.c \
 	cameras/ps350/ps350-thumbs.c \
 	ui/ui.c \
 	../lib/serial/c/simple_serial.c \
@@ -77,7 +77,7 @@ slowtake_SOURCES := \
 	cameras/sierra/sierra-serial.c \
 	cameras/sierra/sierra-read-packet.s \
 	cameras/ps350/ps350-serial.c \
-	cameras/ps350/ps350-read-dir-list.s \
+	cameras/ps350/ps350-read-streaming.s \
 	../lib/dget_text_single.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
@@ -337,7 +337,7 @@ SRRA.DRV: slowtake.bin
 %.ZX: %.DRV
 	zx02 -f $< $@
 
-../zxloader/zxloader.system: ../zxloader/zxloader.s
+../zxloader/zxloader.system: ../zxloader/loader.s
 	make -C ../zxloader/ clean all
 
 add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX ../zxloader/zxloader.system

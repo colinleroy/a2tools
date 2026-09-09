@@ -12,7 +12,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "ps350.h"
-#include "ps350-read-dir-list.h"
+#include "ps350-read-streaming.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -199,6 +199,9 @@ static uint8 ps350_get_ping_reply(void) {
 
 static uint8 ps350_get_eot(void) {
   PC_DEBUG_PRINTF("Getting EOT\n");
+#ifndef _CC65__
+  bzero(buffer+512, PS350_PKT_LEN);
+#endif
   /* EOTs are read at +512 to preserve the previous command's
    * output */
   if (simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN)) {
@@ -589,7 +592,7 @@ err_out:
   }
 
   /* WIP: Get a picture info (from last used subdir_path) */
-  cam_info.num_pics = total_pics/2; /* Ignore THM files */
+  cam_info.num_pics = total_pics;
   strcpy(cam_info.name, "Canon PowerShot 350");
   return 0;
 }
@@ -610,35 +613,23 @@ err_out:
     sprintf(filename, "%s%s%s",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", ent_name);
+    /* Pictures are named AUT_xxxx.JPG and _ is illegal on ProDOS filesystems.
+     * replace it, but not in ent_name which we need to keep as is */
+    *strchr(filename, '_') = 'p';
   }
 }
 
-#define DATABUF_SIZE 0x2000
 #ifdef __CC65__
   char *databuf = (char *)0x2000;
 #else
-  char databuf[8192];
-#endif
-#define FIRST_HEADER_SIZE 41
-#define NEXT_HEADERS_SIZE 5
-#define FOOTER_SIZE 3
-#define DATA_SIZE_FIRST_BLOCK (PS350_PKT_LEN-FIRST_HEADER_SIZE-FOOTER_SIZE)
-#define DATA_SIZE_NEXT_BLOCKS  (PS350_PKT_LEN-NEXT_HEADERS_SIZE-FOOTER_SIZE)
-#define NUM_MULTIPACKETS ((DATABUF_SIZE-256)/292)
-#define WIRE_SIZE ((NUM_MULTIPACKETS)*PS350_PKT_LEN)
-#define READ_BLOCK_MAX_SIZE (DATA_SIZE_FIRST_BLOCK + (NUM_MULTIPACKETS-1)*DATA_SIZE_NEXT_BLOCKS)
-/* Camera sends in batches of 256 bytes anyway: the last packet is not full */
-#define READ_BLOCK_SIZE (READ_BLOCK_MAX_SIZE-(READ_BLOCK_MAX_SIZE%256))
-#if WIRE_SIZE > 8192
-#error
+  char databuf[DATABUF_SIZE];
 #endif
 #define TEMP_FILENAME (buffer+1024) /* Use a safe buffer place to build the absolute name */
 
 static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
-  register char *packet_walker, *buffer_walker;
-  uint8 cont = 0;
   uint32 rem_bytes;
-  uint16 wire_read_len = WIRE_SIZE, to_write = READ_BLOCK_SIZE;
+  uint16 to_write = READ_BLOCK_SIZE;
+
   ui_get_image_header_str();
   /* At that point, we just called _get_filename, so the pic's name
    * is stored in ent_name, and the dir name in subdir_path.
@@ -647,6 +638,7 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   strcat(TEMP_FILENAME, "\\");
   strcat(TEMP_FILENAME, ent_name);
   if (get_ent_id(1, TEMP_FILENAME) != 0) {
+    cputs("Could not get ID for ");
     goto err_out;
   }
   PC_DEBUG_PRINTF("%s: Got picture pointer %02X%02X%02X%02X\n",
@@ -659,9 +651,13 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   }
 
   if (ps350_open_entity(1) != 0) {
+    cputs("Could not open file ");
 err_out:
+    cputs(TEMP_FILENAME);
     return -1;
   }
+
+  ui_get_image_str(640, 480, ent_size);
 
   do {
     ps350_prepare_packet(24);
@@ -681,73 +677,26 @@ err_out:
         last_batch_size = 1;
       } else {
         last_batch_size = 1 + 1 /* 256 bytes */ 
-                        + (rem_bytes-DATA_SIZE_FIRST_BLOCK)/DATA_SIZE_NEXT_BLOCKS;
+                        + ((rem_bytes-DATA_SIZE_FIRST_BLOCK)/DATA_SIZE_NEXT_BLOCKS);
       }
-      wire_read_len = last_batch_size*300;
       to_write = rem_bytes;
       rem_bytes = 0;
-      PC_DEBUG_PRINTF("Last block, updated read_len: %zu bytes on serial (%zu remaining)\n",
-                      wire_read_len, rem_bytes);
     }
 
-    ps350_send_packet();
-    PC_DEBUG_PRINTF("Reading %zu bytes on serial (%zu remaining)\n",
-                    wire_read_len, rem_bytes);
-    if (simple_serial_read_no_irq((char *)databuf, wire_read_len) != 0) {
-      PC_DEBUG_BUFFER("End of photo response", databuf, 48);
-      goto err_out;
-    }
-    PC_DEBUG_BUFFER("Photo response", databuf, 48);
-    PC_DEBUG_PRINTF("Remaining to read: %zu bytes\n", rem_bytes);
-
-    /* Pack buffer */
-    packet_walker = buffer_walker = databuf;
-    cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
-    PC_DEBUG_PRINTF("Buffer claims offset %02X%02X%02X%02X\n",
-            packet_walker[32], packet_walker[31], packet_walker[30], packet_walker[29]);
-    memmove(buffer_walker, packet_walker+FIRST_HEADER_SIZE, DATA_SIZE_FIRST_BLOCK);
-    PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_FIRST_BLOCK,
-          packet_walker+FIRST_HEADER_SIZE-databuf,
-          buffer_walker-databuf);
-    buffer_walker += DATA_SIZE_FIRST_BLOCK;
-    while(cont) {
-      packet_walker += PS350_PKT_LEN;
-      cont = packet_walker[PS350_LEN_IDX+1] & 0x80;
-
-      memmove(buffer_walker, packet_walker+NEXT_HEADERS_SIZE, DATA_SIZE_NEXT_BLOCKS);
-      PC_DEBUG_PRINTF("Put %d bytes from %d at %d offset\n", DATA_SIZE_NEXT_BLOCKS,
-             packet_walker+NEXT_HEADERS_SIZE-databuf,
-             buffer_walker-databuf);
-      buffer_walker += DATA_SIZE_NEXT_BLOCKS;
-    }
+    ps350_read_file(databuf);
 
     /* Write buffer */
     PC_DEBUG_PRINTF("Writing %zu bytes\n", to_write);
     write(fd, databuf, to_write);
 
-#ifndef __CC65__
-    if (ps350_get_eot_and_ack() != 0) {
-      PC_DEBUG_PRINTF("EOT/ACK fail\n");
-      goto err_out;
-    }
-#else
-    /* Let's just not read EOT, we were busy writing. We'll send the ACK
-     * and hope for the best */
-    ps350_send_ack();
-#endif
-
 #ifdef __CC65__
 #endif
 } while (rem_bytes);
 
-  ui_get_image_str(640, 480, ent_size);
   return 0;
 }
 
 static uint8 ps350_get_thumbnail(uint8 n_pic, int fd) {
-  ui_get_thumbnail_str(n_pic);
-  th_info.flash_mode   = 0xFF;
-  th_info.quality_mode = 0xFF;
   return -1;
 }
 

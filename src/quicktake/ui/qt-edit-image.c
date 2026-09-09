@@ -112,11 +112,11 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
     reopen_start_device();
 
     if (!strcmp(magic, QKTK_MAGIC)) {
-      filename = "QKTKCONV";
+      filename = "-QKTKCONV";
     } else if (!strcmp(magic, QKTN_MAGIC) || !strcmp(magic, KDC_MAGIC)) {
-      filename = "RADCCONV";
+      filename = "-RADCCONV";
     } else if (!strncmp(magic, JPEG_EXIF_MAGIC, 3)) {
-      filename = "JPEGCONV";
+      filename = "-JPEGCONV";
     } else {
       cputs("\r\nUnknown file type.\r\n");
       cgetc();

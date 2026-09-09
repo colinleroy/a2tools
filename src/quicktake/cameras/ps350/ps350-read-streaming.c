@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "../qt-serial.h"
 #include "ps350.h"
+#include "ps350-read-streaming.h"
 
 #pragma code-name(push, "PS350")
 #pragma rodata-name(push, "PS350")
@@ -130,4 +131,31 @@ packet_loop_done:
   return ps350_get_eot_and_ack();
 err_out:
   return -1;
+}
+
+uint8 ps350_read_file(char *databuf) {
+  register char *buffer_walker;
+  uint8 cont = 0;
+
+  ps350_send_packet();
+  buffer_walker = databuf;
+  /* Get first header */
+  simple_serial_read_no_irq(buffer_walker, FIRST_HEADER_SIZE);
+  cont = buffer_walker[PS350_LEN_IDX+1] & 0x80;
+  /* Get and store first data */
+  simple_serial_read_no_irq(buffer_walker, DATA_SIZE_FIRST_BLOCK);
+  buffer_walker += DATA_SIZE_FIRST_BLOCK;
+  while (cont) {
+    /* Get footer and next header */
+    simple_serial_read_no_irq(buffer_walker, FOOTER_SIZE+NEXT_HEADERS_SIZE);
+    cont = buffer_walker[FOOTER_SIZE+PS350_LEN_IDX+1] & 0x80;
+    /* Get and store next data block */
+    simple_serial_read_no_irq(buffer_walker, 256);
+    simple_serial_read_no_irq(buffer_walker+256, DATA_SIZE_NEXT_BLOCKS-256);
+    buffer_walker += DATA_SIZE_NEXT_BLOCKS;
+  }
+  /* And read the last footer */
+  simple_serial_read_no_irq(buffer_walker, FOOTER_SIZE);
+
+  return ps350_get_eot_and_ack();
 }

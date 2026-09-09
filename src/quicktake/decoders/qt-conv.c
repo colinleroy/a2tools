@@ -122,7 +122,7 @@ void reload_menu(const char *filename) {
 
   zxloader_name = "CONFIG.SYSTEM";
 
-  strcpy(buffer, "SLOWTAKE");
+  strcpy(buffer, "-SLOWTAKE");
   if (filename) {
     #ifndef __CC65__
     sprintf(buffer, "%s %d", filename, effective_width);

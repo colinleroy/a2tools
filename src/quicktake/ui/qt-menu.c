@@ -605,16 +605,16 @@ static uint8 setup(int argc, char *argv[]) {
   if (argc == 1) {
     exec_pass = 1;
     #if DEBUG_HD==50
-    zexec("RADCCONV /HD/TEST50.KDC 0 0 640 480");
+    zexec("-RADCCONV /HD/TEST50.KDC 0 0 640 480");
     #endif
     #if DEBUG_HD==100
-    zexec("QKTKCONV /HD/TEST100.QTK 0 0 640 480");
+    zexec("-QKTKCONV /HD/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_HD==150
-    zexec("RADCCONV /HD/TEST150.QTK 0 0 640 480");
+    zexec("-RADCCONV /HD/TEST150.QTK 0 0 640 480");
     #endif
     #if DEBUG_HD==200
-    zexec("JPEGCONV /HD/TEST200.JPG 0 0 640 480");
+    zexec("-JPEGCONV /HD/TEST200.JPG 0 0 640 480");
     #endif
   }
 #endif
@@ -622,19 +622,19 @@ static uint8 setup(int argc, char *argv[]) {
   if (argc == 1) {
     exec_pass = 1;
     #if DEBUG_FLOPPY==50
-    zexec("RADCCONV /DC50/TEST50.KDC 0 0 640 480");
+    zexec("-RADCCONV /DC50/TEST50.KDC 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==100
-    zexec("QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
+    zexec("-QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==98
-    zexec("QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
+    zexec("-QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==150
-    zexec("RADCCONV /QT150/TEST150.QTK 0 0 640 480");
+    zexec("-RADCCONV /QT150/TEST150.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==200
-    zexec("JPEGCONV /QT200/TEST200.JPG 0 0 640 480");
+    zexec("-JPEGCONV /QT200/TEST200.JPG 0 0 640 480");
     #endif
   }
 #endif
@@ -675,7 +675,7 @@ static uint8 setup(int argc, char *argv[]) {
       init_text();
       set_scrollwindow(0, scrh);
       clrscr();
-      zexec("CONFIG 1");
+      zexec("1"); /* Config, forced */
     }
   }
   return 1;
@@ -798,7 +798,7 @@ menu:
     }
   } else if (choice == 'r') {
     exec_pass = 1;
-    zexec("SLOWTAKE");
+    zexec("-SLOWTAKE");
   }
 
   goto menu;
