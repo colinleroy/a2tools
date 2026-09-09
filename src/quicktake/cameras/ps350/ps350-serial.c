@@ -9,6 +9,7 @@
 #include "a2_features.h"
 #include "platform.h"
 #include "extended_conio.h"
+#include "hgr.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "ps350.h"
@@ -44,12 +45,12 @@ static uint8 ps350_get_information(void);
 
 /* Camera pictures functions */
 static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 ps350_get_thumbnail(uint8 n_pic, int fd);
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
  * but must exist and return -1
  */
+static uint8 ps350_get_thumbnail(uint8 n_pic, int fd);
 static uint8 ps350_set_camera_name(const char *name);
 static uint8 ps350_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
 static uint8 ps350_set_quality(uint8 quality);
@@ -65,6 +66,7 @@ void ps350_load_thumb_data(uint8 line);
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode);
 static const char *ps350_get_flash_str(uint8 is_pic, uint8 mode);
 
+#ifndef __CC65__
 /* Camera callbacks */
 void *ps350_callbacks[] = {
   /* FEATURES */        (void *)ps350_features,
@@ -85,6 +87,28 @@ void *ps350_callbacks[] = {
   /* GET_QUALITY_STR */ ps350_get_quality_str,
   /* GET_FLASH_STR */   ps350_get_flash_str,
 };
+#else
+/* Camera callbacks */
+void *ps350_callbacks[] = {
+  /* FEATURES */        (void *)ps350_features,
+  /* WAKEUP */          ps350_wakeup,
+  /* SET_SPEED */       ps350_set_speed,
+  /* SET_CAMERA_NAME */ NULL,
+  /* SET_CAMERA_TIME */ NULL,
+  /* GET_INFORMATION */ ps350_get_information,
+  /* SET_QUALITY */     NULL,
+  /* SET_FLASH */       NULL,
+  /* TAKE_PICTURE */    NULL,
+  /* GET_PICTURE */     ps350_get_picture,
+  /* GET_THUMBNAIL */   NULL,
+  /* DELETE_PICTURES */ NULL,
+  /* GET_FILENAME */    ps350_get_filename,
+  /* THUMB_HISTOGRAM */ NULL,
+  /* THUMB_LOAD_DATA */ NULL,
+  /* GET_QUALITY_STR */ ps350_get_quality_str,
+  /* GET_FLASH_STR */   ps350_get_flash_str,
+};
+#endif
 
 #ifdef __CC65__
 #define PC_DEBUG_BUFFER(op, str, len)
@@ -134,7 +158,7 @@ uint8 ps350_send_packet(void) {
   unsigned short chksum = 0;
   unsigned short i;
   unsigned char j;
-  unsigned char lastbit, xorbit;
+  unsigned char lastbit;
 
   simple_serial_putc(0xC0);
   /* Compute checksum, excluding header, checksum and trailer */
@@ -145,11 +169,10 @@ uint8 ps350_send_packet(void) {
       lastbit = ((uint8)chksum) & 0x01;      /* remember if last bit was 1 */
       chksum >>= 1;                          /* shift 1 place */
 
-      xorbit = (cur & 0x01)^lastbit;
-      cur >>= 1;
-      if (xorbit) {                          /* XOR if needed */
+      if ((cur & 0x01)^lastbit) {            /* XOR if needed */
         chksum ^= 0x8408;
       }
+      cur >>= 1;
     }
   }
   simple_serial_putc((uint8)chksum);
@@ -158,10 +181,10 @@ uint8 ps350_send_packet(void) {
 #ifndef __CC65__
   command_packet[PS350_CHK_IDX]   = chksum & 0xFF;
   command_packet[PS350_CHK_IDX+1] = chksum >> 8;
-#endif
   if (command_packet[PS350_TYPE_IDX] != CMD_ACK) {
     PC_DEBUG_BUFFER("Sent: ", command_packet, PS350_PKT_LEN);
   }
+#endif
   return 0;
 }
 
@@ -199,9 +222,7 @@ static uint8 ps350_get_ping_reply(void) {
 
 static uint8 ps350_get_eot(void) {
   PC_DEBUG_PRINTF("Getting EOT\n");
-#ifndef _CC65__
   bzero(buffer+512, PS350_PKT_LEN);
-#endif
   /* EOTs are read at +512 to preserve the previous command's
    * output */
   if (simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN)) {
@@ -227,7 +248,6 @@ static uint8 ps350_read_packet(void) {
 }
 
 uint8 ps350_get_eot_and_ack(void) {
-  uint8 i = 0;
   if (ps350_get_eot() != 0) {
     return -1;
   }
@@ -279,12 +299,10 @@ static uint8 ps350_wakeup(CamSpeed speed) {
   }
 
   if (ps350_get_eot_and_ack() != 0) {
-    goto no_cam;
+no_cam:
+    return QT_MODEL_UNKNOWN;
   }
   return QT_MODEL_PS350;
-
-no_cam:
-  return QT_MODEL_UNKNOWN;
 }
 
 #pragma warn(unused-param, pop)
@@ -335,12 +353,11 @@ again:
   ps350_send_ping();
   if (ps350_get_ping_reply() != 0) {
     cputs("No reply\r\n");
-    goto err_out;
+err_out:
+    return -1;
   }
 
   return ps350_get_eot_and_ack();
-err_out:
-  return -1;
 }
 
 uint8 is_multi = 0;
@@ -381,7 +398,7 @@ static uint8 ps350_send_command_and_get_result(void) {
   return ps350_get_eot_and_ack();
 }
 
-static char root_dir_name[64];
+static char root_dir_name[32];
 static char cur_entity_id[4];
 
 static uint8 ps350_select_disk(void) {
@@ -501,14 +518,19 @@ err_out:
 
   if (!get_ent) {
     (*num_entries) = cur_ent;
-    return 0;
   } else {
     PC_DEBUG_PRINTF("Returning %d\n", found_ent == 0);
     if (!found_ent) {
       ent_name[0] = '\0';
+      goto err_out;
     }
-    return found_ent == 0;
   }
+  return 0;
+}
+
+static void concat_dirs(char *a, char *b) {
+  strcat(a, "\\");
+  strcat(a, b);
 }
 
 #define NUM_DIRS 2
@@ -529,11 +551,9 @@ err_out:
   /* Figure out root directory */
   for (i = 0; i < NUM_DIRS; i++) {
     if (IS_NOT_NULL(p = strchr(root_dir_name, '\\'))) {
-      *(p+1) = '\0';
-    } else {
-      strcat(root_dir_name, "\\");
+      *(p) = '\0';
     }
-    strcat(root_dir_name, directories[i]);
+    concat_dirs(root_dir_name, directories[i]);
 
     if (get_ent_id(0, root_dir_name) != 0) {
       goto err_out;
@@ -563,8 +583,7 @@ err_out:
     return -1;
   }
   PC_DEBUG_PRINTF("Got entity: %s (size %d)\n", ent_name, ent_size);
-  strcat(subdir_path, "\\");
-  strcat(subdir_path, ent_name);
+  concat_dirs(subdir_path, ent_name);
   last_subdir = subdir_idx;
 
   return get_ent_id(0, subdir_path);
@@ -572,7 +591,7 @@ err_out:
 
 /* Get information from the camera */
 static uint8 ps350_get_information(void) {
-  uint8 i, total_pics = 0;
+  uint8 i;
   if (ps350_get_root_directory() != 0) {
 err_out:
     return -1;
@@ -588,18 +607,22 @@ err_out:
     if (ps350_list_dir(&num_pics_in_dir, 0) != 0) {
       goto err_out;
     }
-    total_pics += num_pics_in_dir;
+    cam_info.num_pics += num_pics_in_dir;
   }
 
-  /* WIP: Get a picture info (from last used subdir_path) */
-  cam_info.num_pics = total_pics;
   strcpy(cam_info.name, "Canon PowerShot 350");
   return 0;
 }
 
+#ifndef __CC65__
+char databuf[DATABUF_SIZE];
+#else
+char *databuf = 0x2000;
+#endif
+
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
-  uint8 idx_dir = n_pic/100;
   uint8 idx_img = n_pic-1; /* Counted from 0 */
+  uint8 idx_dir = idx_img/100;
  
   if (get_subdir_path(idx_dir) != 0) {
     goto err_out;
@@ -619,11 +642,6 @@ err_out:
   }
 }
 
-#ifdef __CC65__
-  char *databuf = (char *)0x2000;
-#else
-  char databuf[DATABUF_SIZE];
-#endif
 #define TEMP_FILENAME (buffer+1024) /* Use a safe buffer place to build the absolute name */
 
 static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
@@ -635,10 +653,9 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
    * is stored in ent_name, and the dir name in subdir_path.
    */
   strcpy(TEMP_FILENAME, subdir_path);
-  strcat(TEMP_FILENAME, "\\");
-  strcat(TEMP_FILENAME, ent_name);
+  concat_dirs(TEMP_FILENAME, ent_name);
   if (get_ent_id(1, TEMP_FILENAME) != 0) {
-    cputs("Could not get ID for ");
+    errno = ENOENT;
     goto err_out;
   }
   PC_DEBUG_PRINTF("%s: Got picture pointer %02X%02X%02X%02X\n",
@@ -647,17 +664,17 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   rem_bytes = ent_size;
   if (rem_bytes > avail) {
     errno = ENOSPC;
-    goto err_out;
+    return -1;
   }
 
   if (ps350_open_entity(1) != 0) {
-    cputs("Could not open file ");
+    errno = EIO;
 err_out:
-    cputs(TEMP_FILENAME);
     return -1;
   }
 
   ui_get_image_str(640, 480, ent_size);
+  progress_bar(2, wherey(), scrw - 2, 0, 1);
 
   do {
     ps350_prepare_packet(24);
@@ -669,38 +686,31 @@ err_out:
       command_packet[PS350_DATA_IDX+5] = READ_BLOCK_SIZE >> 8;
       rem_bytes -= READ_BLOCK_SIZE;
     } else {
-      uint16 last_batch_size;
       command_packet[PS350_DATA_IDX+4] = rem_bytes & 0xFF;
       command_packet[PS350_DATA_IDX+5] = rem_bytes >> 8;
 
-      if (rem_bytes < 256) {
-        last_batch_size = 1;
-      } else {
-        last_batch_size = 1 + 1 /* 256 bytes */ 
-                        + ((rem_bytes-DATA_SIZE_FIRST_BLOCK)/DATA_SIZE_NEXT_BLOCKS);
-      }
       to_write = rem_bytes;
       rem_bytes = 0;
     }
 
     ps350_read_file(databuf);
+    PC_DEBUG_BUFFER("data", databuf, to_write);
 
     /* Write buffer */
     PC_DEBUG_PRINTF("Writing %zu bytes\n", to_write);
     write(fd, databuf, to_write);
-
-#ifdef __CC65__
-#endif
+    progress_bar(-1, -1, scrw - 2, ent_size-rem_bytes, ent_size);
 } while (rem_bytes);
 
   return 0;
 }
 
+#pragma warn(unused-param, push, off)
+#ifndef __CC65__
 static uint8 ps350_get_thumbnail(uint8 n_pic, int fd) {
   return -1;
 }
 
-#pragma warn(unused-param, push, off)
 static uint8 ps350_set_camera_name(const char *name) {
   return -1;
 }
@@ -724,6 +734,7 @@ static uint8 ps350_take_picture(void) {
 static uint8 ps350_delete_pictures(void) {
   return -1;
 }
+#endif
 
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode) {
   return "unknown";
