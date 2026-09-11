@@ -227,7 +227,7 @@ static uint8 ps350_read_ignore(void) {
 #define ps350_get_ping_reply ps350_read_ignore
 #endif
 
-static uint8 ps350_get_eot(void) {
+uint8 ps350_get_eot(void) {
   PC_DEBUG_PRINTF("Getting EOT\n");
   /* EOTs are read at +512 to preserve the previous command's
    * output */
@@ -596,6 +596,7 @@ err_out:
     return -1;
   }
   /* Now count files in subdirectories */
+  cam_info.num_pics = 0;
   for (i = 0; i < num_subdirs; i++) {
     uint8 num_pics_in_dir;
 
@@ -691,13 +692,21 @@ err_out:
       to_write = rem_bytes;
       rem_bytes = 0;
     }
+
+    /* Race condition fix */
     sleep(1);
-    ps350_read_file(databuf);
+    if (ps350_read_file(databuf) < 0) {
+      errno = EBUSY;
+      goto err_out;
+    }
     PC_DEBUG_BUFFER("data", databuf, to_write);
 
     /* Write buffer */
     PC_DEBUG_PRINTF("Writing %zu bytes\n", to_write);
-    write(fd, databuf, to_write);
+    if (write(fd, databuf, to_write) < to_write) {
+      errno = EIO;
+      goto err_out;
+    }
     progress_bar(-1, -1, scrw - 2, ent_size-rem_bytes, ent_size);
 } while (rem_bytes);
 

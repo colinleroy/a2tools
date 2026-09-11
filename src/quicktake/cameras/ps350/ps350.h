@@ -39,6 +39,7 @@ extern uint8 do_debug;
 #define PS350_SPEED_57600  0x03
 #define PS350_SPEED_115200 0x04
 
+uint8 ps350_get_eot(void);
 uint8 ps350_get_eot_and_ack(void);
 uint8 ps350_send_packet(void);
 
