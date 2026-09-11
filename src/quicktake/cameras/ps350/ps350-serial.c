@@ -58,10 +58,6 @@ static uint8 ps350_set_flash(uint8 mode);
 static uint8 ps350_take_picture(void);
 static uint8 ps350_delete_pictures(void);
 
-/* Camera thumbnail functions */
-void ps350_thumb_histogram(void);
-void ps350_load_thumb_data(uint8 line);
-
 /* Modes strings */
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode);
 static const char *ps350_get_flash_str(uint8 is_pic, uint8 mode);
@@ -79,11 +75,11 @@ void *ps350_callbacks[] = {
   /* SET_FLASH */       ps350_set_flash,
   /* TAKE_PICTURE */    ps350_take_picture,
   /* GET_PICTURE */     ps350_get_picture,
-  /* GET_THUMBNAIL */   ps350_get_thumbnail,
+  /* GET_THUMBNAIL */   NULL,
   /* DELETE_PICTURES */ ps350_delete_pictures,
   /* GET_FILENAME */    ps350_get_filename,
-  /* THUMB_HISTOGRAM */ ps350_thumb_histogram,
-  /* THUMB_LOAD_DATA */ ps350_load_thumb_data,
+  /* THUMB_HISTOGRAM */ NULL,
+  /* THUMB_LOAD_DATA */ NULL,
   /* GET_QUALITY_STR */ ps350_get_quality_str,
   /* GET_FLASH_STR */   ps350_get_flash_str,
 };
@@ -402,6 +398,7 @@ static char cur_entity_id[4];
 
 static uint8 ps350_select_disk(void) {
   char *ptr;
+
   /* GET DISKS */
   ps350_prepare_packet(20);
   command_packet[PS350_TYPE_IDX] = CMD_PACKET;
