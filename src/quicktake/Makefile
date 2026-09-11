@@ -89,7 +89,6 @@ slowtake_CC65SOURCES := \
 	cameras/qt1x0/qt1x0-thumbs.s \
 	cameras/fuji/fuji-thumbs.s \
 	cameras/dc50/dc50-thumbs.s \
-	cameras/sierra/sierra-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \

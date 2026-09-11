@@ -18,6 +18,7 @@ extern uint8 do_debug;
 #define INIT_REPLY_NAME_IDX 29
 
 
+#define CMD_OFF       0x01
 #define CMD_EOT       0x03
 #define CMD_ACK       0x04
 #define CMD_PACKET    0x10

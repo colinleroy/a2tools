@@ -9,8 +9,24 @@
         .import  _ent_name
         .import  _ent_size
         .import  _cur_ent
+        .import  _serial_model
+        .import  _ps350_turn_off
         .export  _read_to_get_ent
         .export  _ent_to_get
+
+        .destructor ps350_check_turn_off
+
+        .include    "../qt-serial.inc"
+
+.segment "CODE"
+
+.proc ps350_check_turn_off
+        lda     _serial_model
+        cmp     #QT_MODEL_PS350
+        bne     :+
+        jmp _ps350_turn_off
+:       rts
+.endproc
 
 .segment "PS350"
 

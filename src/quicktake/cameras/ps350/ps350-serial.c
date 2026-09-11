@@ -608,6 +608,7 @@ err_out:
   }
 
   strcpy(cam_info.name, "Canon PowerShot 350");
+
   return 0;
 }
 
@@ -756,3 +757,14 @@ static const char *ps350_get_flash_str(uint8 is_pic, uint8 mode) {
 }
 
 #pragma warn(unused-param, pop)
+
+#pragma code-name(push, "CODE")
+/* In CODE as it is a destructor */
+void ps350_turn_off(void) {
+  ps350_prepare_packet(0);
+  command_packet[PS350_TYPE_IDX] = CMD_OFF;
+  command_packet[11]             = 0x00;
+  command_packet[12]             = 0x00;
+  ps350_send_packet();
+}
+#pragma code-name(pop)
