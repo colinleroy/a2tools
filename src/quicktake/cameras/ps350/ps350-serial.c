@@ -620,15 +620,19 @@ char databuf[DATABUF_SIZE];
 char *databuf = 0x2000;
 #endif
 
-static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
+static uint8 ps350_load_ent_name_for_pic(uint8 n_pic) {
   uint8 idx_img = n_pic-1; /* Counted from 0 */
   uint8 idx_dir = idx_img/100;
  
+  last_subdir = 0xFF;
   if (get_subdir_path(idx_dir) != 0) {
-    goto err_out;
+    return -1;
   }
-  if (ps350_list_dir(&idx_img, 1) != 0) {
-err_out:
+  return ps350_list_dir(&idx_img, 1);
+}
+
+static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
+  if (ps350_load_ent_name_for_pic(n_pic) != 0) {
     sprintf(filename, "%s%sIMAGE%d.JPG",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
@@ -649,9 +653,11 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint16 to_write = READ_BLOCK_SIZE;
 
   ui_get_image_header_str();
-  /* At that point, we just called _get_filename, so the pic's name
-   * is stored in ent_name, and the dir name in subdir_path.
-   */
+  if (ps350_load_ent_name_for_pic(n_pic) != 0) {
+    errno = ENOENT;
+    goto err_out;
+  }
+
   strcpy(TEMP_FILENAME, subdir_path);
   concat_dirs(TEMP_FILENAME, ent_name);
   if (get_ent_id(1, TEMP_FILENAME) != 0) {
@@ -664,12 +670,12 @@ static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   rem_bytes = ent_size;
   if (rem_bytes > avail) {
     errno = ENOSPC;
+err_out:
     return -1;
   }
 
   if (ps350_open_entity(1) != 0) {
     errno = EIO;
-err_out:
     return -1;
   }
 
@@ -695,7 +701,7 @@ err_out:
 
     /* Race condition fix */
     sleep(1);
-    if (ps350_read_file(databuf) < 0) {
+    if (ps350_read_file(databuf) != 0) {
       errno = EBUSY;
       goto err_out;
     }

@@ -169,9 +169,13 @@ get_info:
     /* handle command */
     if ((!strcmp(argv[3], "get") || !strcmp(argv[3], "thumb")) && argc > 4) {
       char filename[64];
-      uint8 n_pic = atoi(argv[4]);
       int fd;
       int thumb = !strcmp(argv[3], "thumb");
+      uint8 n_pic;
+      uint8 cur = 4;
+
+next_pic:
+      n_pic = atoi(argv[cur]);
 
       cam_get_filename(n_pic, NULL, filename);
       if (thumb) {
@@ -199,6 +203,10 @@ get_info:
           printf("Can not get picture: %s\n", strerror(errno));
         }
         close(fd);
+      }
+      cur++;
+      if (argc > cur) {
+        goto next_pic;
       }
     }
     if (!strcmp(argv[3], "set_name") && argc > 4) {
