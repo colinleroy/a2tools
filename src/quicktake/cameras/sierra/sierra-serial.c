@@ -40,7 +40,6 @@ static uint8 sierra_get_information(void);
 
 /* Camera pictures functions */
 static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail);
-static uint8 sierra_get_thumbnail(uint8 n_pic, int fd);
 static void sierra_get_filename(uint8 n_pic, char *dirname, char *filename);
 
 /* Other functions, that this driver doesn't implement
@@ -52,10 +51,6 @@ static uint8 sierra_set_quality(uint8 quality);
 static uint8 sierra_set_flash(uint8 mode);
 static uint8 sierra_take_picture(void);
 static uint8 sierra_delete_pictures(void);
-
-/* Camera thumbnail functions */
-void sierra_thumb_histogram(void);
-void sierra_load_thumb_data(uint8 line);
 
 /* Modes strings */
 static const char *sierra_get_quality_str(uint8 is_pic, uint8 mode);
@@ -73,11 +68,11 @@ void *sierra_callbacks[] = {
   /* SET_FLASH */       sierra_set_flash,
   /* TAKE_PICTURE */    sierra_take_picture,
   /* GET_PICTURE */     sierra_get_picture,
-  /* GET_THUMBNAIL */   sierra_get_thumbnail,
+  /* GET_THUMBNAIL */   NULL,
   /* DELETE_PICTURES */ sierra_delete_pictures,
   /* GET_FILENAME */    sierra_get_filename,
-  /* THUMB_HISTOGRAM */ sierra_thumb_histogram,
-  /* THUMB_LOAD_DATA */ sierra_load_thumb_data,
+  /* THUMB_HISTOGRAM */ NULL,
+  /* THUMB_LOAD_DATA */ NULL,
   /* GET_QUALITY_STR */ sierra_get_quality_str,
   /* GET_FLASH_STR */   sierra_get_flash_str,
 };
@@ -536,11 +531,13 @@ static uint8 sierra_get_picture(uint8 n_pic, int fd, off_t avail) {
   return sierra_get_picture_data(n_pic, fd, avail, 1);
 }
 
+#if 0
 static uint8 sierra_get_thumbnail(uint8 n_pic, int fd) {
   th_info.flash_mode   = 0xFF;
   th_info.quality_mode = 0xFF;
   return sierra_get_picture_data(n_pic, fd, 0, 0);
 }
+#endif
 
 #pragma warn(unused-param, push, off)
 static uint8 sierra_set_camera_name(const char *name) {
