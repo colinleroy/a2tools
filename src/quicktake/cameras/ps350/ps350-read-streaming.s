@@ -3,7 +3,7 @@
         .import  _buffer
         .import  _ps350_get_eot_and_ack
         .import  _ps350_send_packet
-        .import  _serial_read_byte_direct
+        .import  _serial_read_byte_no_irq
         .import  _is_multi
         .import  _found_ent
         .import  _ent_name
@@ -45,8 +45,7 @@ _ent_to_get:        .res 1,$00
 .proc read_to_preset_dest
         ldx     #$00
 read_again:
-        jsr     _serial_read_byte_direct
-        bcs     read_again
+        jsr     _serial_read_byte_no_irq
 dest = *+1
         sta     _buffer,x
         inx

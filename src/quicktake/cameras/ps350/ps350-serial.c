@@ -220,9 +220,15 @@ static uint8 ps350_get_ping_reply(void) {
   return 0;
 }
 
+#else
+static uint8 ps350_read_ignore(void) {
+  return simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN);
+}
+#define ps350_get_ping_reply ps350_read_ignore
+#endif
+
 static uint8 ps350_get_eot(void) {
   PC_DEBUG_PRINTF("Getting EOT\n");
-  bzero(buffer+512, PS350_PKT_LEN);
   /* EOTs are read at +512 to preserve the previous command's
    * output */
   if (simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN)) {
@@ -235,13 +241,6 @@ static uint8 ps350_get_eot(void) {
   }
   return 0;
 }
-#else
-static uint8 ps350_read_ignore(void) {
-  return simple_serial_read_no_irq((char *)buffer+512, PS350_PKT_LEN);
-}
-#define ps350_get_eot        ps350_read_ignore
-#define ps350_get_ping_reply ps350_read_ignore
-#endif
 
 static uint8 ps350_read_packet(void) {
   return simple_serial_read_no_irq((char *)buffer, PS350_PKT_LEN);
@@ -692,7 +691,7 @@ err_out:
       to_write = rem_bytes;
       rem_bytes = 0;
     }
-
+    sleep(1);
     ps350_read_file(databuf);
     PC_DEBUG_BUFFER("data", databuf, to_write);
 
