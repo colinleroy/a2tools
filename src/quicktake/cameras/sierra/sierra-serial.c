@@ -155,7 +155,6 @@ static uint8 sierra_write_int(uint8 reg, uint32 value) {
 try_again:
   sierra_build_packet(SIERRA_PACKET_COMMAND, 6, OP_SET_INT, reg);
 
-  /* TODO: optimize that, the assembly is going to be ugly */
   buffer[PACKET_VALUE]    = value         & 0xFF;
   buffer[PACKET_VALUE+1]  = (value >> 8)  & 0xFF;
   buffer[PACKET_VALUE+2]  = (value >> 16) & 0xFF;
@@ -178,6 +177,7 @@ try_again:
   return -1;
 }
 
+#if 0
 static void dump_packet(void) {
   uint16 i, l;
   cprintf("packet: %02X %02X %02X %02X\r\n",
@@ -189,6 +189,7 @@ static void dump_packet(void) {
   }
   cprintf("\r\n%02X %02X\r\n", footer[0], footer[1]);
 }
+#endif
 
 static uint8 sierra_read_int(uint8 reg) {
   uint8 r;
@@ -443,7 +444,7 @@ static uint8 sierra_get_information(void) {
                + (buffer[2] << 16)
                + (buffer[3] << 24);
 #else
-  /* Get size (24 bits big endian)*/
+  /* Get size (24 bits little endian)*/
   ((unsigned char *)&cam_date)[0] = buffer[0];
   ((unsigned char *)&cam_date)[1] = buffer[1];
   ((unsigned char *)&cam_date)[2] = buffer[2];

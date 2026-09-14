@@ -47,17 +47,6 @@ static uint8 ps350_get_information(void);
 static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail);
 static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename);
 
-/* Other functions, that this driver doesn't implement
- * but must exist and return -1
- */
-static uint8 ps350_get_thumbnail(uint8 n_pic, int fd);
-static uint8 ps350_set_camera_name(const char *name);
-static uint8 ps350_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
-static uint8 ps350_set_quality(uint8 quality);
-static uint8 ps350_set_flash(uint8 mode);
-static uint8 ps350_take_picture(void);
-static uint8 ps350_delete_pictures(void);
-
 /* Modes strings */
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode);
 static const char *ps350_get_flash_str(uint8 is_pic, uint8 mode);
@@ -68,15 +57,15 @@ void *ps350_callbacks[] = {
   /* FEATURES */        (void *)ps350_features,
   /* WAKEUP */          ps350_wakeup,
   /* SET_SPEED */       ps350_set_speed,
-  /* SET_CAMERA_NAME */ ps350_set_camera_name,
-  /* SET_CAMERA_TIME */ ps350_set_camera_time,
+  /* SET_CAMERA_NAME */ NULL,
+  /* SET_CAMERA_TIME */ NULL,
   /* GET_INFORMATION */ ps350_get_information,
-  /* SET_QUALITY */     ps350_set_quality,
-  /* SET_FLASH */       ps350_set_flash,
-  /* TAKE_PICTURE */    ps350_take_picture,
-  /* GET_PICTURE */     ps350_get_picture,
+  /* SET_QUALITY */     NULL,
+  /* SET_FLASH */       NULL,
+  /* TAKE_PICTURE */    NULL,
+  /* GET_PICTURE */     NULL,
   /* GET_THUMBNAIL */   NULL,
-  /* DELETE_PICTURES */ ps350_delete_pictures,
+  /* DELETE_PICTURES */ NULL,
   /* GET_FILENAME */    ps350_get_filename,
   /* THUMB_HISTOGRAM */ NULL,
   /* THUMB_LOAD_DATA */ NULL,
@@ -718,35 +707,6 @@ err_out:
 }
 
 #pragma warn(unused-param, push, off)
-#ifndef __CC65__
-static uint8 ps350_get_thumbnail(uint8 n_pic, int fd) {
-  return -1;
-}
-
-static uint8 ps350_set_camera_name(const char *name) {
-  return -1;
-}
-
-static uint8 ps350_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  return -1;
-}
-
-static uint8 ps350_set_quality(uint8 quality) {
-  return -1;
-}
-
-static uint8 ps350_set_flash(uint8 mode) {
-  return -1;
-}
-
-static uint8 ps350_take_picture(void) {
-  return -1;
-}
-
-static uint8 ps350_delete_pictures(void) {
-  return -1;
-}
-#endif
 
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode) {
   return "unknown";
