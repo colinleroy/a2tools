@@ -2,6 +2,7 @@
 #include "extended_conio.h"
 #include "simple_serial.h"
 #include "platform.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "ps350.h"
 #include "ps350-read-streaming.h"
@@ -10,24 +11,6 @@
 #pragma rodata-name(push, "PS350")
 #pragma data-name(push, "PS350")
 #pragma bss-name(push, "PS350")
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-extern uint8 do_debug;
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 extern uint8 is_multi;
 extern uint8 found_ent;

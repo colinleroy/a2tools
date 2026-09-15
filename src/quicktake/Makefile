@@ -27,6 +27,7 @@ VERSION := $(shell grep define.VERSION ../surl-server/surl_protocol.h |cut -d'"'
 microserial_SOURCES := \
 	tools/micro-serial.c \
 	cameras/qt-serial.c \
+	cameras/pc-debug.c \
 	cameras/qt1x0/qt1x0-serial.c \
 	cameras/qt1x0/qt1x0-thumbs.c \
 	cameras/fuji/fuji-serial.c \

@@ -109,7 +109,7 @@ void __fastcall__ build_scale_table(const char *ofname) {
       break;
   }
   
-  printf("Band height %d to %d, %zu bytes per band\n",
+  printf("Band height %d to %d, %d bytes per band\n",
          BAND_HEIGHT, scaled_band_height, output_write_len);
   /* Hack for 768px wide pics, keep the center 640.
    * Those (DC50 KDC) pics are also 512 pixels, high,

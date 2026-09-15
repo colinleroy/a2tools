@@ -14,6 +14,7 @@
 #include "strtrim.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../qt-thumbs.h"
 #include "../../decoders/qt-conv.h"
@@ -107,20 +108,6 @@ uint8 is_qt100; /* helper for thumbnailer */
   #endif
 #endif
 
-#ifdef __CC65__
-#define PC_DEBUG(op, str, len)
-#else
-static void PC_DEBUG(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
-
 static void qt1x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
   sprintf(filename, "%s%sIMAGE%d.QTK",
           IS_NOT_NULL(dirname)?dirname:"",
@@ -132,17 +119,17 @@ static uint8 get_ack(uint8 wait) {
   char c;
   while (wait--) {
     if (simple_serial_read_no_irq(&c, 1) == 0x00 && c == 0x00) {
-      PC_DEBUG("ack OK", &c, 1);
+      PC_DEBUG_PRINTF("ack OK\n");
       return 0;
     }
-    PC_DEBUG("ack", &c, 1);
+    PC_DEBUG_PRINTF("ack NOK %02X\n", c);
   }
   return -1;
 }
 
 /* Send an ack to the camera */
 static void send_ack(void) {
-  PC_DEBUG("sack", NULL, 0);
+  PC_DEBUG_PRINTF("Sending ack\n");
   simple_serial_putc(0x06);
 }
 
@@ -150,7 +137,7 @@ static void send_ack(void) {
 static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, uint8 wait) {
   static char ping_str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
   if (ping) {
-    PC_DEBUG("ping", ping_str, sizeof ping_str);
+    PC_DEBUG_BUFFER("ping", ping_str, sizeof ping_str);
     simple_serial_write(ping_str, sizeof ping_str);
     if (get_ack(5) != 0)
       return -1;
@@ -160,7 +147,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 ping, uint8 s_ack, u
     return 0;
   }
 
-  PC_DEBUG("write", cmd, len);
+  PC_DEBUG_BUFFER("write", cmd, len);
   simple_serial_write(cmd, len);
   if (get_ack(wait) != 0)
     return -1;
@@ -178,7 +165,7 @@ static uint8 get_hello(void) {
     cputs("Timeout. ");
     return QT_MODEL_UNKNOWN;
   }
-  PC_DEBUG("read hello", buffer, 7);
+  PC_DEBUG_BUFFER("read hello", buffer, 7);
 
   if (buffer[0] != 0xA5) {
     return QT_MODEL_UNKNOWN;
@@ -209,13 +196,13 @@ static uint8 send_hello(CamSpeed speed) {
   }
   str_hello[CHKSUM_IDX] = chk;
 
-  PC_DEBUG("send hello", str_hello, sizeof str_hello);
+  PC_DEBUG_BUFFER("send hello", str_hello, sizeof str_hello);
   simple_serial_write(str_hello, sizeof str_hello);
   if (simple_serial_read_no_irq((char *)buffer, 10) == EOF) {
     cputs("Timeout. ");
     return -1;
   }
-  PC_DEBUG("read hello reply", buffer, 10);
+  PC_DEBUG_BUFFER("read hello reply", buffer, 10);
 
   if (buffer[0] != 0x00) {
     cprintf("Error ($%02X).\r\n", c);
@@ -302,7 +289,7 @@ static uint8 qt1x0_set_speed(CamSpeed speed) {
       return send_command(NULL, 0, 1, 0, 0);
   }
 
-  PC_DEBUG("write speed", str_speed, sizeof str_speed);
+  PC_DEBUG_BUFFER("write speed", str_speed, sizeof str_speed);
   if (send_command(str_speed, sizeof str_speed, 0, 1, 5) != 0) {
     cputs("Speed set command failed.\r\n");
     return -1;
@@ -612,7 +599,7 @@ static uint8 qt1x0_get_information(void) {
     errno = EBUSY;
     return -1;
   }
-  PC_DEBUG("read information", buffer, 128);
+  PC_DEBUG_BUFFER("read information", buffer, 128);
 
   cam_info.num_pics     = buffer[NUM_PICS_IDX];
   cam_info.left_pics    = buffer[LEFT_PICS_IDX];
@@ -644,7 +631,7 @@ static uint8 qt1x0_get_information(void) {
   return 0;
 }
 
-
+#pragma warn(unused-param, push, off)
 static const char *qt1x0_get_quality_str(uint8 is_pic, uint8 mode) {
   switch(mode % 2) {
   case 0:  return "high";
@@ -664,3 +651,4 @@ static const char *qt1x0_get_flash_str(uint8 is_pic, uint8 mode) {
   default:         return "unknown";
   }
 }
+#pragma warn(unused-param, pop)

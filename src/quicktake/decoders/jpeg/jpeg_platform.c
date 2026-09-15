@@ -426,7 +426,7 @@ uint8 decodeNextMCU(void)
         page_shift-=256;
       }
       /* Now do the two next blocks 4 lines down, 4 pixels left */
-      printf("shifting output0 from   %p to %p   (offset %d)\n",
+      printf("shifting output0 from   %p to %p   (offset %zu)\n",
              output0, output0+page_shift,
              output0-raw_image);
       output0 += page_shift;
@@ -488,7 +488,7 @@ uint8 decodeNextMCU(void)
   /* If H2V2, go back 4 lines and 4 pixels right */
   if (gScanType == PJPG_YH2V2) {
     uint16 page_shift = (RAW_WIDTH*4);
-    printf("setting output0 back to %p from %p (Ofsset %d, idx %d)\n",
+    printf("setting output0 back to %p from %p (offset %zu, idx %d)\n",
            output0-page_shift, output0,
            (output0-page_shift)-raw_image,
            outputIdx);

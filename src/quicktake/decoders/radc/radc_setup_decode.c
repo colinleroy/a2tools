@@ -93,8 +93,9 @@ char qt_setup_decode(void) {
     }
     kodak_cbpp = kodak_cbpp == 243 ? 2 : 3;
   } else {
-    cputs("Invalid file.\r\n");
-    return -1;
+    width = 640/2;
+    height = 480/2;
+    data_offset = 0x80;
   }
   lseek(ifd, data_offset, SEEK_SET);
   read(ifd, cur_cache_ptr = cache, CACHE_SIZE);

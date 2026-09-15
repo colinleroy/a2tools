@@ -5,6 +5,7 @@
 #include "simple_serial.h"
 #include "dc50.h"
 #include "dc50-read-response.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../ui/ui.h"
 
@@ -15,20 +16,6 @@
 
 extern uint16 response_len;
 extern uint8 response_continues;
-
-#ifdef __CC65__
-#define PC_DEBUG(op, str, len)
-#else
-static void PC_DEBUG(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 /* Read a reply from the camera */
 uint8 dc50_read_response(char *dest, uint16 len) {
@@ -43,10 +30,10 @@ uint8 dc50_read_response(char *dest, uint16 len) {
   if (c == EOF) {
     return -1;
   }
-  PC_DEBUG("Data", dest, len);
+  PC_DEBUG_BUFFER("Data", dest, len);
   /* Checksum */
   simple_serial_read_no_irq((char *)&c, 1);
-  PC_DEBUG("checksum", &c, 1);
+  PC_DEBUG_PRINTF("checksum %02X\n", c);
 
   return 0;
 }

@@ -5,30 +5,12 @@
 #include "simple_serial.h"
 #include "fuji.h"
 #include "fuji-read-response.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../ui/ui.h"
 
 extern uint16 response_len;
 extern uint8 response_continues;
-
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
-
 extern uint8 ack_timeout;
 
 /* Read a reply from the camera */

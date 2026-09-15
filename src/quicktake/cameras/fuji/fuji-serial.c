@@ -12,6 +12,7 @@
 #include "simple_serial.h"
 #include "fuji.h"
 #include "fuji-read-response.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -93,24 +94,6 @@ uint8 fuji_model;
 
 #define STD_WAIT 20
 #define SHORT_WAIT 5
-
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 uint16 response_len;
 uint8 response_continues;
@@ -652,6 +635,9 @@ static const char *fuji_get_flash_str(uint8 is_pic, uint8 mode) {
     case 2:  return "strobe";
     case 3:  return "automatic";
   }
+  #ifndef __CC65__
+  return "unknown";
+  #endif
 }
 
 #pragma warn(unused-param, pop)

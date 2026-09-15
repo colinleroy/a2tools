@@ -11,6 +11,7 @@
 #include "simple_serial.h"
 #include "sierra.h"
 #include "sierra-read-packet.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -76,23 +77,6 @@ void *sierra_callbacks[] = {
   /* GET_QUALITY_STR */ sierra_get_quality_str,
   /* GET_FLASH_STR */   sierra_get_flash_str,
 };
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 extern camera_info cam_info;
 extern thumb_info th_info;
@@ -170,7 +154,7 @@ try_again:
     }
     return -1;
   }
-  PC_DEBUG_PRINTF("write_int reply: %d", sierra_packet_type);
+  PC_DEBUG_PRINTF("write_int reply: %d\n", sierra_packet_type);
   if (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK) {
     return 0;
   }
@@ -200,7 +184,7 @@ try_again:
   r = sierra_read_packet();
   // dump_packet();
   if (r == 0) {
-    PC_DEBUG_PRINTF("read_int reply OK: %d", sierra_packet_type);
+    PC_DEBUG_PRINTF("read_int reply OK: %d\n", sierra_packet_type);
     PC_DEBUG_BUFFER("read_int details: ", buffer, 6);
     sierra_write_ack();
     return 0;
@@ -227,7 +211,7 @@ try_again:
     }
     return -1;
   }
-  PC_DEBUG_PRINTF("write_string reply: %d", sierra_packet_type);
+  PC_DEBUG_PRINTF("write_string reply: %d\n", sierra_packet_type);
   if (sierra_packet_type == SIERRA_PACKET_ENQ|| sierra_packet_type == SIERRA_PACKET_ACK) {
     return 0;
   }
@@ -588,6 +572,9 @@ static const char *sierra_get_quality_str(uint8 is_pic, uint8 mode) {
   case 2:  return "high";
   case 1:  return "low";
   }
+  #ifndef __CC65__
+  return "unknown";
+  #endif
 }
 
 static const char *sierra_get_flash_str(uint8 is_pic, uint8 mode) {
@@ -599,6 +586,9 @@ static const char *sierra_get_flash_str(uint8 is_pic, uint8 mode) {
   case 1:  return "forced";
   case 2:  return "off";
   }
+  #ifndef __CC65__
+  return "unknown";
+  #endif
 }
 
 #pragma warn(unused-param, pop)

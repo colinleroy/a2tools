@@ -13,6 +13,7 @@
 #include "simple_serial.h"
 #include "dc50.h"
 #include "dc50-read-response.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -92,20 +93,6 @@ void init_packet(char command) {
   command_packet[7] = 0x1A;
 }
 
-#ifdef __CC65__
-#define PC_DEBUG(op, str, len)
-#else
-static void PC_DEBUG(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
-
 extern camera_info cam_info;
 extern thumb_info th_info;
 
@@ -147,7 +134,7 @@ static uint8 wait_command_completion(void) {
   do {
     /* Wait for a character... */
     while (simple_serial_read_no_irq((char *)&c, 1) == EOF);
-    PC_DEBUG("completion", &c, 1);
+    PC_DEBUG_PRINTF("completion: %02X\n", c);
     /* Is camera still busy? If so wait */
     if (c == REP_BUSY) {
       continue;
@@ -164,19 +151,19 @@ static uint8 wait_command_completion(void) {
 /* Send the command (packet previously inited with init_packet()) */
 static uint8 dc50_send_command(void) {
   uint8 c;
-  PC_DEBUG("CMD", command_packet, 8);
+  PC_DEBUG_BUFFER("CMD", command_packet, 8);
 
   /* Send */
   simple_serial_write(command_packet, 8);
 
   /* Wait to get an answer, */
   if (simple_serial_read_no_irq((char *)&c, 1) != 0) {
-    PC_DEBUG("No response", &c, 1);
+    PC_DEBUG_PRINTF("No response %02X\n", c);
     return -1;
   }
 
   /* and verify it's accepted */
-  PC_DEBUG("response", &c, 1);
+  PC_DEBUG_PRINTF("response %02X\n", c);
   if (c != REP_ACK) {
     return -1;
   }
@@ -595,22 +582,22 @@ static uint8 dc50_send_packet(uint8 ctrl, uint16 len) {
   uint16 i = 0;
   uint8 chksum = 0;
 
-  PC_DEBUG("Packet header", &ctrl, 1);
+  PC_DEBUG_PRINTF("Packet header %02X\n", ctrl);
   simple_serial_putc(ctrl);
+  PC_DEBUG_BUFFER("Packet data", buffer, len);
   while (i < len) {
-    PC_DEBUG("Packet data", buffer+i, 1);
     simple_serial_putc(buffer[i]);
     chksum ^= buffer[i];
     i++;
   }
-  PC_DEBUG("Packet checksum", &chksum, 1);
   simple_serial_putc(chksum);
+  PC_DEBUG_PRINTF("Packet checksum %02X\n", chksum);
 
   if (simple_serial_read_no_irq((char *)&ctrl, 1) == EOF) {
-    PC_DEBUG("Timeout on reply", &ctrl, 1);
+    PC_DEBUG_PRINTF("Timeout on reply %02X\n", ctrl);
     return -1;
   }
-  PC_DEBUG("Packet send reply", &ctrl, 1);
+  PC_DEBUG_PRINTF("Packet send reply %02X\n", ctrl);
   if (ctrl != REP_CORRECT) {
     return -1;
   }
@@ -701,6 +688,9 @@ static const char *dc50_get_quality_str(uint8 is_pic, uint8 mode) {
   case 1:  return "medium";
   case 2:  return "low";
   }
+  #ifndef __CC65__
+  return "unknown";
+  #endif
 }
 
 static const char *dc50_get_flash_str(uint8 is_pic, uint8 mode) {
@@ -715,6 +705,9 @@ static const char *dc50_get_flash_str(uint8 is_pic, uint8 mode) {
   case 1:  return "forced";
   case 2:  return "disabled";
   }
+  #ifndef __CC65__
+  return "unknown";
+  #endif
 }
 
 #pragma warn(unused-param, pop)

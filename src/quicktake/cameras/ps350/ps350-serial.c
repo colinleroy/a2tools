@@ -14,6 +14,7 @@
 #include "simple_serial.h"
 #include "ps350.h"
 #include "ps350-read-streaming.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -51,28 +52,6 @@ static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename);
 static const char *ps350_get_quality_str(uint8 is_pic, uint8 mode);
 static const char *ps350_get_flash_str(uint8 is_pic, uint8 mode);
 
-#ifndef __CC65__
-/* Camera callbacks */
-void *ps350_callbacks[] = {
-  /* FEATURES */        (void *)ps350_features,
-  /* WAKEUP */          ps350_wakeup,
-  /* SET_SPEED */       ps350_set_speed,
-  /* SET_CAMERA_NAME */ NULL,
-  /* SET_CAMERA_TIME */ NULL,
-  /* GET_INFORMATION */ ps350_get_information,
-  /* SET_QUALITY */     NULL,
-  /* SET_FLASH */       NULL,
-  /* TAKE_PICTURE */    NULL,
-  /* GET_PICTURE */     NULL,
-  /* GET_THUMBNAIL */   NULL,
-  /* DELETE_PICTURES */ NULL,
-  /* GET_FILENAME */    ps350_get_filename,
-  /* THUMB_HISTOGRAM */ NULL,
-  /* THUMB_LOAD_DATA */ NULL,
-  /* GET_QUALITY_STR */ ps350_get_quality_str,
-  /* GET_FLASH_STR */   ps350_get_flash_str,
-};
-#else
 /* Camera callbacks */
 void *ps350_callbacks[] = {
   /* FEATURES */        (void *)ps350_features,
@@ -93,24 +72,6 @@ void *ps350_callbacks[] = {
   /* GET_QUALITY_STR */ ps350_get_quality_str,
   /* GET_FLASH_STR */   ps350_get_flash_str,
 };
-#endif
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 extern camera_info cam_info;
 extern thumb_info th_info;
@@ -604,7 +565,7 @@ err_out:
 #ifndef __CC65__
 char databuf[DATABUF_SIZE];
 #else
-char *databuf = 0x2000;
+char *databuf = (char *)0x2000;
 #endif
 
 static uint8 ps350_load_ent_name_for_pic(uint8 n_pic) {
@@ -633,7 +594,7 @@ static void ps350_get_filename(uint8 n_pic, char *dirname, char *filename) {
   }
 }
 
-#define TEMP_FILENAME (buffer+1024) /* Use a safe buffer place to build the absolute name */
+#define TEMP_FILENAME (char *)(buffer+1024) /* Use a safe buffer place to build the absolute name */
 
 static uint8 ps350_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint32 rem_bytes;
@@ -695,7 +656,7 @@ err_out:
     PC_DEBUG_BUFFER("data", databuf, to_write);
 
     /* Write buffer */
-    PC_DEBUG_PRINTF("Writing %zu bytes\n", to_write);
+    PC_DEBUG_PRINTF("Writing %u bytes\n", to_write);
     if (write(fd, databuf, to_write) < to_write) {
       errno = EIO;
       goto err_out;

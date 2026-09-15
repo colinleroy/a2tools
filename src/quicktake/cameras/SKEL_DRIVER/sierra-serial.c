@@ -11,6 +11,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "sierra.h"
+#include "../pc-debug.h"
 #include "../qt-serial.h"
 #include "../../decoders/qt-conv.h"
 #include "../../ui/ui.h"
@@ -81,23 +82,6 @@ void *sierra_callbacks[] = {
   /* GET_QUALITY_STR */ sierra_get_quality_str,
   /* GET_FLASH_STR */   sierra_get_flash_str,
 };
-
-#ifdef __CC65__
-#define PC_DEBUG_BUFFER(op, str, len)
-#define PC_DEBUG_PRINTF(...)
-#else
-#define PC_DEBUG_PRINTF(...) do { if (do_debug) printf(__VA_ARGS__); } while (0)
-
-static void PC_DEBUG_BUFFER(char *op, const char *str, int len) {
-  if (do_debug) {
-    printf("%s:", op);
-    for (int i = 0; i < len; i++) {
-      printf("%s %02X", i%16 == 0 ? "\n":"", (uint8)str[i]);
-    }
-    printf("\n");
-  }
-}
-#endif
 
 extern camera_info cam_info;
 extern thumb_info th_info;
