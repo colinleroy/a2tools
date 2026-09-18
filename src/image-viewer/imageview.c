@@ -248,6 +248,8 @@ again:
 out:
   init_text();
 
+  simple_serial_close();
+  reopen_start_device();
   /* Pass back extra arguments received at startup */
   if (argc > 2) {
     cmdline[0] = '\0';
