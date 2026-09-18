@@ -216,12 +216,14 @@ static uint8 send_hello(CamSpeed speed) {
  * Returns 0 if successful, -1 otherwise
  */
 static uint8 qt1x0_wakeup(CamSpeed speed) {
-  static uint8 model = QT_MODEL_UNKNOWN;
+  static uint8 c, model = QT_MODEL_UNKNOWN;
 
   cputs("Pinging QuickTake 1x0... ");
 
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
+  /* Flush shit */
+  while (simple_serial_read_no_irq((char *)&c, 1) != EOF) {}
 
   /* The Apple II printer port being closed right now,
    * we have to set DTR before clearing it.
