@@ -1001,13 +1001,15 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
 
 uint8 qt_view_image(const char *filename, const char *cmd) {
   if (filename) {
-    snprintf((char *)args, sizeof(args) - 1, "%s "PROGRAM_NAME" %s", filename, cmd?cmd:"");
+    snprintf((char *)args, sizeof(args) - 1, "%s %s %s", filename, zxloader_name, cmd?cmd:"");
   } else {
-    snprintf((char *)args, sizeof(args) - 1, "___SEL___ "PROGRAM_NAME);
+    snprintf((char *)args, sizeof(args) - 1, "___SEL___ %s", zxloader_name);
   }
 
   init_text();
   exec_pass = 1;
+  state_set(STATE_EDIT, 0, NULL);
+  reopen_start_device();
   return exec("imgview", (char *)args);
 }
 
