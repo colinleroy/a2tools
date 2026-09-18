@@ -87,7 +87,7 @@ void *dc50_callbacks[] = {
 static char command_packet[8];
 
 /* Zero command packet and set command */
-void init_packet(char command) {
+static void init_packet(char command) {
   command_packet[0] = command;
   bzero(command_packet+1, 6);
   command_packet[7] = 0x1A;
