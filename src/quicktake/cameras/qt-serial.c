@@ -31,6 +31,7 @@ char *cam_file_extension[] = {
   ".KDC", /* QT_MODEL_DC50 */
   ".JPG", /* QT_MODEL_SIERRA */
   ".JPG", /* QT_MODEL_PS350 */
+  ".DCT", /* QT_MODEL_DY10C */
 };
 
 

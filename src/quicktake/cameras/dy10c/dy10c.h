@@ -1,0 +1,42 @@
+#ifndef _DY10C_H
+#define _DY10C_H
+
+#include "platform.h"
+
+extern uint8 scrw, scrh;
+extern uint8 do_debug;
+
+#define CMD_SET_SPEED          0x41
+
+#define CMD_GET_CAM_PIC        0x51
+#define CMD_GET_CARD_PIC       0x61
+
+#define CMD_CAM_PIC_INFO       0x55
+#define CMD_CARD_PIC_INFO      0x65
+
+#define CMD_GET_CAM_THUMB      0x56
+#define CMD_GET_CARD_THUMB     0x66
+
+#define CMD_SET_QUALITY        0x71
+#define CMD_SET_FLASH          0x72
+#define CMD_SET_TIMER          0x74
+#define CMD_SET_TIME           0x75
+#define CMD_TAKE_PICTURE_CAM   0x77
+#define CMD_DELETE_CAM         0x7A
+#define CMD_DELETE_CARD        0x7B
+#define CMD_TAKE_PICTURE_CARD  0x7C
+#define CMD_GET_STATUS         0x7F
+
+#define CMD_SET_NAME           0x9E
+
+
+#define REP_COMPLETE    0x00
+#define CTRL_EOF        0x80
+#define REP_ACK         0xd1
+#define REP_CORRECT     0xd2
+#define REP_NACK        0xe1
+#define REP_EXEC_ERR    0xe2
+#define REP_ILLEGAL     0xe3
+#define REP_BUSY        0xf0
+
+#endif

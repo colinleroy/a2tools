@@ -12,6 +12,7 @@
 #define QT_MODEL_DC50    4
 #define QT_MODEL_SIERRA  5
 #define QT_MODEL_PS350   6
+#define QT_MODEL_DY10C   7
 
 #define CAM_FEATURES        0
 #define CAM_WAKEUP          1

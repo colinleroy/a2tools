@@ -106,11 +106,11 @@ display:
   uint8 buf[512];
   uint32 curr_hist;
   int r;
-  fseek(fp, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
-  if ((r = fread(buf, 1, 512, fp)) < 512) {
-    printf(" Can't read histogram at %zu: %d\n", PNM_HEADER_SIZE + 256*192UL, r);
-    do_hist = 0;
-  }
+  // fseek(fp, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
+  // if ((r = fread(buf, 1, 512, fp)) < 512) {
+  //   printf(" Can't read histogram at %zu: %d\n", PNM_HEADER_SIZE + 256*192UL, r);
+  //   do_hist = 0;
+  // }
 
   int black = 0, found_black = 0;
   int white = 0, found_white = 0;
@@ -139,12 +139,12 @@ display:
         opt_histogram[i] = 255;
       }
   }
-
-  fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
-  if (fp2) {
-    fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
-  }
-
+  // 
+  // fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
+  // if (fp2) {
+  //   fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
+  // }
+fseek(fp, 0x500, SEEK_SET);
   SDL_LockSurface(screen);
   unsigned char c, c2;
   int x, y;
@@ -199,7 +199,30 @@ display:
       fseek(fp, data_offset, SEEK_SET);
     }
     for (y = 0; y < 60; y++) {
-      if (qtmodel == QT_MODEL_150) {
+      if (qtmodel == QT_MODEL_DY10C) {
+        if (y % 2 == 0) {
+          fread(line, 1, 80, fp);
+
+          /* Very naive and unperfect. I guess this should
+           * be refined with the two next planes. No need
+           * to bother as it wouldn't fit qt-dither's flow
+           * (where it doesn't go back to previous pixels).
+           */
+          for (i = 0, x = 0; x < 80;) {
+            out[x] = (line[i]);
+            PIXEL_OUTPUT(x,   y,   out[x], 0);
+
+            out[x+1] = (line[i+40]);
+            PIXEL_OUTPUT(x+1,   y, out[x+1], 0);
+            i++;
+            x+=2;
+          }
+        } else {
+          for (x = 0; x < 160; x++) {
+            PIXEL_OUTPUT(x, y, out[x], 0);
+          }
+        }
+      } else if (qtmodel == QT_MODEL_150) {
         unsigned char pg;
         if (y % 2 == 0) {
           fread(line, 1, 80, fp);
