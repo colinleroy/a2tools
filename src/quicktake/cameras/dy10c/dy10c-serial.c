@@ -362,10 +362,10 @@ static void dy10c_get_filename(uint8 n_pic, char *dirname, char *filename) {
 #define CAM_PIC_SIZE_IDX 6
 #define CARD_PIC_SIZE_IDX 754
 
-#define HEADER_LEN 1280
+#define HEADER_LEN 0x180
 
 static uint8 dy10c_get_picture(uint8 n_pic, int fd, off_t avail) {
-  uint32 pic_size;
+  uint32 pic_size, hdr_pic_size;
   uint8 c, blocks_to_read, d;
 
   if (dy10c_get_picture_info(n_pic) != 0) {
@@ -401,16 +401,39 @@ static uint8 dy10c_get_picture(uint8 n_pic, int fd, off_t avail) {
 #endif
   }
 
-  pic_size += HEADER_LEN;
+  /* Magic numbers from Windows app */
+  switch(pic_size) {
+  case 24000:
+    hdr_pic_size = pic_size + 448;
+    break;
+  case 96000:
+    hdr_pic_size = pic_size + 640;
+    break;
+  case 192000:
+    hdr_pic_size = pic_size + 2432;
+    break;
+  default:
+    hdr_pic_size = pic_size;
+  }
 
-  if (pic_size > avail) {
+  blocks_to_read = 1 + (hdr_pic_size >> 10);
+
+  if (pic_size + HEADER_LEN > avail) {
     errno = ENOSPC;
     return -1;
   }
 
+  bzero(buffer, HEADER_LEN);
+  memcpy(buffer, "Cdcx\0\0\0", 7);
+  buffer[7]  = 0x02;
+  buffer[8]  = (hdr_pic_size) & 0xff;
+  buffer[9]  = (hdr_pic_size >> 8) & 0xff;
+  buffer[10] = (hdr_pic_size >> 16) & 0xff;
+
+  write(fd, buffer, HEADER_LEN);
+
   ui_get_image_str(640, 480, pic_size);
 
-  blocks_to_read = (pic_size >> 10); /* div 1024 */
   d = 0;
   progress_bar(2, wherey(), scrw - 2, 0, blocks_to_read);
 
