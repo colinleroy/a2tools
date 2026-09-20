@@ -151,15 +151,20 @@ fseek(fp, 0x500, SEEK_SET);
 
   if (h == 64 && qtmodel == QT_MODEL_DC50) {
     char line[80];
-    fseek(fp, 24, SEEK_SET);
+    fseek(fp, 96*2, SEEK_SET);
     printf("DC50\n");
-    for (y = 0; y < 32; y+=2) {
-      fread(line, 1, 96, fp);
-      for (x = 0; x < 96; x+=2) {
-        PIXEL_OUTPUT(x, y, line[x] & 0xF0, 0);
-        PIXEL_OUTPUT((x)+1, y, line[x] & 0xF0, 0);
-        PIXEL_OUTPUT((x)+2, y, line[x] & 0xF0, 0);
-        PIXEL_OUTPUT((x)+3, y, line[x] & 0xF0, 0);
+    for (y = 0; y < 64; y++) {
+      if (!(y % 2)) {
+        fread(line, 1, 96, fp);
+      }
+      for (int i = 0, x = 0; x < 96; ) {
+        PIXEL_OUTPUT(x,   y, line[i] & 0xF0, 0);
+        PIXEL_OUTPUT(x+1, y, line[i] & 0xF0, 0);
+        i++;
+        PIXEL_OUTPUT(x+2, y, line[i] << 4, 0);
+        PIXEL_OUTPUT(x+3, y, line[i] << 4, 0);
+        i+=2;
+        x+=4;
       }
     }
   } else if (w != 80) {
@@ -188,40 +193,53 @@ fseek(fp, 0x500, SEEK_SET);
     char line[80], *cur_in;
     unsigned char out[160], *cur_out;
     int i, a, b, c, d, x, y;
-
+    size_t thumb_size;
+    fseek(fp, 0, SEEK_END);
+    thumb_size = ftell(fp);
     rewind(fp);
+
     if (qtmodel == QT_MODEL_FUJI) {
       unsigned int data_offset;
-      fseek(fp, 0, SEEK_END);
-      data_offset = ftell(fp);
-      data_offset -= 160*60;
+      data_offset = thumb_size - 160*60;
       printf("data_offset = %04X\n", data_offset);
       fseek(fp, data_offset, SEEK_SET);
+    } else if (qtmodel == QT_MODEL_DY10C && thumb_size == 10240) {
+      fseek(fp, 4800, SEEK_SET);
     }
     for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_DY10C) {
-        if (y % 2 == 0) {
-          fread(line, 1, 80, fp);
-
-          /* Very naive and unperfect. I guess this should
-           * be refined with the two next planes. No need
-           * to bother as it wouldn't fit qt-dither's flow
-           * (where it doesn't go back to previous pixels).
-           */
+        if (thumb_size == 8192) {
+          fread(line, 1, 40, fp);
           for (i = 0, x = 0; x < 80;) {
-            out[x] = (line[i]);
-            PIXEL_OUTPUT(x,   y,   out[x], 0);
-
-            out[x+1] = (line[i+40]);
-            PIXEL_OUTPUT(x+1,   y, out[x+1], 0);
-            i++;
-            x+=2;
+            PIXEL_OUTPUT(x,   y,   line[i], 0);
+            PIXEL_OUTPUT(x+1,   y,   line[i], 0);
+            PIXEL_OUTPUT(x+2,   y,   line[i+1], 0);
+            PIXEL_OUTPUT(x+3,   y,   line[i+1], 0);
+            x+=4;
+            i+=2;
           }
-        } else {
-          for (x = 0; x < 160; x++) {
-            PIXEL_OUTPUT(x, y, out[x], 0);
+        } else if (thumb_size == 10240) {
+          if (y % 2 == 0) {
+            fread(line, 1, 80, fp);
+          }
+          for (x = 0; x < 80; x+=2) {
+            PIXEL_OUTPUT(x, y, line[x], 0);
+            PIXEL_OUTPUT(x+1, y, line[x], 0);
+          }
+        } else if (thumb_size == 2048) {
+          if (y % 2 == 0) {
+            fread(line, 1, 20, fp);
+          }
+          for (i = 0, x = 0; x < 80;) {
+            PIXEL_OUTPUT(x,   y,   line[i], 0);
+            PIXEL_OUTPUT(x+1, y,   line[i], 0);
+            PIXEL_OUTPUT(x+2, y,   line[i], 0);
+            PIXEL_OUTPUT(x+3, y,   line[i], 0);
+            x+=4;
+            i++;
           }
         }
+
       } else if (qtmodel == QT_MODEL_150) {
         unsigned char pg;
         if (y % 2 == 0) {
