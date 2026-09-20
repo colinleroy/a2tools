@@ -456,6 +456,10 @@ static uint8 dy10c_get_picture(uint8 n_pic, int fd, off_t avail) {
   return wait_command_completion();
 }
 
+#define PIC_QUALITY_IDX 4
+#define PIC_TIME_IDX    10
+#define PIC_FLASH_IDX   14
+
 static uint8 dy10c_get_thumbnail(uint8 n_pic, int fd) {
   uint8 blocks_to_read, d;
   time_t int_time;
@@ -465,30 +469,36 @@ static uint8 dy10c_get_thumbnail(uint8 n_pic, int fd) {
   }
 
   ui_get_thumbnail_str(n_pic);
-  // th_info.flash_mode   = buffer[PIC_FLASH_IDX];   /* 0 = not fired, 1 = fired */
-  // th_info.quality_mode = buffer[PIC_QUALITY_IDX]; /* same as cam_get_quality_str */
+  th_info.flash_mode   = buffer[PIC_FLASH_IDX];   /* 0 = not fired, 1 = fired */
+  th_info.quality_mode = buffer[PIC_QUALITY_IDX]; /* same as cam_get_quality_str */
 
-// #ifndef __CC65__
-//   int_time     =  buffer[TIME_IDX+3]
-//                + (buffer[TIME_IDX+2] << 8)
-//                + (buffer[TIME_IDX+1] << 16)
-//                + (buffer[TIME_IDX+0] << 24);
-// #else
-//   ((unsigned char *)&int_time)[0] = buffer[TIME_IDX+3];
-//   ((unsigned char *)&int_time)[1] = buffer[TIME_IDX+2];
-//   ((unsigned char *)&int_time)[2] = buffer[TIME_IDX+1];
-//   ((unsigned char *)&int_time)[3] = buffer[TIME_IDX+0];
-// #endif
-//   dy10c_time_to_camera_date(int_time, &(th_info.date));
+#ifndef __CC65__
+  int_time     = (buffer[PIC_TIME_IDX+3] << 24)
+               + (buffer[PIC_TIME_IDX+2] << 16)
+               + (buffer[PIC_TIME_IDX+1] << 8)
+               + (buffer[PIC_TIME_IDX+0] << 0);
+#else
+  ((unsigned char *)&int_time)[0] = buffer[PIC_TIME_IDX+0];
+  ((unsigned char *)&int_time)[1] = buffer[PIC_TIME_IDX+1];
+  ((unsigned char *)&int_time)[2] = buffer[PIC_TIME_IDX+2];
+  ((unsigned char *)&int_time)[3] = buffer[PIC_TIME_IDX+3];
+#endif
+  dy10c_time_to_camera_date(int_time, &(th_info.date));
 
   init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
   command_packet[CMD_PIC_NUM+1] = n_pic;
-  blocks_to_read = 8;
+  switch(th_info.quality_mode) {
+    case 2: blocks_to_read = 2; break;
+    case 1: blocks_to_read = 8; break;
+    case 0: blocks_to_read = 10; break;
+  }
+
   d = 0;
   dy10c_send_command();
 
   while (d++ < blocks_to_read) {
     if (dy10c_read_response((char *)buffer, 1024) == 0) {
+      PC_DEBUG_PRINTF("Thumbnail block %d/%d\n", d, blocks_to_read);
       write(fd, buffer, 1024);
 
       progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);

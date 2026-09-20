@@ -10,6 +10,7 @@
 *.JPG
 *.KDC
 *.DCT
+*.pgm
 *.dump
 *.log
 *.thumb
