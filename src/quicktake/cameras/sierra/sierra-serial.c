@@ -282,11 +282,13 @@ uint8 sierra_reset(void) {
 try_again:
   /* Parity first because resets speed to 9600 on PC, a bug in
    * my lib that I don't want to investigate right now. */
+  if (do_debug) cputs("Setting 19200 bps, 8n1\r\n");
   simple_serial_set_parity(SER_PAR_NONE);
   simple_serial_set_speed(SER_BAUD_19200);
 
   if (first_reset) {
     /* Flush shit */
+    if (do_debug) cputs("Flushing port\r\n");
     sierra_flush();
 #ifdef __CC65__
     /* Sierra cameras timing suck at 115k, there are framing errors */
@@ -307,13 +309,16 @@ try_again:
 
   /* Do the reset without interfering with buffer, so that we can reset anytime. */
   i = 10;
+  if (do_debug) cputs("Sending 0x00\r\n");
   sierra_putc_slow(0x00);
   while (i--) {
     if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == 0) {
       if (sierra_packet_type == 0) {
+        if (do_debug) cputs("Got 0x00, still waiting\r\n");
         PC_DEBUG_PRINTF("Skip NUL\n");
       }
       if (sierra_packet_type == SIERRA_PACKET_NAK) {
+        if (do_debug) cputs("Got expected answer\r\n");
         PC_DEBUG_PRINTF("Got answer\n");
         break;
       }
@@ -331,6 +336,7 @@ try_again:
     speed_set_packet[6]  = sierra_speed;
     /* Checksum */
     speed_set_packet[10] = SIERRA_REG_SPEED+sierra_speed;
+    if (do_debug) cputs("Sending speed set command\r\n");
     for (i = 0; i < sizeof speed_set_packet; i++) {
       sierra_putc_slow(speed_set_packet[i]);
     }
@@ -341,19 +347,23 @@ try_again:
       platform_msleep(100);
       first_packet = 0;
       resetting = 0;
+      if (do_debug) cputs("Got ACK\r\n");
       PC_DEBUG_PRINTF("Reset done (got %d)\n", sierra_packet_type);
       return 0;
     } else {
+      if (do_debug) cprintf("Got unexpected answer 0x%02X\r\n", sierra_packet_type);
       sierra_packet_type = SIERRA_PACKET_SESSION_END;
     }
   }
   if (sierra_packet_type == SIERRA_PACKET_SESSION_END && tries++ < 3) {
-// #ifdef __CC65__
-//       __asm__("sta $C030");
-// #endif
+    if (do_debug) cputs("Trying again...\r\n");
     platform_msleep(500);
     goto try_again;
-  } 
+  }
+  if (do_debug) {
+    cputs("Reset failed. Press a key to continue.\r\n");
+    cgetc();
+  }
   resetting = 0;
   return -1;
 }
