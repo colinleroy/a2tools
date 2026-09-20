@@ -206,25 +206,24 @@ fseek(fp, 0x500, SEEK_SET);
     }
     for (y = 0; y < 60; y++) {
       if (qtmodel == QT_MODEL_DY10C) {
-        if (thumb_size == 8192) {
+        if (thumb_size == 10240) {
+          fread(line, 1, 80, fp);
+          for (x = 0; x < 80;) {
+            uint8_t a = line[x];
+            uint8_t b = line[x + 1];
+            /* OMG Why. */
+            uint8_t v = (a >> 2) | (b << 6);
+            PIXEL_OUTPUT(x,   y, v, 0);
+            PIXEL_OUTPUT(x+1, y, v, 0);
+            x+=2;
+          }
+        } else if (thumb_size == 8192) {
           fread(line, 1, 40, fp);
           for (i = 0, x = 0; x < 80;) {
             PIXEL_OUTPUT(x,   y,   line[i], 0);
-            PIXEL_OUTPUT(x+1,   y,   line[i], 0);
-            PIXEL_OUTPUT(x+2,   y,   line[i+1], 0);
-            PIXEL_OUTPUT(x+3,   y,   line[i+1], 0);
-            x+=4;
-            i+=2;
-          }
-        } else if (thumb_size == 10240) {
-          fread(line, 1, 80, fp);
-          for (x = 0; x < 40; x++) {
-            uint8_t a = line[2*x];
-            uint8_t b = line[2*x + 1];
-            /* OMG Why. */
-            uint8_t v = (a >> 2) | (b << 6);
-            PIXEL_OUTPUT(x*2, y, v, 0);
-            PIXEL_OUTPUT(x*2+1, y, v, 0);
+            PIXEL_OUTPUT(x+1, y,   line[i], 0);
+            x+=2;
+            i++;
           }
         } else if (thumb_size == 2048) {
           if (y % 2 == 0) {
