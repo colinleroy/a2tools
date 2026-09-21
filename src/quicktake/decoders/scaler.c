@@ -187,7 +187,6 @@ first_col:
         xoff = *cur_orig_x;
       }
       *dst_ptr = *(cur + xoff);
-      printf("counting one pix\n");
       histogram[*dst_ptr]++;
       cur_orig_x++;
       dst_ptr ++;

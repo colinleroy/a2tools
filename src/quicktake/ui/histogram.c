@@ -110,8 +110,6 @@ store:
 #endif
 }
 
-#pragma code-name(push, "SQUEEZE")
-
 void histogram_contrast(void) {
   uint16 curr_hist = 0;
 #ifndef __CC65__

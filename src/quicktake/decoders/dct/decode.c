@@ -20,6 +20,8 @@
 #include <math.h>
 #include <assert.h>
 
+extern uint32_t data_size;
+
 uint16_t width, height;
 
 static uint8_t SCAN[64] = {
@@ -80,16 +82,7 @@ static uint8_t superfine_shift[64] = {
 static uint8_t *bits_table;
 static uint8_t *shift_table;
 
-static uint32_t read_le32(const uint8_t *p)
-{
-    return
-        ((uint32_t)p[0]) |
-        ((uint32_t)p[1] << 8) |
-        ((uint32_t)p[2] << 16) |
-        ((uint32_t)p[3] << 24);
-}
-
-uint8_t *p;
+uint8_t *cache, *cur_cache_ptr;
 uint8_t *image, *dst;
 int nbits_avail = 8;
 uint16_t bitmask[16] = {
@@ -223,9 +216,6 @@ static int16_t mul_669(int16_t w)
 }
 #define DESCALE_FACTOR 1
 
-#define CLAMPI(x) (x)
-#define CLAMPU(x) (((uint16_t)(x) << DESCALE_FACTOR) > 255 ? 255 : x<<DESCALE_FACTOR)
-
 int8_t coef[64];
 int8_t row_out[128]; /* Twice as large as needed but simplifies computations. */
 static void idct_1d_rows(void)
@@ -311,20 +301,21 @@ static void idct_1d_rows(void)
         tmp5 = tmp11 - tmp6;
         tmp4 = tmp10 + tmp5;
 
-        row_out[y + 0] = (uint8_t)CLAMPI(tmp0 + tmp7);
-        row_out[y + 2] = (uint8_t)CLAMPI(tmp1 + tmp6);
-        row_out[y + 4] = (uint8_t)CLAMPI(tmp2 + tmp5);
-        row_out[y + 6] = (uint8_t)CLAMPI(tmp3 - tmp4);
-        row_out[y + 8] = (uint8_t)CLAMPI(tmp3 + tmp4);
-        row_out[y + 10] = (uint8_t)CLAMPI(tmp2 - tmp5);
-        row_out[y + 12] = (uint8_t)CLAMPI(tmp1 - tmp6);
-        row_out[y + 14] = (uint8_t)CLAMPI(tmp0 - tmp7);
+        row_out[y + 0] = (uint8_t)(tmp0 + tmp7);
+        row_out[y + 2] = (uint8_t)(tmp1 + tmp6);
+        row_out[y + 4] = (uint8_t)(tmp2 + tmp5);
+        row_out[y + 6] = (uint8_t)(tmp3 - tmp4);
+        row_out[y + 8] = (uint8_t)(tmp3 + tmp4);
+        row_out[y + 10] = (uint8_t)(tmp2 - tmp5);
+        row_out[y + 12] = (uint8_t)(tmp1 - tmp6);
+        row_out[y + 14] = (uint8_t)(tmp0 - tmp7);
     }
 }
 
 #define RAW_WIDTH 512
 #define DECODE_WIDTH 320
 #define DECODE_HEIGHT 240
+#define CLAMPU(x) (((uint16_t)(x) << DESCALE_FACTOR) > 255 ? 255 : x<<DESCALE_FACTOR)
 
 static void idct_1d_cols(void)
 {
@@ -584,8 +575,6 @@ int main(int argc, char **argv)
             continue;
         }
 
-        uint32_t data_size = read_le32(raw + 0x186);
-
         bits_table = normal_bits;
         shift_table = normal_shift;
         width = 320;
@@ -609,11 +598,6 @@ int main(int argc, char **argv)
           exit(1);
         }
 
-        image =
-            calloc(RAW_WIDTH * DECODE_HEIGHT,
-                   sizeof(uint8_t));
-
-        p = raw + 0x200;
         decode_plane();
 
         char outname[1024];

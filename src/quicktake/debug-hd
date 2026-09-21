@@ -6,9 +6,14 @@ fi
 
 if [ "$1" = "200" ]; then
   EXT=JPG
+elif [ "$1" = "50" ]; then
+  EXT=KDC
+elif [ "$1" = "3000" ]; then
+  EXT=DCT
 else
   EXT=QTK
 fi
+
 TESTFILE=TEST$1.$EXT
 if [ "$2" != "" ]; then
   TESTFILE=$2
@@ -33,6 +38,12 @@ if [ "$1" != "" ]; then
   elif [ "$1" = "200" ]; then
     java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.JPG > /tmp/TEST$1.JPG
     ./jpegconv.x86_64 /tmp/TEST$1.JPG 0 0 640 480
+  elif [ "$1" = "50" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.KDC > /tmp/TEST$1.KDC
+    ./radcconv.x86_64 /tmp/TEST$1.KDC 0 0 640 480
+  elif [ "$1" = "3000" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.DCT > /tmp/TEST$1.DCT
+    ./dctconv.x86_64 /tmp/TEST$1.DCT 0 0 640 480
   fi
   chmod 644 GREY HIST
   #get result from HD

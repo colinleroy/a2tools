@@ -117,6 +117,8 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
       filename = "-RADCCONV";
     } else if (!strncmp(magic, JPEG_EXIF_MAGIC, 3)) {
       filename = "-JPEGCONV";
+    } else if (!strncmp(magic, DCT_MAGIC, 4)) {
+      filename = "-DCTCONV";
     } else {
       cputs("\r\nUnknown file type.\r\n");
       cgetc();

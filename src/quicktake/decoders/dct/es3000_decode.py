@@ -111,7 +111,7 @@ def decode(path):
     raw = open(path, 'rb').read()
     if raw[:4] != b'Cdcx':
         raise ValueError('not a Cdcx file')
-    n = int.from_bytes(raw[8:12], 'little')
+    n = int.from_bytes(raw[0x186:0x18A], 'little')
     if n not in MODES:
         raise ValueError(f'unknown payload length {n}')
     ty, tc, yb, cb, bw, yr, cr = MODES[n]

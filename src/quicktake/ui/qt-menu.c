@@ -616,6 +616,9 @@ static uint8 setup(int argc, char *argv[]) {
     #if DEBUG_HD==200
     zexec("-JPEGCONV /HD/TEST200.JPG 0 0 640 480");
     #endif
+    #if DEBUG_HD==3000
+    zexec("-DCTCONV /HD/TEST3000.DCT 0 0 640 480");
+    #endif
   }
 #endif
 #ifdef DEBUG_FLOPPY
@@ -635,6 +638,9 @@ static uint8 setup(int argc, char *argv[]) {
     #endif
     #if DEBUG_FLOPPY==200
     zexec("-JPEGCONV /QT200/TEST200.JPG 0 0 640 480");
+    #endif
+    #if DEBUG_FLOPPY==3000
+    zexec("-DCTCONV /ES3000/TEST3000.DCT 0 0 640 480");
     #endif
   }
 #endif

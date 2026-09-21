@@ -199,6 +199,24 @@ jpegconv_GCCSOURCES := \
 	decoders/jpeg/jpeg_platform.c \
 	decoders/scaler.c
 
+dctconv_SOURCES := \
+	decoders/qt-conv.c \
+	decoders/dct/dct_setup_decode.c \
+	decoders/dct/dct_data.c \
+	decoders/dct/dct.c \
+	../lib/progress_bar.c \
+	../lib/zexec.c
+
+dctconv_CC65SOURCES := \
+	decoders/scaler.s \
+	../lib/asm/path_helper.s \
+	../lib/extrazp.s \
+	../lib/a2_features.s \
+	../lib/check_floppy.s
+
+dctconv_GCCSOURCES := \
+	decoders/scaler.c
+
 GCCSOURCES := \
 	../lib/extended_conio.c \
 	../lib/c/path_helper.c \
@@ -302,6 +320,31 @@ jpegconv_GCCCFLAGS = \
 	-DFILE_WIDTH=256 \
 	-DJPEGCONV=1 \
 
+# 4 full tracks cache!
+dctconv_CLCFLAGS = \
+	-DCACHE_SIZE=8192  --asm-define CACHE_SIZE=8192 \
+	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
+	-DBAND_HEIGHT=40    --asm-define BAND_HEIGHT=40 \
+	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
+	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
+	-DDCTCONV=1 \
+	$(CLCFLAGS) -C ../../config/apple2enh-dctconv.cfg \
+	--start-addr 0x1000  #Two file buffers
+
+dctconv_GCCCFLAGS = \
+	-DCACHE_SIZE=8192 \
+	-DRAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=512 \
+	-DBAND_HEIGHT=40 \
+	-DFILE_WIDTH=256 \
+	-DDECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240 \
+	-DDCTCONV=1 \
+
 GCCCFLAGS = -g -Wall -Wno-pointer-sign -Wno-char-subscripts \
 	-Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas \
 	-fno-omit-frame-pointer \
@@ -331,6 +374,8 @@ RADCCONV.BZX: radcconv.bin
 	zx02 -f $< $@
 JPEGCONV.BZX: jpegconv.bin
 	zx02 -f $< $@
+DCTCONV.BZX: dctconv.bin
+	zx02 -f $< $@
 
 QT1X0.DRV: slowtake.bin
 FUJI.DRV: slowtake.bin
@@ -345,7 +390,7 @@ SRRA.DRV: slowtake.bin
 ../zxloader/zxloader.system: ../zxloader/loader.s
 	make -C ../zxloader/ clean all
 
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX ../zxloader/zxloader.system
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX DCTCONV.BZX ../zxloader/zxloader.system
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG.SYSTEM SYS   < ../zxloader/zxloader.system; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
@@ -360,11 +405,12 @@ add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QKTKCONV BIN 0x1000 < QKTKCONV.BZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)RADCCONV BIN 0x1000 < RADCCONV.BZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)JPEGCONV BIN 0x1000 < JPEGCONV.BZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DCTCONV BIN 0x1000  < DCTCONV.BZX; \
 	for r in ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $(IMG) $(PREFIX)$$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-quicktake.po: splash.h config.bin slowtake.bin qktkconv.bin radcconv.bin jpegconv.bin loader.x86_64 qktkconv.x86_64 radcconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
+quicktake.po: splash.h config.bin slowtake.bin qktkconv.bin radcconv.bin jpegconv.bin dctconv.bin loader.x86_64 qktkconv.x86_64 radcconv.x86_64 jpegconv.x86_64 dctconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
@@ -404,6 +450,12 @@ jpegconv.bin: $(jpegconv_CC65SOURCES) $(jpegconv_SOURCES)
 
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
+
+dctconv.bin: $(dctconv_CC65SOURCES) $(dctconv_SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"dctconv.dbg" $(CFLAGS) $(dctconv_CLCFLAGS) -vm -m dctconv.map -o $@ $^ $(TARGET)-iobuf-0800.o
+
+dctconv.x86_64: $(dctconv_SOURCES) $(dctconv_GCCSOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $(dctconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 loader.x86_64: tools/loader.c
 	gcc $(microserial_GCCCFLAGS) -g -O0 -o $@ -I/usr/include/SDL -I../lib $< ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL

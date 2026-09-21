@@ -2,12 +2,21 @@
 TYPE="full"
 if [ "$1" != "" ]; then
   TYPE=$1
-  if [ "$TYPE" != "50" ]; then
-    FLOPNAME="qt$1"
-	  FLOP2="-flop2 ../../disks/qt$1.dsk"
-  else
+  if [ "$TYPE" = "50" ]; then
     FLOPNAME="dc50"
     FLOP2="-flop2 ../../disks/dc50.dsk"
+  elif  [ "$TYPE" = "100" ]; then
+    FLOPNAME="qt100"
+	  FLOP2="-flop2 ../../disks/qt100.dsk"
+  elif  [ "$TYPE" = "150" ]; then
+    FLOPNAME="qt150"
+	  FLOP2="-flop2 ../../disks/qt150.dsk"
+  elif  [ "$TYPE" = "50" ]; then
+    FLOPNAME="dc50"
+    FLOP2="-flop2 ../../disks/dc50.dsk"
+  elif  [ "$TYPE" = "3000" ]; then
+    FLOPNAME="es3000"
+    FLOP2="-flop2 ../../disks/es3000.dsk"
   fi
 else
   FLOPNAME="qt100"
@@ -18,6 +27,8 @@ if [ "$1" = "200" ]; then
   EXT=JPG
 elif [ "$1" = "50" ]; then
   EXT=KDC
+elif [ "$1" = "3000" ]; then
+  EXT=DCT
 else
   EXT=QTK
 fi
