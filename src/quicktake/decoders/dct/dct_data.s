@@ -3,7 +3,7 @@
         .export _normal_shift, _superfine_shift
         .export _idx
         .export _shift_table, _bits_table, _SCAN
-        .export _nbits_avail, _bitmask, _negate
+        .export _nbits_avail, _bitmask_h, _bitmask_l, _negate_h, _negate_l
         .export _mul362_m, _mul362_l
         .export _mul473_m, _mul473_l
         .export _mul277_m, _mul277_l
@@ -66,41 +66,73 @@ _SCAN:                  .byte  0, 1, 8,16, 9, 2, 3,10
 
 _nbits_avail:           .byte 8
 
-; Fixme split
-_bitmask:               .word %0000000000000001
-                        .word %0000000000000010
-                        .word %0000000000000100
-                        .word %0000000000001000
-                        .word %0000000000010000
-                        .word %0000000000100000
-                        .word %0000000001000000
-                        .word %0000000010000000
-                        .word %0000000100000000
-                        .word %0000001000000000
-                        .word %0000010000000000
-                        .word %0000100000000000
-                        .word %0001000000000000
-                        .word %0010000000000000
-                        .word %0100000000000000
-                        .word %1000000000000000
+_bitmask_h:             .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000001
+                        .byte %00000010
+                        .byte %00000100
+                        .byte %00001000
+                        .byte %00010000
+                        .byte %00100000
+                        .byte %01000000
+                        .byte %10000000
 
-; Fixme split
-_negate:                .word %1111111111111111
-                        .word %1111111111111110
-                        .word %1111111111111100
-                        .word %1111111111111000
-                        .word %1111111111110000
-                        .word %1111111111100000
-                        .word %1111111111000000
-                        .word %1111111110000000
-                        .word %1111111100000000
-                        .word %1111111000000000
-                        .word %1111110000000000
-                        .word %1111100000000000
-                        .word %1111000000000000
-                        .word %1110000000000000
-                        .word %1100000000000000
-                        .word %1000000000000000
+_bitmask_l:             .byte %00000001
+                        .byte %00000010
+                        .byte %00000100
+                        .byte %00001000
+                        .byte %00010000
+                        .byte %00100000
+                        .byte %01000000
+                        .byte %10000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+
+_negate_h:              .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111111
+                        .byte %11111110
+                        .byte %11111100
+                        .byte %11111000
+                        .byte %11110000
+                        .byte %11100000
+                        .byte %11000000
+                        .byte %10000000
+
+_negate_l:              .byte %11111111
+                        .byte %11111110
+                        .byte %11111100
+                        .byte %11111000
+                        .byte %11110000
+                        .byte %11100000
+                        .byte %11000000
+                        .byte %10000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
+                        .byte %00000000
 
 _cache_start:           .addr _cache
         .segment "BSS"

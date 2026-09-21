@@ -11,8 +11,10 @@ extern uint8 *idx;
 
 extern uint8 SCAN[64];
 extern uint8 nbits_avail;
-extern uint16 bitmask[16];
-extern uint16 negate[16];
+extern uint8 bitmask_h[16];
+extern uint8 bitmask_l[16];
+extern uint8 negate_h[16];
+extern uint8 negate_l[16];
 
 extern uint8 normal_bits[64];
 extern uint8 superfine_bits[64];

@@ -30,53 +30,6 @@ char *decoder_name = "Chinon DCT";
 uint8 *cache_start = cache;
 #endif
 uint32 nmults = 0;
-
-#if 0
-static const int8 basis[8][8] =
-{
-    { 11, 16, 15, 14, 11,  8,  6,  3 },
-    { 11, 14,  6, -8,-11,-16,-15, -3 },
-    { 11,  8, -6,-16,-11,  3, 15, 14 },
-    { 11,  3,-15, -8, 11, 14, -6,-16 },
-    { 11, -3,-15,  8, 11,-14, -6, 16 },
-    { 11, -8, -6, 16,-11, -3, 15,-14 },
-    { 11,-14,  6,  8,-11, 16,-15,  3 },
-    { 11,-16, 15,-14, 11, -8,  6, -3 }
-};
-static void idct_1d_col(void)
-{
-    for (uint8 out = 0; out < 8; out++) {
-
-        const int8 *b = basis[out];
-        int16 s = 0;
-
-        for (uint8 k = 0; k < 8; k++) {
-            s += b[k] * g_src[k * 8];
-            nmults++;
-        }
-
-        g_idx[out * 8] = s >> 5;
-    }
-}
-static void idct_1d_row(void)
-{
-    int16 in[8];
-
-    memcpy(in, g_src, sizeof(in));
-
-    for (uint8 out = 0; out < 8; out++) {
-
-        const int8 *b = basis[out];
-        int16 s = 0;
-
-        for (uint8 k = 0; k < 8; k++) {
-            s += b[k] * in[k];
-        }
-
-        g_idx[out] = s;
-    }
-}
-#else
 static int16 mul_362(int16 w)
 {
   uint32 x;
@@ -275,8 +228,6 @@ static void idct_1d_cols(void) {
     }
 }
 
-#endif
-
 uint8 qt_load_raw(uint16 top)
 {
     uint8 blocks_rem_in_row = blocks_per_row;
@@ -313,7 +264,7 @@ uint8 qt_load_raw(uint16 top)
                 neg = *cur_cache_ptr & 1;
                 *cur_cache_ptr >>= 1;
                 if (neg) {
-                  x |= bitmask[bitpos];
+                  x |= (bitmask_h[bitpos] << 8)|bitmask_l[bitpos] ;
                 }
                 bitpos++;
                 nbits_avail--;
@@ -321,7 +272,7 @@ uint8 qt_load_raw(uint16 top)
 
             /* extend sign bit */
             if (scan && neg) {
-                x = (uint16)x | negate[ob];
+                x = (uint16)x | (negate_h[ob] << 8) | negate_l[ob];
             }
             coef[r] = (int8)(x >> (DESCALE_FACTOR+2));
         }
