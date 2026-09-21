@@ -106,11 +106,15 @@ display:
   uint8 buf[512];
   uint32 curr_hist;
   int r;
-  // fseek(fp, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
-  // if ((r = fread(buf, 1, 512, fp)) < 512) {
-  //   printf(" Can't read histogram at %zu: %d\n", PNM_HEADER_SIZE + 256*192UL, r);
-  //   do_hist = 0;
-  // }
+  if (w == 256) {
+    fseek(fp, PNM_HEADER_SIZE + 256*192UL, SEEK_SET);
+    if ((r = fread(buf, 1, 512, fp)) < 512) {
+      printf(" Can't read histogram at %zu: %d\n", PNM_HEADER_SIZE + 256*192UL, r);
+      do_hist = 0;
+    }
+  } else {
+    do_hist = 0;
+  }
 
   int black = 0, found_black = 0;
   int white = 0, found_white = 0;
@@ -139,12 +143,12 @@ display:
         opt_histogram[i] = 255;
       }
   }
-  // 
-  // fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
-  // if (fp2) {
-  //   fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
-  // }
-fseek(fp, 0x500, SEEK_SET);
+  
+  fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
+  if (fp2) {
+    fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
+  }
+
   SDL_LockSurface(screen);
   unsigned char c, c2;
   int x, y;
