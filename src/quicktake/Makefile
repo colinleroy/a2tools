@@ -202,12 +202,12 @@ jpegconv_GCCSOURCES := \
 dctconv_SOURCES := \
 	decoders/qt-conv.c \
 	decoders/dct/dct_setup_decode.c \
-	decoders/dct/dct_data.c \
 	decoders/dct/dct.c \
 	../lib/progress_bar.c \
 	../lib/zexec.c
 
 dctconv_CC65SOURCES := \
+	decoders/dct/dct_data.s \
 	decoders/scaler.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
@@ -215,6 +215,7 @@ dctconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 dctconv_GCCSOURCES := \
+	decoders/dct/dct_data.c \
 	decoders/scaler.c
 
 GCCSOURCES := \
@@ -320,7 +321,7 @@ jpegconv_GCCCFLAGS = \
 	-DFILE_WIDTH=256 \
 	-DJPEGCONV=1 \
 
-# 4 full tracks cache!
+
 dctconv_CLCFLAGS = \
 	-DCACHE_SIZE=8192  --asm-define CACHE_SIZE=8192 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \

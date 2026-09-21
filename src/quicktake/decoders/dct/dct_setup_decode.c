@@ -47,5 +47,7 @@ err_out:
     goto err_out;
   }
 
+  nbits_avail = 8;
+
   return 0;
 }
