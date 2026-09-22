@@ -208,6 +208,7 @@ dctconv_SOURCES := \
 
 dctconv_CC65SOURCES := \
 	decoders/dct/dct_data.s \
+	decoders/dct/dct_platform.c \
 	decoders/scaler.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
@@ -216,6 +217,7 @@ dctconv_CC65SOURCES := \
 
 dctconv_GCCSOURCES := \
 	decoders/dct/dct_data.c \
+	decoders/dct/dct_platform.c \
 	decoders/scaler.c
 
 GCCSOURCES := \

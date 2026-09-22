@@ -176,11 +176,11 @@ _blocks_per_row:        .res 1
     .byte ((I*362) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul362_h
-  .repeat 256, I
-    .byte ((I*362) .SHR 16) .BITAND $FF
-  .endrepeat
-.endproc
+; .proc _mul362_h
+;   .repeat 256, I
+;     .byte ((I*362) .SHR 16) .BITAND $FF
+;   .endrepeat
+; .endproc
 
 .proc _mul473_l
   .repeat 256, I
@@ -192,11 +192,13 @@ _blocks_per_row:        .res 1
     .byte ((I*473) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul473_h
-  .repeat 256, I
-    .byte ((I*473) .SHR 16) .BITAND $FF
-  .endrepeat
-.endproc
+; .proc _mul473_h
+;   .repeat 256, I
+;     .byte ((I*473) .SHR 16) .BITAND $FF
+;   .endrepeat
+; .endproc
+
+        .segment "LC"
 
 .proc _mul277_l
   .repeat 256, I
@@ -208,14 +210,11 @@ _blocks_per_row:        .res 1
     .byte ((I*277) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-
-        .segment "LC"
-
-.proc _mul277_h
-  .repeat 256, I
-    .byte ((I*277) .SHR 16) .BITAND $FF
-  .endrepeat
-.endproc
+; .proc _mul277_h
+;   .repeat 256, I
+;     .byte ((I*277) .SHR 16) .BITAND $FF
+;   .endrepeat
+; .endproc
 
 .proc _mul669_l
   .repeat 256, I
@@ -227,11 +226,11 @@ _blocks_per_row:        .res 1
     .byte ((I*669) .SHR 8) .BITAND $FF
   .endrepeat
 .endproc
-.proc _mul669_h
-  .repeat 256, I
-    .byte ((I*669) .SHR 16) .BITAND $FF
-  .endrepeat
-.endproc
+; .proc _mul669_h
+;   .repeat 256, I
+;     .byte ((I*669) .SHR 16) .BITAND $FF
+;   .endrepeat
+; .endproc
 
 .assert <* = 0, error
 .proc right_shift_4

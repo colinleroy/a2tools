@@ -21,6 +21,7 @@
 #include "dct_data.h"
 #include "../qt-conv.h"
 #include "platform.h"
+#include "dct_platform.h"
 
 extern uint32 data_size;
 
@@ -30,37 +31,7 @@ char *decoder_name = "Chinon DCT";
 uint8 *cache_start = cache;
 #endif
 uint32 nmults = 0;
-static int16 mul_362(int16 w)
-{
-  uint32 x;
-  x = (uint32)w * 362;
-  x >>= 8;
-  return (uint16)x;
-}
 
-static int16 mul_473(int16 w)
-{
-  uint32 x;
-  x = (uint32)w * 473;
-  x >>= 8;
-  return (uint16)x;
-}
-
-static int16 mul_277(int16 w)
-{
-  uint32 x;
-  x = (uint32)w * 277;
-  x >>= 8;
-  return (uint16)x;
-}
-
-static int16 mul_669(int16 w)
-{
-  uint32 x;
-  x = (uint32)w * 669;
-  x >>= 8;
-  return (uint16)x;
-}
 #define DESCALE_FACTOR 1
 
 int8 coef[64];
