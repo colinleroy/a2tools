@@ -21,7 +21,9 @@ err_out:
         ((uint32)cache[DATASIZE_IDX+3] << 24);
 
   cur_cache_ptr = cache + (0x200);
-
+#ifdef __CC65__
+  cache_read = cur_cache_ptr;
+#endif
   bits_table = normal_bits;
   shift_table = normal_shift;
   actual_width = width = 320;

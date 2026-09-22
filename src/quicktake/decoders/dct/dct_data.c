@@ -21,7 +21,7 @@ uint8 SCAN[64] = {
     53,60,61,54,47,55,62,63,
 };
 
-int nbits_avail = 8;
+int8 nbits_avail;
 
 uint8 bitmask_l[16] = {
   0b00000001,

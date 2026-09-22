@@ -6,6 +6,7 @@
 
 extern uint8 cache[CACHE_SIZE];
 extern uint8 *cache_start;
+extern uint8 *cache_read;
 extern uint8 raw_image[RAW_IMAGE_SIZE];
 extern uint8 *idx;
 
@@ -15,7 +16,7 @@ extern uint8 valneg;
 extern int16 bitval;
 
 extern uint8 SCAN[64];
-extern uint8 nbits_avail;
+extern int8 nbits_avail;
 extern uint8 bitmask_h[16];
 extern uint8 bitmask_l[16];
 extern uint8 negate_h[16];

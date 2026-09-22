@@ -199,28 +199,6 @@ static void idct_1d_cols(void) {
     }
 }
 
-void get_bitval(void) {
-  bitval = valneg = 0;
-
-  while (numbits--) {
-      if (nbits_avail == 0) {
-          cur_cache_ptr++;
-          if (cur_cache_ptr == cache_end) {
-              read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
-          }
-          nbits_avail = 8;
-      }
-
-      valneg = *cur_cache_ptr & 1;
-      *cur_cache_ptr >>= 1;
-      if (valneg) {
-        bitval |= (bitmask_h[bitpos] << 8)|bitmask_l[bitpos] ;
-      }
-      bitpos++;
-      nbits_avail--;
-  }
-}
-
 uint8 qt_load_raw(uint16 top)
 {
     uint8 blocks_rem_in_row = blocks_per_row;

@@ -65,8 +65,6 @@ _SCAN:                  .byte  0, 1, 8,16, 9, 2, 3,10
                         .byte 58,59,52,45,38,31,39,46
                         .byte 53,60,61,54,47,55,62,63
 
-_nbits_avail:           .byte 8
-
 _bitmask_h:             .byte %00000000
                         .byte %00000000
                         .byte %00000000
@@ -169,6 +167,7 @@ _numbits:               .res 1
 _bitpos:                .res 1
 _valneg:                .res 1
 _bitval:                .res 2
+_nbits_avail:           .res 1
 
         .segment "DATA"
 
