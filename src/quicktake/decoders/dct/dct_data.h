@@ -9,6 +9,11 @@ extern uint8 *cache_start;
 extern uint8 raw_image[RAW_IMAGE_SIZE];
 extern uint8 *idx;
 
+extern uint8 numbits;
+extern uint8 bitpos;
+extern uint8 valneg;
+extern int16 bitval;
+
 extern uint8 SCAN[64];
 extern uint8 nbits_avail;
 extern uint8 bitmask_h[16];

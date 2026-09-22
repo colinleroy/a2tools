@@ -2,6 +2,7 @@
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
         .export _idx
+        .export _numbits, _bitpos, _valneg, _bitval
         .export _shift_table, _bits_table, _SCAN
         .export _nbits_avail, _bitmask_h, _bitmask_l, _negate_h, _negate_l
         .export _mul362_m, _mul362_l
@@ -135,6 +136,7 @@ _negate_l:              .byte %11111111
                         .byte %00000000
 
 _cache_start:           .addr _cache
+
         .segment "BSS"
 
 ; raw_image has 512px wide lines to help with alignment
@@ -162,6 +164,11 @@ _actual_width:          .res 2
 _total_blocks:          .res 2
 _blocks_per_band:       .res 2
 _blocks_per_row:        .res 1
+
+_numbits:               .res 1
+_bitpos:                .res 1
+_valneg:                .res 1
+_bitval:                .res 2
 
         .segment "DATA"
 

@@ -199,6 +199,28 @@ static void idct_1d_cols(void) {
     }
 }
 
+void get_bitval(void) {
+  bitval = valneg = 0;
+
+  while (numbits--) {
+      if (nbits_avail == 0) {
+          cur_cache_ptr++;
+          if (cur_cache_ptr == cache_end) {
+              read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
+          }
+          nbits_avail = 8;
+      }
+
+      valneg = *cur_cache_ptr & 1;
+      *cur_cache_ptr >>= 1;
+      if (valneg) {
+        bitval |= (bitmask_h[bitpos] << 8)|bitmask_l[bitpos] ;
+      }
+      bitpos++;
+      nbits_avail--;
+  }
+}
+
 uint8 qt_load_raw(uint16 top)
 {
     uint8 blocks_rem_in_row = blocks_per_row;
@@ -209,43 +231,24 @@ uint8 qt_load_raw(uint16 top)
     for (block = 0; block < blocks_per_band; block++) {
         for (scan = 0; scan < 64; scan++) {
             uint8 r = SCAN[scan];
-            uint8 b = bits_table[scan];
-            uint8 ob, neg = 0;
-            uint8 bitpos = 0;
-            int16 x = 0;
+            uint8 ob;
 
-            if (!b) {
+            if (!(numbits = bits_table[scan])) {
                 coef[r] = 0;
                 continue;
             }
 
-            ob = b + bitpos;
-
             bitpos = shift_table[scan];
+            /* get_bitval will destroy bitpos */
+            ob = numbits + bitpos;
 
-            while (b--) {
-                if (nbits_avail == 0) {
-                    cur_cache_ptr++;
-                    if (cur_cache_ptr == cache_end) {
-                        read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
-                    }
-                    nbits_avail = 8;
-                }
-
-                neg = *cur_cache_ptr & 1;
-                *cur_cache_ptr >>= 1;
-                if (neg) {
-                  x |= (bitmask_h[bitpos] << 8)|bitmask_l[bitpos] ;
-                }
-                bitpos++;
-                nbits_avail--;
-            }
+            get_bitval();
 
             /* extend sign bit */
-            if (scan && neg) {
-                x = (uint16)x | (negate_h[ob] << 8) | negate_l[ob];
+            if (scan && valneg) {
+                bitval = (uint16)bitval | (negate_h[ob] << 8) | negate_l[ob];
             }
-            coef[r] = (int8)(x >> (DESCALE_FACTOR+2));
+            coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
         }
 
         idct_1d_rows();

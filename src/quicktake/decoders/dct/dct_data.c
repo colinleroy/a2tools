@@ -5,6 +5,11 @@ uint8 cache[CACHE_SIZE];
 uint8 raw_image[RAW_IMAGE_SIZE];
 uint8 *idx;
 
+uint8 numbits;
+uint8 bitpos;
+uint8 valneg;
+int16 bitval;
+
 uint8 SCAN[64] = {
      0, 1, 8,16, 9, 2, 3,10,
     17,24,32,25,18,11, 4, 5,
