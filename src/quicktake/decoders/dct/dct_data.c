@@ -158,3 +158,4 @@ uint16 actual_width;
 uint16 total_blocks;
 uint16 blocks_per_band;
 uint8 blocks_per_row;
+uint8 blocks_rem_in_row;

@@ -1,5 +1,6 @@
         .export _mul_362, _mul_473, _mul_277, _mul_669
         .export _get_bitval, _cache_read
+        .export _advance_block
 
         .import _mul362_h, _mul362_m, _mul362_l
         .import _mul473_h, _mul473_m, _mul473_l
@@ -9,6 +10,9 @@
         .import _cache
         .import _bitmask_h, _bitmask_l, _bitpos
         .import _nbits_avail, _numbits, _bitval, _valneg
+
+        .import _blocks_per_row, _blocks_rem_in_row
+        .import _idx, _actual_width
 
         .import _ifd, _cache_start
         .import _read, _cputsxy
@@ -166,3 +170,36 @@ cache_read = *+1
 .endproc
 inc_cache_done = _get_bitval::inc_cache_done
 _cache_read = _get_bitval::cache_read
+
+; Fixme lots to optimize
+; Move block increment to a single-byte var and use it as index in idct_1d_cols
+; Move row increment to LUT-based (always lands at $XX00)
+block_step:     .byte 16, 8
+row_step_l:     .byte <(8*RAW_WIDTH-DECODE_WIDTH+16), <(4*RAW_WIDTH-DECODE_WIDTH+8)
+row_step_h:     .byte >(8*RAW_WIDTH-DECODE_WIDTH+16), >(4*RAW_WIDTH-DECODE_WIDTH+8)
+.proc _advance_block
+        dec     _blocks_rem_in_row
+        beq     inc_row
+inc_block:
+        ldx     _actual_width+1
+        lda     block_step,x
+        clc
+        adc     _idx
+        sta     _idx
+        lda     _idx+1
+        adc     #0
+        sta     _idx+1
+        rts
+inc_row:
+        ldx     _actual_width+1
+        lda     row_step_l,x
+        clc
+        adc     _idx
+        sta     _idx
+        lda     row_step_h,x
+        adc     _idx+1
+        sta     _idx+1
+        lda     _blocks_per_row
+        sta     _blocks_rem_in_row
+        rts
+.endproc

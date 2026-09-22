@@ -11,7 +11,7 @@
         .export _mul669_m, _mul669_l
         .export _raw_image, _cache, _cache_start
         .export _actual_width, _total_blocks
-        .export _blocks_per_row, _blocks_per_band
+        .export _blocks_per_row, _blocks_per_band, _blocks_rem_in_row
         .export _histogram_low, _histogram_high
         .export _orig_y_table_l, _orig_y_table_h
         .export _orig_x_offset, _special_x_orig_offset
@@ -162,6 +162,7 @@ _actual_width:          .res 2
 _total_blocks:          .res 2
 _blocks_per_band:       .res 2
 _blocks_per_row:        .res 1
+_blocks_rem_in_row:     .res 1
 
 _numbits:               .res 1
 _bitpos:                .res 1

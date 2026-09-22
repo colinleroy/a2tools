@@ -55,3 +55,17 @@ void get_bitval(void) {
     bitpos++;
   } while (--numbits);
 }
+
+void advance_block(void) {
+  if (--blocks_rem_in_row == 0) {
+    if (actual_width == 160) {
+      idx += 8*RAW_WIDTH-DECODE_WIDTH+16;
+    } else {
+      idx += 4*RAW_WIDTH-DECODE_WIDTH+8;
+    }
+    printf("idx %p\n", idx);
+    blocks_rem_in_row = blocks_per_row;
+  } else {
+    idx += actual_width == 160 ? 16 : 8;
+  }
+}

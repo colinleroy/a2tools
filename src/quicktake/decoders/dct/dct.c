@@ -201,10 +201,11 @@ static void idct_1d_cols(void) {
 
 uint8 qt_load_raw(uint16 top)
 {
-    uint8 blocks_rem_in_row = blocks_per_row;
     uint16 block;
     uint8 scan;
+
     idx = raw_image;
+    blocks_rem_in_row = blocks_per_row;
 
     for (block = 0; block < blocks_per_band; block++) {
         for (scan = 0; scan < 64; scan++) {
@@ -231,18 +232,7 @@ uint8 qt_load_raw(uint16 top)
 
         idct_1d_rows();
         idct_1d_cols();
-
-        if (--blocks_rem_in_row == 0) {
-          uint8 *old_idx = idx;
-          if (actual_width == 160) {
-            idx += 8*RAW_WIDTH-DECODE_WIDTH+16;
-          } else {
-            idx += 4*RAW_WIDTH-DECODE_WIDTH+8;
-          }
-          blocks_rem_in_row = blocks_per_row;
-        } else {
-          idx += actual_width == 160 ? 16 : 8;
-        }
+        advance_block();
 
         /* Each block consumes a constant number of full bytes */
         // assert(nbits_avail == 0);
