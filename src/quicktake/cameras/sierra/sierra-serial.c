@@ -314,14 +314,17 @@ try_again:
   while (i--) {
     if (simple_serial_read_no_irq((char *)&sierra_packet_type, 1) == 0) {
       if (sierra_packet_type == 0) {
-        if (do_debug) cputs("Got 0x00, still waiting\r\n");
+        if (do_debug) cputs("Got 0x00, still waiting for answer\r\n");
         PC_DEBUG_PRINTF("Skip NUL\n");
-      }
-      if (sierra_packet_type == SIERRA_PACKET_NAK) {
+      } else if (sierra_packet_type == SIERRA_PACKET_NAK) {
         if (do_debug) cputs("Got expected answer\r\n");
         PC_DEBUG_PRINTF("Got answer\n");
         break;
+      } else if (do_debug)  {
+        cprintf("Got %02X, still waiting\r\n", sierra_packet_type);
       }
+    } else if (do_debug) {
+      cputs("No response.\r\n");
     }
   }
   if (sierra_packet_type == SIERRA_PACKET_NAK) {
