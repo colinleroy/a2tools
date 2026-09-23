@@ -325,7 +325,7 @@ jpegconv_GCCCFLAGS = \
 
 
 dctconv_CLCFLAGS = \
-	-DCACHE_SIZE=8192  --asm-define CACHE_SIZE=8192 \
+	-DCACHE_SIZE=12288  --asm-define CACHE_SIZE=12288 \
 	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
@@ -338,7 +338,7 @@ dctconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 dctconv_GCCCFLAGS = \
-	-DCACHE_SIZE=8192 \
+	-DCACHE_SIZE=12288 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512 \
