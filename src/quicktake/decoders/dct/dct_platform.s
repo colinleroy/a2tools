@@ -1,5 +1,5 @@
         .export _mul_362, _mul_473, _mul_277, _mul_669
-        .export _get_coeffs, _get_bitval, _cache_read
+        .export _get_coeffs, _cache_read
         .export _advance_block
         .export _shift_table, _bits_table
 
@@ -9,10 +9,9 @@
         .import _mul669_h, _mul669_m, _mul669_l
 
         .import _cache, _coef
-        .import _bitmask_h, _bitmask_l, _bitpos
-        .import _negate_h, _negate_l
-        .import _ob, _SCAN, _scan
-        .import _nbits_avail, _numbits, _bitval
+        .import _bitmask, _negate, _ign_bits
+        .import _SCAN, _scan
+        .import _nbits_avail, _numbits
 
         .import _blocks_per_row, _blocks_rem_in_row
         .import _idx, _actual_width
@@ -21,7 +20,7 @@
         .import _read, _cputsxy
         .import decsp4, pushax 
         .importzp _prev_ram_irq_vector, c_sp
-        .importzp xbck, ybck
+        .importzp xbck, ybck, abck
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
 
@@ -126,106 +125,93 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         jsr     _cputsxy
         ldx     xbck
         ldy     ybck
-        jmp     inc_cache_done
+        jmp     inc_cache_finish
 .endproc
 
-.proc inc_cache
-        lda     #7
-        sta     _nbits_avail
-        inc     _cache_read
-        bne     inc_cache_done
+.proc inc_cache_high
         inc     _cache_read+1
         lda     _cache_read+1
         cmp     #>CACHE_END
-        bne     inc_cache_done
+        bne     inc_cache_finish
         jmp     fill_cache
 .endproc
 
+.proc inc_cache
+        sta     abck
+        lda     #7
+        sta     _nbits_avail
+        inc     _cache_read
+        beq     inc_cache_high
+.endproc
+        ; Fallthrough
+.proc inc_cache_finish
+        lda     abck
+        jmp     inc_cache_done
+.endproc
 ; Much left to optimize there
 ; Split read to avoid lda/ora/sta *2
 ; use ZP
 
 ; Exits with carry set if last bit set (neg)
-; Exits with bitval low in A
-.proc _get_bitval
-        lda     #0                      ; Init values
-        sta     _bitval
-        sta     _bitval+1
-        ldx     _bitpos                 ; bitpos is X
+; Exits with bitval low in A, bitpos in X
+.macro GET_BITVAL
+        lda     #0                      ; Init bitval
+        tax                             ; bitpos is X
 
         ldy     _numbits                ; Get all bits
 next_bit:
         dec     _nbits_avail
         bmi     inc_cache
 inc_cache_done:
-cache_read = *+1
+_cache_read = *+1
         lsr     $FFFF
+        dec     _ign_bits
+        bpl     bit_done
         bcc     :+
-        lda     _bitval+1               ; Update value
-        ora     _bitmask_h,x
-        sta     _bitval+1
-        lda     _bitval
-        ora     _bitmask_l,x
-        sta     _bitval
+        ora     _bitmask,x
 :       inx                             ; update bitpos
+bit_done:
         dey
         bne     next_bit
-        rts
-.endproc
-inc_cache_done = _get_bitval::inc_cache_done
-_cache_read = _get_bitval::cache_read
+
+        ldy     _scan                   ; is coef negative?
+        beq     store_coef
+        bcc     store_coef
+
+        ora     _negate,x               ; extend sign bit
+.endmacro
 
 .proc _get_coeffs
-        ldx     #0
+        ldy     #0
 next_coeff:
-        stx     _scan
-        ldy     _SCAN,x
+        sty     _scan
+        ldx     _SCAN,y
 
 bits_table = *+1
-        lda     $FFFF,x                 ; get numbits
+        lda     $FFFF,y                 ; get numbits
         beq     inc_scan                ; eq jmp here
 load_coef:
         sta     _numbits
 shift_table = *+1
-        lda     $FFFF,x                 ; get initial bitpos
-        sta     _bitpos
-        clc                             ; get ob
-        adc     _numbits
-        sta     _ob
+        lda     $FFFF,y                 ; get ignored bits shift
+        sta     _ign_bits
 
-        jsr     _get_bitval             ; Exits with carry if neg, low byte in A
+        GET_BITVAL                      ; Exits with carry if neg, low byte in A
 
-        ldx     _scan                   ; is coef negative?
-        beq     store_coef
-        bcc     store_coef
-
-        ldy     _ob                     ; extend sign bit
-        lda     _bitval
-        ora     _negate_l,y
-        sta     _bitval
-        lda     _bitval+1
-        ora     _negate_h,y
-        sta     _bitval+1
 store_coef:
-        ; coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
-        ldy     #(DESCALE_FACTOR+2)
-        lda     _bitval+1
-:       cmp     #$80
-        ror
-        ror     _bitval
-        dey
-        bne     :-
-        ldy     _SCAN,x
-        lda     _bitval
+        ; coef[r] = (int8)(bitval);
+        ldx     _SCAN,y
 inc_scan:
-        sta     _coef,y                 ; zero, easy way out
-        inx
-        cpx     #64
+        sta     _coef,x                 ; zero, easy way out
+        iny
+        cpy     #64
         bcc     next_coeff
         rts
 .endproc
 _bits_table = _get_coeffs::bits_table
 _shift_table = _get_coeffs::shift_table
+inc_cache_done = _get_coeffs::inc_cache_done
+_cache_read = _get_coeffs::_cache_read
 
 ; Fixme lots to optimize
 ; Move block increment to a single-byte var and use it as index in idct_1d_cols

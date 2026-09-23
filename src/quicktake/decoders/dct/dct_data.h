@@ -21,10 +21,8 @@ extern uint8 scan;
 extern uint8 ob;
 
 extern int8 nbits_avail;
-extern uint8 bitmask_h[16];
-extern uint8 bitmask_l[16];
-extern uint8 negate_h[16];
-extern uint8 negate_l[16];
+extern uint8 bitmask[8];
+extern uint8 negate[8];
 
 extern uint8 normal_bits[64];
 extern uint8 superfine_bits[64];

@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <assert.h>
 
 #include "platform.h"
 #include "dct_data.h"
@@ -36,6 +37,8 @@ int8 mul_669(int8 w)
   return (int8)x & 0xFF;
 }
 
+int8 ign_bits;
+
 void get_coeffs(void) {
   for (scan = 0; scan < 64; scan++) {
       uint8 r = SCAN[scan];
@@ -44,24 +47,24 @@ void get_coeffs(void) {
           coef[r] = 0;
           continue;
       }
+      ign_bits = shift_table[scan];
 
-      bitpos = shift_table[scan];
-      /* get_bitval will destroy bitpos */
-      ob = numbits + bitpos;
+      bitpos = 0;
 
       get_bitval();
 
       /* extend sign bit */
       if (scan && valneg) {
-          bitval = (uint16)bitval | (negate_h[ob] << 8) | negate_l[ob];
+          bitval = (uint16)bitval | negate[bitpos];
       }
-      coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
+      coef[r] = (int8)(bitval);
   }
 }
 
 void get_bitval(void) {
   bitval = valneg = 0;
 
+  assert(numbits-ign_bits < 8);
   do {
     if (--nbits_avail < 0) {
         nbits_avail = 7;
@@ -73,8 +76,11 @@ void get_bitval(void) {
 
     valneg = *cur_cache_ptr & 1;
     *cur_cache_ptr >>= 1;
+    if (--ign_bits >= 0) {
+      continue;
+    }
     if (valneg) {
-      bitval |= (bitmask_h[bitpos] << 8)|bitmask_l[bitpos] ;
+      bitval |= bitmask[bitpos] ;
     }
     bitpos++;
   } while (--numbits);
