@@ -8,7 +8,14 @@ extern uint8 cache[CACHE_SIZE];
 extern uint8 *cache_start;
 extern uint8 *cache_read;
 extern uint8 raw_image[RAW_IMAGE_SIZE];
-extern uint8 *idx;
+extern uint8 *idx0;
+extern uint8 *idx1;
+extern uint8 *idx2;
+extern uint8 *idx3;
+extern uint8 *idx4;
+extern uint8 *idx5;
+extern uint8 *idx6;
+extern uint8 *idx7;
 
 extern uint8 numbits;
 extern uint8 bitpos;

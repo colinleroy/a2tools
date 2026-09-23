@@ -4,7 +4,7 @@
 
 uint8 cache[CACHE_SIZE];
 uint8 raw_image[RAW_IMAGE_SIZE];
-uint8 *idx;
+uint8 *idx0, *idx1, *idx2, *idx3, *idx4, *idx5, *idx6, *idx7;
 
 uint8 numbits;
 uint8 bitpos;

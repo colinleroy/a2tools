@@ -3,7 +3,7 @@
  * an LLM-generated reverse-engineer of the Amiga binary
  * (https://aminet.net/package/driver/other/ES3000_Demo)
  * that has been provided to me.
- * 
+ *
  * Of course full standard DCT based on doubles was never
  * going to be okay so DCT core replaced by a Loeffler-
  * Ligtenberg-Moschytz implementation.
@@ -13,7 +13,7 @@
  *
  * TBD: write it in assembly.
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,29 +43,28 @@ static void idct_1d_cols(void) {
             row_out[x + 112] == 0) {
 
             if (actual_width == 160) {
-              idx[x + 0*RAW_WIDTH] =
-                idx[x + 1*RAW_WIDTH] =
-                idx[x + 2*RAW_WIDTH] =
-                idx[x + 3*RAW_WIDTH] =
-                idx[x + 4*RAW_WIDTH] =
-                idx[x + 5*RAW_WIDTH] =
-                idx[x + 6*RAW_WIDTH] =
-                idx[x + 7*RAW_WIDTH] =
-              idx[x + 1 + 0*RAW_WIDTH] =
-                idx[x + 1 + 1*RAW_WIDTH] =
-                idx[x + 1 + 2*RAW_WIDTH] =
-                idx[x + 1 + 3*RAW_WIDTH] =
-                idx[x + 1 + 4*RAW_WIDTH] =
-                idx[x + 1 + 5*RAW_WIDTH] =
-                idx[x + 1 + 6*RAW_WIDTH] =
-                idx[x + 1 + 7*RAW_WIDTH] = CLAMPU(row_out[x + 0]);
+              idx0[x] =
+                idx1[x] =
+                idx2[x] =
+                idx3[x] =
+                idx4[x] =
+                idx5[x] =
+                idx6[x] =
+                idx7[x] =
+              idx0[x + 1] =
+                idx1[x + 1] =
+                idx2[x + 1] =
+                idx3[x + 1] =
+                idx4[x + 1] =
+                idx5[x + 1] =
+                idx6[x + 1] =
+                idx7[x + 1] = CLAMPU(row_out[x + 0]);
             } else {
-              idx[x/2 + 0*RAW_WIDTH] = 
-                idx[x/2 + 1*RAW_WIDTH] = 
-                idx[x/2 + 2*RAW_WIDTH] = 
-                idx[x/2 + 3*RAW_WIDTH] = CLAMPU(row_out[x + 0]);
+              idx0[x/2] =
+                idx1[x/2] =
+                idx2[x/2] =
+                idx3[x/2] = CLAMPU(row_out[x + 0]);
             }
-            
         } else {
             tmp10 = row_out[x + 0] + row_out[x + 64];
             tmp11 = row_out[x + 0] - row_out[x + 64];
@@ -79,20 +78,20 @@ static void idct_1d_cols(void) {
             idct_common();
 
             if (actual_width == 160) {
-              idx[x + 0*RAW_WIDTH] = idx[x + 1 + 0*RAW_WIDTH] = CLAMPU(tmp0 + tmp7);
-              idx[x + 2*RAW_WIDTH] = idx[x + 1 + 2*RAW_WIDTH] = CLAMPU(tmp2 + tmp5);
-              idx[x + 4*RAW_WIDTH] = idx[x + 1 + 4*RAW_WIDTH] = CLAMPU(tmp3 + tmp4);
-              idx[x + 6*RAW_WIDTH] = idx[x + 1 + 6*RAW_WIDTH] = CLAMPU(tmp1 - tmp6);
-              
-              idx[x + 1*RAW_WIDTH] = idx[x + 1 + 1*RAW_WIDTH] = CLAMPU(tmp1 + tmp6);
-              idx[x + 3*RAW_WIDTH] = idx[x + 1 + 3*RAW_WIDTH] = CLAMPU(tmp3 - tmp4);
-              idx[x + 5*RAW_WIDTH] = idx[x + 1 + 5*RAW_WIDTH] = CLAMPU(tmp2 - tmp5);
-              idx[x + 7*RAW_WIDTH] = idx[x + 1 + 7*RAW_WIDTH] = CLAMPU(tmp0 - tmp7);
+              idx0[x] = idx0[x + 1] = CLAMPU(tmp0 + tmp7);
+              idx1[x] = idx1[x + 1] = CLAMPU(tmp2 + tmp5);
+              idx2[x] = idx2[x + 1] = CLAMPU(tmp3 + tmp4);
+              idx3[x] = idx3[x + 1] = CLAMPU(tmp1 - tmp6);
+
+              idx4[x] = idx4[x + 1] = CLAMPU(tmp1 + tmp6);
+              idx5[x] = idx5[x + 1] = CLAMPU(tmp3 - tmp4);
+              idx6[x] = idx6[x + 1] = CLAMPU(tmp2 - tmp5);
+              idx7[x] = idx7[x + 1] = CLAMPU(tmp0 - tmp7);
             } else {
-              idx[x/2 + 0*RAW_WIDTH] = CLAMPU(tmp0 + tmp7);
-              idx[x/2 + 1*RAW_WIDTH] = CLAMPU(tmp2 + tmp5);
-              idx[x/2 + 2*RAW_WIDTH] = CLAMPU(tmp3 + tmp4);
-              idx[x/2 + 3*RAW_WIDTH] = CLAMPU(tmp1 - tmp6);
+              idx0[x/2] = CLAMPU(tmp0 + tmp7);
+              idx1[x/2] = CLAMPU(tmp2 + tmp5);
+              idx2[x/2] = CLAMPU(tmp3 + tmp4);
+              idx3[x/2] = CLAMPU(tmp1 - tmp6);
             }
         }
     }
@@ -102,7 +101,14 @@ uint8 qt_load_raw(uint16 top)
 {
     uint16 block;
 
-    idx = raw_image;
+    idx0 = raw_image;
+    idx1 = idx0 + RAW_WIDTH;
+    idx2 = idx1 + RAW_WIDTH;
+    idx3 = idx2 + RAW_WIDTH;
+    idx4 = idx3 + RAW_WIDTH;
+    idx5 = idx4 + RAW_WIDTH;
+    idx6 = idx5 + RAW_WIDTH;
+    idx7 = idx6 + RAW_WIDTH;
     blocks_rem_in_row = blocks_per_row;
 
     for (block = 0; block < blocks_per_band; block++) {

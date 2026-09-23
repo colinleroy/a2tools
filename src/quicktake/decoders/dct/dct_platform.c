@@ -88,15 +88,21 @@ void get_bitval(void) {
 void advance_block(void) {
   if (--blocks_rem_in_row == 0) {
     if (actual_width == 160) {
-      idx += 8*RAW_WIDTH-DECODE_WIDTH+16;
+      idx0 += 8*RAW_WIDTH-DECODE_WIDTH+16;
     } else {
-      idx += 4*RAW_WIDTH-DECODE_WIDTH+8;
+      idx0 += 4*RAW_WIDTH-DECODE_WIDTH+8;
     }
-    printf("idx %p\n", idx);
     blocks_rem_in_row = blocks_per_row;
   } else {
-    idx += actual_width == 160 ? 16 : 8;
+    idx0 += actual_width == 160 ? 16 : 8;
   }
+  idx1 = idx0 + RAW_WIDTH;
+  idx2 = idx1 + RAW_WIDTH;
+  idx3 = idx2 + RAW_WIDTH;
+  idx4 = idx3 + RAW_WIDTH;
+  idx5 = idx4 + RAW_WIDTH;
+  idx6 = idx5 + RAW_WIDTH;
+  idx7 = idx6 + RAW_WIDTH;
 }
 
 void idct_common(void) {
@@ -145,7 +151,7 @@ void idct_common(void) {
 
 void idct_1d_rows(void) {
     uint8 y;
-    
+
     for (y = 0; y < 8*16; y+=16) {
         // const int8 *x = &coef[y];
 
