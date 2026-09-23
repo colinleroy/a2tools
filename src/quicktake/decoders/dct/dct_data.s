@@ -16,6 +16,13 @@
         .export _orig_y_table_l, _orig_y_table_h
         .export _orig_x_offset, _special_x_orig_offset
 
+        .export xbck, ybck
+
+        .importzp _zp6, _zp7
+
+xbck = _zp6
+ybck = _zp7
+
         .segment "DATA"
 .align 256
 _normal_bits:           .byte 8,8,8,7,7,7,7,7
@@ -166,7 +173,6 @@ _scan:                  .res 1
 _ob:                    .res 1
 _numbits:               .res 1
 _bitpos:                .res 1
-_valneg:                .res 1
 _bitval:                .res 2
 _nbits_avail:           .res 1
 
