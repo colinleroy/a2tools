@@ -85,6 +85,14 @@ void main(int argc, char *argv) {
 
   register_start_device();
 
+  zxloader_name = "CONFIG.SYSTEM";
+#ifdef DEBUG_FLOPPY
+  zexec("-SLOWTAKE");
+#endif
+#ifdef DEBUG_HD
+  zexec("-SLOWTAKE");
+#endif
+
 #ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
   if (!has_80cols) {
@@ -109,6 +117,5 @@ void main(int argc, char *argv) {
     /* And save ! */
     simple_serial_write_config();
   }
-  zxloader_name = "CONFIG.SYSTEM";
   zexec("-SLOWTAKE");
 }
