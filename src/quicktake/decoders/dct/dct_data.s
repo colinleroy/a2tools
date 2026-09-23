@@ -2,7 +2,7 @@
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
         .export _idx
-        .export _numbits, _bitpos, _valneg, _bitval
+        .export _numbits, _bitpos, _bitval
         .export _SCAN, _coef, _scan, _ob
         .export _nbits_avail, _bitmask_h, _bitmask_l, _negate_h, _negate_l
         .export _mul362_m, _mul362_l
@@ -34,6 +34,15 @@ _normal_bits:           .byte 8,8,8,7,7,7,7,7
                         .byte 0,0,0,0,0,0,0,0
                         .byte 0,0,0,0,0,0,0,0
 
+_normal_shift:          .byte 2,2,2,2,2,2,2,2
+                        .byte 2,2,2,3,2,2,2,2
+                        .byte 2,3,3,3,2,3,0,0
+                        .byte 3,3,3,2,2,3,3,3
+                        .byte 0,0,0,0,0,0,0,0
+                        .byte 3,3,3,0,0,0,0,0
+                        .byte 0,0,0,0,0,0,0,0
+                        .byte 0,0,0,0,0,0,0,0
+
 _superfine_bits:        .byte 10,10,10,9,9,9,8,8
                         .byte 8,8,7,7,7,8,8,8
                         .byte 7,7,7,7,6,5,6,6
@@ -42,15 +51,6 @@ _superfine_bits:        .byte 10,10,10,9,9,9,8,8
                         .byte 6,6,6,6,6,6,5,4
                         .byte 3,3,3,5,6,6,5,4
                         .byte 3,3,3,3,4,3,3,3
-
-_normal_shift:          .byte 2,2,2,2,2,2,2,2
-                        .byte 2,2,2,3,2,2,2,2
-                        .byte 2,3,3,3,2,3,7,7
-                        .byte 3,3,3,2,2,3,3,3
-                        .byte 7,7,6,5,5,5,6,7
-                        .byte 3,3,3,7,7,7,6,5
-                        .byte 5,5,5,6,7,7,6,6
-                        .byte 5,5,5,5,6,5,5,5
 
 _superfine_shift:       .byte 0,0,0,0,0,0,1,1
                         .byte 1,1,1,1,1,1,1,1
