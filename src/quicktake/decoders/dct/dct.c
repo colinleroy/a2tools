@@ -30,60 +30,6 @@ char *decoder_name = "Chinon DCT";
 #ifndef __CC65__
 uint8 *cache_start = cache;
 #endif
-uint32 nmults = 0;
-
-int8 row_out[128]; /* Twice as large as needed but simplifies computations. */
-int8 tmp0, tmp1, tmp2, tmp3;
-int8 tmp4, tmp5, tmp6, tmp7;
-int8 tmp10, tmp11, tmp12, tmp13;
-int8 z5, z10, z11, z12, z13;
-static void idct_common(void) {
-        tmp0 = tmp10 + tmp13;
-        tmp3 = tmp10 - tmp13;
-
-        if (tmp12) {
-          tmp12 = mul_362(tmp12);
-        }
-        tmp12 -= tmp13;
-        tmp1 = tmp11 + tmp12;
-        tmp2 = tmp11 - tmp12;
-
-        tmp7 = z11 + z13;
-
-        if (z11 - z13) {
-          tmp11 = mul_362(z11 - z13);
-          nmults++;
-        } else {
-          tmp11 = 0;
-        }
-
-        if (z10) {
-          z13 = mul_669(z10);
-          nmults++;
-        } else {
-          z13 = 0;
-        }
-
-        if (z10 + z12) {
-          z5 = mul_473(z10 + z12);
-          nmults++;
-        } else {
-          z5 = 0;
-        }
-        tmp12 = z5 - z13;
-
-        if (z12) {
-          tmp10 = mul_277(z12);
-          nmults++;
-        } else {
-          tmp10 = 0;
-        }
-        tmp10 -= z5;
-
-        tmp6 = tmp12 - tmp7;
-        tmp5 = tmp11 - tmp6;
-        tmp4 = tmp10 + tmp5;
-}
 
 static void idct_1d_rows(void) {
     uint8 y;

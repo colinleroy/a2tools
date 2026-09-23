@@ -1,12 +1,15 @@
-        .export _mul_362, _mul_473, _mul_277, _mul_669
         .export _get_coeffs, _cache_read
-        .export _advance_block
+        .export _advance_block, _idct_common
         .export _shift_table, _bits_table
 
         .import _mul362_h, _mul362_m, _mul362_l
         .import _mul473_h, _mul473_m, _mul473_l
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
+
+        .import _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
+        .import _tmp10, _tmp11, _tmp12, _tmp13
+        .import _z5, _z10, _z11, _z12, _z13
 
         .import _cache, _coef
         .import _bitmask, _negate, _ign_bits
@@ -38,7 +41,7 @@ CACHE_END = _cache + CACHE_SIZE
         tay
         lda     TABM,y
         ; ldx     TABH,y
-        rts
+        jmp     done
 
 neg:    clc
         eor     #$FF
@@ -58,25 +61,25 @@ neg:    clc
         ; adc     #0
         ; tax
         ; tya
-        rts
+done:
 .endscope
 .endmacro
 
-.proc _mul_362
+.macro MULT_362
         do_mul _mul362_l, _mul362_m ;, _mul_362_h
-.endproc
+.endmacro
 
-.proc _mul_473
+.macro MULT_473
         do_mul _mul473_l, _mul473_m ;, _mul_473_h
-.endproc
+.endmacro
 
-.proc _mul_277
+.macro MULT_277
         do_mul _mul277_l, _mul277_m; , _mul_277_h
-.endproc
+.endmacro
 
-.proc _mul_669
+.macro MULT_669
         do_mul _mul669_l, _mul669_m;, _mul_669_h
-.endproc
+.endmacro
 
 _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
@@ -243,5 +246,84 @@ inc_row:
         sta     _idx+1
         lda     _blocks_per_row
         sta     _blocks_rem_in_row
+        rts
+.endproc
+
+.proc _idct_common
+        lda     _tmp10
+        clc
+        adc     _tmp13
+        sta     _tmp0
+
+        lda     _tmp10
+        sec
+        sbc     _tmp13
+        sta     _tmp3
+
+        lda     _tmp12
+        beq     :+
+        MULT_362
+:       sec
+        sbc     _tmp13
+        sta     _tmp12
+
+        clc
+        adc     _tmp11
+        sta     _tmp1
+
+        lda     _tmp11
+        sec
+        sbc     _tmp12
+        sta     _tmp2
+
+        lda     _z11
+        clc
+        adc     _z13
+        sta     _tmp7
+
+        lda     _z11
+        sec
+        sbc     _z13
+        beq     :+
+        MULT_362
+:       sta     _tmp11
+
+        lda     _z10
+        beq     :+
+        MULT_669
+:       sta     _z13
+
+        lda     _z10
+        clc
+        adc     _z12
+        beq     :+
+        MULT_473
+:       sta     _z5
+
+        sec
+        sbc     _z13
+        sta     _tmp12
+
+        lda     _z12
+        beq     :+
+        MULT_277
+:       sec
+        sbc     _z5
+        sta     _tmp10
+
+        lda     _tmp12
+        sec
+        sbc     _tmp7
+        sta     _tmp6
+
+        lda     _tmp11
+        sec
+        sbc     _tmp6
+        sta     _tmp5
+
+        clc
+        adc     _tmp10
+        sta     _tmp4
+
         rts
 .endproc

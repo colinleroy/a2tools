@@ -12,6 +12,10 @@
         .export _raw_image, _cache, _cache_start
         .export _actual_width, _total_blocks
         .export _blocks_per_row, _blocks_per_band, _blocks_rem_in_row
+        .export _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
+        .export _tmp10, _tmp11, _tmp12, _tmp13
+        .export _z5, _z10, _z11, _z12, _z13
+        .export _row_out
         .export _histogram_low, _histogram_high
         .export _orig_y_table_l, _orig_y_table_h
         .export _orig_x_offset, _special_x_orig_offset
@@ -115,10 +119,29 @@ _histogram_low:         .res 256
 _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
-_coef:                  .res 64
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
+_row_out:               .res 128
+_tmp0:                  .res 1
+_tmp1:                  .res 1
+_tmp2:                  .res 1
+_tmp3:                  .res 1
+_tmp4:                  .res 1
+_tmp5:                  .res 1
+_tmp6:                  .res 1
+_tmp7:                  .res 1
+_tmp10:                 .res 1
+_tmp11:                 .res 1
+_tmp12:                 .res 1
+_tmp13:                 .res 1
+_z5:                    .res 1
+_z10:                   .res 1
+_z11:                   .res 1
+_z12:                   .res 1
+_z13:                   .res 1
 
+.align 256
+_coef:                  .res 64
 _idx:                   .res 2
 
 _actual_width:          .res 2

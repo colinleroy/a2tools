@@ -37,4 +37,11 @@ extern uint16 total_blocks;
 extern uint16 blocks_per_band;
 extern uint8 blocks_per_row;
 extern uint8 blocks_rem_in_row;
+
+extern int8 row_out[128]; /* Twice as large as needed but simplifies computations. */
+extern int8 tmp0, tmp1, tmp2, tmp3;
+extern int8 tmp4, tmp5, tmp6, tmp7;
+extern int8 tmp10, tmp11, tmp12, tmp13;
+extern int8 z5, z10, z11, z12, z13;
+
 #endif

@@ -5,7 +5,7 @@
 #include "dct_data.h"
 #include "dct_platform.h"
 
-int8 mul_362(int8 w)
+static int8 mul_362(int8 w)
 {
   int16 x;
   x = (int16)(w * 362);
@@ -13,7 +13,7 @@ int8 mul_362(int8 w)
   return (int8)x & 0xFF;
 }
 
-int8 mul_473(int8 w)
+static int8 mul_473(int8 w)
 {
   int16 x;
   x = (int16)(w * 473);
@@ -21,7 +21,7 @@ int8 mul_473(int8 w)
   return (int8)x & 0xFF;
 }
 
-int8 mul_277(int8 w)
+static int8 mul_277(int8 w)
 {
   int16 x;
   x = (int16)(w * 277);
@@ -29,7 +29,7 @@ int8 mul_277(int8 w)
   return (int8)x & 0xFF;
 }
 
-int8 mul_669(int8 w)
+static int8 mul_669(int8 w)
 {
   int16 x;
   x = (int16)(w * 669);
@@ -64,7 +64,6 @@ void get_coeffs(void) {
 void get_bitval(void) {
   bitval = valneg = 0;
 
-  assert(numbits-ign_bits < 8);
   do {
     if (--nbits_avail < 0) {
         nbits_avail = 7;
@@ -98,4 +97,48 @@ void advance_block(void) {
   } else {
     idx += actual_width == 160 ? 16 : 8;
   }
+}
+
+void idct_common(void) {
+        tmp0 = tmp10 + tmp13;
+        tmp3 = tmp10 - tmp13;
+
+        if (tmp12) {
+          tmp12 = mul_362(tmp12);
+        }
+        tmp12 -= tmp13;
+        tmp1 = tmp11 + tmp12;
+        tmp2 = tmp11 - tmp12;
+
+        tmp7 = z11 + z13;
+
+        if (z11 - z13) {
+          tmp11 = mul_362(z11 - z13);
+        } else {
+          tmp11 = 0;
+        }
+
+        if (z10) {
+          z13 = mul_669(z10);
+        } else {
+          z13 = 0;
+        }
+
+        if (z10 + z12) {
+          z5 = mul_473(z10 + z12);
+        } else {
+          z5 = 0;
+        }
+        tmp12 = z5 - z13;
+
+        if (z12) {
+          tmp10 = mul_277(z12);
+        } else {
+          tmp10 = 0;
+        }
+        tmp10 -= z5;
+
+        tmp6 = tmp12 - tmp7;
+        tmp5 = tmp11 - tmp6;
+        tmp4 = tmp5 + tmp10;
 }

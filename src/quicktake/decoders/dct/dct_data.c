@@ -112,3 +112,9 @@ uint16 total_blocks;
 uint16 blocks_per_band;
 uint8 blocks_per_row;
 uint8 blocks_rem_in_row;
+
+int8 row_out[128]; /* Twice as large as needed but simplifies computations. */
+int8 tmp0, tmp1, tmp2, tmp3;
+int8 tmp4, tmp5, tmp6, tmp7;
+int8 tmp10, tmp11, tmp12, tmp13;
+int8 z5, z10, z11, z12, z13;
