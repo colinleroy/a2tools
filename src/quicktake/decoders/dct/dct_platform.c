@@ -96,13 +96,7 @@ void advance_block(void) {
   } else {
     idx0 += actual_width == 160 ? 16 : 8;
   }
-  idx1 = idx0 + RAW_WIDTH;
-  idx2 = idx1 + RAW_WIDTH;
-  idx3 = idx2 + RAW_WIDTH;
-  idx4 = idx3 + RAW_WIDTH;
-  idx5 = idx4 + RAW_WIDTH;
-  idx6 = idx5 + RAW_WIDTH;
-  idx7 = idx6 + RAW_WIDTH;
+  update_idx();
 }
 
 void idct_common(void) {
@@ -191,4 +185,84 @@ void idct_1d_rows(void) {
         row_out[y + 12] = (uint8)(tmp1 - tmp6);
         row_out[y + 14] = (uint8)(tmp0 - tmp7);
     }
+}
+
+
+#define CLAMPU(x) (((uint8)(x) & 0x80) != 0 ? -128 : ((x)<<DESCALE_FACTOR))
+void idct_1d_cols(void) {
+    uint8 x;
+    for (x = 0; x < 16; x+=2) {
+
+        if (row_out[x + 16] == 0 && row_out[x + 32] == 0 &&
+            row_out[x + 48] == 0 && row_out[x + 64] == 0 &&
+            row_out[x + 80] == 0 && row_out[x + 96] == 0 &&
+            row_out[x + 112] == 0) {
+
+            if (actual_width == 160) {
+              idx0[x] =
+                idx1[x] =
+                idx2[x] =
+                idx3[x] =
+                idx4[x] =
+                idx5[x] =
+                idx6[x] =
+                idx7[x] =
+              idx0[x + 1] =
+                idx1[x + 1] =
+                idx2[x + 1] =
+                idx3[x + 1] =
+                idx4[x + 1] =
+                idx5[x + 1] =
+                idx6[x + 1] =
+                idx7[x + 1] = CLAMPU(row_out[x + 0]);
+            } else {
+              idx0[x/2] =
+                idx1[x/2] =
+                idx2[x/2] =
+                idx3[x/2] = CLAMPU(row_out[x + 0]);
+            }
+        } else {
+            tmp10 = row_out[x + 0] + row_out[x + 64];
+            tmp11 = row_out[x + 0] - row_out[x + 64];
+            tmp12 = row_out[x+32] - row_out[x + 96];
+            tmp13 = row_out[x + 32] + row_out[x + 96];
+            z10 = row_out[x + 80] - row_out[x + 48];
+            z11 = row_out[x + 16] + row_out[x + 112];
+            z12 = row_out[x + 16] - row_out[x + 112];
+            z13 = row_out[x + 80] + row_out[x + 48];
+
+            idct_common();
+
+            if (actual_width == 160) {
+              idx0[x] = idx0[x + 1] = CLAMPU(tmp0 + tmp7);
+              idx2[x] = idx2[x + 1] = CLAMPU(tmp2 + tmp5);
+              idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
+              idx6[x] = idx6[x + 1] = CLAMPU(tmp1 - tmp6);
+
+              idx1[x] = idx1[x + 1] = CLAMPU(tmp1 + tmp6);
+              idx3[x] = idx3[x + 1] = CLAMPU(tmp3 - tmp4);
+              idx5[x] = idx5[x + 1] = CLAMPU(tmp2 - tmp5);
+              idx7[x] = idx7[x + 1] = CLAMPU(tmp0 - tmp7);
+            } else {
+              idx0[x/2] = CLAMPU(tmp0 + tmp7);
+              idx1[x/2] = CLAMPU(tmp2 + tmp5);
+              idx2[x/2] = CLAMPU(tmp3 + tmp4);
+              idx3[x/2] = CLAMPU(tmp1 - tmp6);
+            }
+        }
+    }
+}
+
+void init_idx(void) {
+  idx0 = raw_image;
+}
+
+void update_idx(void) {
+  idx1 = idx0 + RAW_WIDTH;
+  idx2 = idx1 + RAW_WIDTH;
+  idx3 = idx2 + RAW_WIDTH;
+  idx4 = idx3 + RAW_WIDTH;
+  idx5 = idx4 + RAW_WIDTH;
+  idx6 = idx5 + RAW_WIDTH;
+  idx7 = idx6 + RAW_WIDTH;
 }
