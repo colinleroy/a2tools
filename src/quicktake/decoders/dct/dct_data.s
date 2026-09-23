@@ -74,14 +74,14 @@ _superfine_shift:       .byte IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_B
 
 .assert <* = 0, error
 
-_SCAN:                  .byte  0, 1, 8,16, 9, 2, 3,10
-                        .byte 17,24,32,25,18,11, 4, 5
-                        .byte 12,19,26,33,40,48,41,34
-                        .byte 27,20,13, 6, 7,14,21,28
-                        .byte 35,42,49,56,57,50,43,36
-                        .byte 29,22,15,23,30,37,44,51
-                        .byte 58,59,52,45,38,31,39,46
-                        .byte 53,60,61,54,47,55,62,63
+_SCAN:                  .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
+                        .byte 17*2,24*2,32*2,25*2,18*2,11*2, 4*2, 5*2
+                        .byte 12*2,19*2,26*2,33*2,40*2,48*2,41*2,34*2
+                        .byte 27*2,20*2,13*2, 6*2, 7*2,14*2,21*2,28*2
+                        .byte 35*2,42*2,49*2,56*2,57*2,50*2,43*2,36*2
+                        .byte 29*2,22*2,15*2,23*2,30*2,37*2,44*2,51*2
+                        .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
+                        .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
 
 _bitmask:               .byte %00000001
                         .byte %00000010
@@ -119,9 +119,12 @@ _histogram_low:         .res 256
 _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
+_coef:                  .res 128
+_row_out:               .res 128
+
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
-_row_out:               .res 128
+
 _tmp0:                  .res 1
 _tmp1:                  .res 1
 _tmp2:                  .res 1
@@ -140,8 +143,6 @@ _z11:                   .res 1
 _z12:                   .res 1
 _z13:                   .res 1
 
-.align 256
-_coef:                  .res 64
 _idx:                   .res 2
 
 _actual_width:          .res 2

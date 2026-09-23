@@ -31,50 +31,6 @@ char *decoder_name = "Chinon DCT";
 uint8 *cache_start = cache;
 #endif
 
-static void idct_1d_rows(void) {
-    uint8 y;
-    
-    for (y = 0; y < 8*16; y+=16) {
-        const int8 *x = &coef[y >> 1];
-
-        if (x[1] == 0 && x[2] == 0 &&
-            x[3] == 0 && x[4] == 0 &&
-            x[5] == 0 && x[6] == 0 &&
-            x[7] == 0) {
-
-            row_out[y + 0] =
-              row_out[y + 2] =
-              row_out[y + 4] =
-              row_out[y + 6] =
-              row_out[y + 8] =
-              row_out[y + 10] =
-              row_out[y + 12] =
-              row_out[y + 14] = x[0];
-            continue;
-        }
-
-        tmp10 = x[0] + x[4];
-        tmp11 = x[0] - x[4];
-        tmp12 = x[2] - x[6];
-        tmp13 = x[2] + x[6];
-        z10   = x[5] - x[3];
-        z11   = x[1] + x[7];
-        z12   = x[1] - x[7];
-        z13   = x[5] + x[3];
-
-        idct_common();
-
-        row_out[y + 0] = (uint8)(tmp0 + tmp7);
-        row_out[y + 2] = (uint8)(tmp1 + tmp6);
-        row_out[y + 4] = (uint8)(tmp2 + tmp5);
-        row_out[y + 6] = (uint8)(tmp3 - tmp4);
-        row_out[y + 8] = (uint8)(tmp3 + tmp4);
-        row_out[y + 10] = (uint8)(tmp2 - tmp5);
-        row_out[y + 12] = (uint8)(tmp1 - tmp6);
-        row_out[y + 14] = (uint8)(tmp0 - tmp7);
-    }
-}
-
 #define CLAMPU(x) (((uint16)(x) << DESCALE_FACTOR) > 255 ? 255 : ((x)<<DESCALE_FACTOR))
 
 static void idct_1d_cols(void) {

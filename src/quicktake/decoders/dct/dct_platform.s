@@ -1,5 +1,6 @@
         .export _get_coeffs, _cache_read
-        .export _advance_block, _idct_common
+        .export _advance_block
+        .export _idct_common, _idct_1d_rows
         .export _shift_table, _bits_table
 
         .import _mul362_h, _mul362_m, _mul362_l
@@ -10,8 +11,9 @@
         .import _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .import _tmp10, _tmp11, _tmp12, _tmp13
         .import _z5, _z10, _z11, _z12, _z13
+        .import _coef, _row_out
 
-        .import _cache, _coef
+        .import _cache
         .import _bitmask, _negate, _ign_bits
         .import _SCAN, _scan
         .import _nbits_avail, _numbits
@@ -326,4 +328,126 @@ inc_row:
         sta     _tmp4
 
         rts
+.endproc
+
+.proc _idct_1d_rows
+        lda     #0
+next_y:
+        tay
+        lda     _coef+2,y
+        ora     _coef+4,y
+        ora     _coef+6,y
+        ora     _coef+8,y
+        ora     _coef+10,y
+        ora     _coef+12,y
+        ora     _coef+14,y
+        bne     :+
+        jmp     store_dc
+
+:       lda     _coef+0,y
+        clc
+        adc     _coef+8,y
+        sta     _tmp10
+        lda     _coef+0,y
+        sec
+        sbc     _coef+8,y
+        sta     _tmp11
+
+        lda     _coef+4,y
+        sec
+        sbc     _coef+12,y
+        sta     _tmp12
+        lda     _coef+4,y
+        clc
+        adc     _coef+12,y
+        sta     _tmp13
+
+        lda     _coef+10,y
+        sec
+        sbc     _coef+6,y
+        sta     _z10
+
+        lda     _coef+2,y
+        clc
+        adc     _coef+14,y
+        sta     _z11
+
+        lda     _coef+2,y
+        sec
+        sbc     _coef+14,y
+        sta     _z12
+
+        lda     _coef+10,y
+        clc
+        adc     _coef+6,y
+        sta     _z13
+
+        sty     ybck
+        jsr     _idct_common
+        ldy     ybck
+
+        lda     _tmp0
+        clc
+        adc     _tmp7
+        sta     _row_out+0,y
+
+        lda     _tmp1
+        clc
+        adc     _tmp6
+        sta     _row_out+2,y
+
+        lda     _tmp2
+        clc
+        adc     _tmp5
+        sta     _row_out+4,y
+
+        lda     _tmp3
+        sec
+        sbc     _tmp4
+        sta     _row_out+6,y
+
+        lda     _tmp3
+        clc
+        adc     _tmp4
+        sta     _row_out+8,y
+
+        lda     _tmp2
+        sec
+        sbc     _tmp5
+        sta     _row_out+10,y
+
+        lda     _tmp1
+        sec
+        sbc     _tmp6
+        sta     _row_out+12,y
+
+        lda     _tmp0
+        sec
+        sbc     _tmp7
+        sta     _row_out+14,y
+
+        tya
+        clc
+        adc     #16
+        bmi     donel                   ; > 128
+        jmp     next_y
+donel:  rts
+
+store_dc:
+        lda     _coef+0,y
+        sta     _row_out+0,y
+        sta     _row_out+2,y
+        sta     _row_out+4,y
+        sta     _row_out+6,y
+        sta     _row_out+8,y
+        sta     _row_out+10,y
+        sta     _row_out+12,y
+        sta     _row_out+14,y
+
+        tya
+        clc
+        adc     #16
+        bmi     done                    ; > 128
+        jmp     next_y
+done:   rts
 .endproc

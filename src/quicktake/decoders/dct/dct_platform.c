@@ -142,3 +142,47 @@ void idct_common(void) {
         tmp5 = tmp11 - tmp6;
         tmp4 = tmp5 + tmp10;
 }
+
+void idct_1d_rows(void) {
+    uint8 y;
+    
+    for (y = 0; y < 8*16; y+=16) {
+        // const int8 *x = &coef[y];
+
+        if (coef[y + 2] == 0 && coef[y + 4] == 0 &&
+            coef[y + 6] == 0 && coef[y + 8] == 0 &&
+            coef[y + 10] == 0 && coef[y + 12] == 0 &&
+            coef[y + 14] == 0) {
+
+            row_out[y + 0] =
+              row_out[y + 2] =
+              row_out[y + 4] =
+              row_out[y + 6] =
+              row_out[y + 8] =
+              row_out[y + 10] =
+              row_out[y + 12] =
+              row_out[y + 14] = coef[y + 0];
+            continue;
+        }
+
+        tmp10 = coef[y + 0] + coef[y + 8];
+        tmp11 = coef[y + 0] - coef[y + 8];
+        tmp12 = coef[y + 4] - coef[y + 12];
+        tmp13 = coef[y + 4] + coef[y + 12];
+        z10   = coef[y + 10] - coef[y + 6];
+        z11   = coef[y + 2] + coef[y + 14];
+        z12   = coef[y + 2] - coef[y + 14];
+        z13   = coef[y + 10] + coef[y + 6];
+
+        idct_common();
+
+        row_out[y + 0] = (uint8)(tmp0 + tmp7);
+        row_out[y + 2] = (uint8)(tmp1 + tmp6);
+        row_out[y + 4] = (uint8)(tmp2 + tmp5);
+        row_out[y + 6] = (uint8)(tmp3 - tmp4);
+        row_out[y + 8] = (uint8)(tmp3 + tmp4);
+        row_out[y + 10] = (uint8)(tmp2 - tmp5);
+        row_out[y + 12] = (uint8)(tmp1 - tmp6);
+        row_out[y + 14] = (uint8)(tmp0 - tmp7);
+    }
+}

@@ -6,3 +6,4 @@ void get_coeffs(void);
 void get_bitval(void);
 void advance_block(void);
 void idct_common(void);
+void idct_1d_rows(void);
