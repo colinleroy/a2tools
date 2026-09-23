@@ -10,6 +10,10 @@ uint8 bitpos;
 uint8 valneg;
 int16 bitval;
 
+int8 coef[64];
+uint8 scan;
+uint8 ob;
+
 uint8 SCAN[64] = {
      0, 1, 8,16, 9, 2, 3,10,
     17,24,32,25,18,11, 4, 5,

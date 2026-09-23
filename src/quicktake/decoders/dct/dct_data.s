@@ -3,7 +3,7 @@
         .export _normal_shift, _superfine_shift
         .export _idx
         .export _numbits, _bitpos, _valneg, _bitval
-        .export _shift_table, _bits_table, _SCAN
+        .export _SCAN, _coef, _scan, _ob
         .export _nbits_avail, _bitmask_h, _bitmask_l, _negate_h, _negate_l
         .export _mul362_m, _mul362_l
         .export _mul473_m, _mul473_l
@@ -15,7 +15,6 @@
         .export _histogram_low, _histogram_high
         .export _orig_y_table_l, _orig_y_table_h
         .export _orig_x_offset, _special_x_orig_offset
-
 
         .segment "DATA"
 .align 256
@@ -151,19 +150,20 @@ _histogram_low:         .res 256
 _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
+_coef:                  .res 64
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
 
 _idx:                   .res 2
 
-_bits_table:            .res 2
-_shift_table:           .res 2
 _actual_width:          .res 2
 _total_blocks:          .res 2
 _blocks_per_band:       .res 2
 _blocks_per_row:        .res 1
 _blocks_rem_in_row:     .res 1
 
+_scan:                  .res 1
+_ob:                    .res 1
 _numbits:               .res 1
 _bitpos:                .res 1
 _valneg:                .res 1

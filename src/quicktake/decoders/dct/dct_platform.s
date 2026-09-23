@@ -1,14 +1,17 @@
         .export _mul_362, _mul_473, _mul_277, _mul_669
-        .export _get_bitval, _cache_read
+        .export _get_coeffs, _get_bitval, _cache_read
         .export _advance_block
+        .export _shift_table, _bits_table
 
         .import _mul362_h, _mul362_m, _mul362_l
         .import _mul473_h, _mul473_m, _mul473_l
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _cache
+        .import _cache, _coef
         .import _bitmask_h, _bitmask_l, _bitpos
+        .import _negate_h, _negate_l
+        .import _ob, _SCAN, _scan
         .import _nbits_avail, _numbits, _bitval, _valneg
 
         .import _blocks_per_row, _blocks_rem_in_row
@@ -20,6 +23,8 @@
         .importzp _prev_ram_irq_vector, _zp6, _zp7, c_sp
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
+
+DESCALE_FACTOR = 1
 
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
@@ -170,6 +175,58 @@ cache_read = *+1
 .endproc
 inc_cache_done = _get_bitval::inc_cache_done
 _cache_read = _get_bitval::cache_read
+
+.proc _get_coeffs
+        ldx     #0
+next_coeff:
+        stx     _scan
+        ldy     _SCAN,x
+
+bits_table = *+1
+        lda     $FFFF,x                 ; get numbits
+        beq     inc_scan                ; eq jmp here
+load_coef:
+        sta     _numbits
+shift_table = *+1
+        lda     $FFFF,x                 ; get initial bitpos
+        sta     _bitpos
+        clc                             ; get ob
+        adc     _numbits
+        sta     _ob
+
+        jsr     _get_bitval
+
+        ldx     _scan                   ; is coef negative?
+        beq     store_coef
+        lda     _valneg
+        beq     store_coef
+
+        ldy     _ob                     ; extend sign bit
+        lda     _bitval+1
+        ora     _negate_h,y
+        sta     _bitval+1
+        lda     _bitval
+        ora     _negate_l,y
+        sta     _bitval
+store_coef:
+        ; coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
+        ldy     #(DESCALE_FACTOR+2)
+        lda     _bitval
+:       cmp     #$80
+        ror     _bitval+1
+        ror
+        dey
+        bne     :-
+        ldy     _SCAN,x
+inc_scan:
+        sta     _coef,y                 ; zero, easy way out
+        inx
+        cpx     #64
+        bcc     next_coeff
+        rts
+.endproc
+_bits_table = _get_coeffs::bits_table
+_shift_table = _get_coeffs::shift_table
 
 ; Fixme lots to optimize
 ; Move block increment to a single-byte var and use it as index in idct_1d_cols

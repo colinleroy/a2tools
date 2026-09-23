@@ -32,9 +32,6 @@ uint8 *cache_start = cache;
 #endif
 uint32 nmults = 0;
 
-#define DESCALE_FACTOR 1
-
-int8 coef[64];
 int8 row_out[128]; /* Twice as large as needed but simplifies computations. */
 int8 tmp0, tmp1, tmp2, tmp3;
 int8 tmp4, tmp5, tmp6, tmp7;
@@ -202,34 +199,12 @@ static void idct_1d_cols(void) {
 uint8 qt_load_raw(uint16 top)
 {
     uint16 block;
-    uint8 scan;
 
     idx = raw_image;
     blocks_rem_in_row = blocks_per_row;
 
     for (block = 0; block < blocks_per_band; block++) {
-        for (scan = 0; scan < 64; scan++) {
-            uint8 r = SCAN[scan];
-            uint8 ob;
-
-            if (!(numbits = bits_table[scan])) {
-                coef[r] = 0;
-                continue;
-            }
-
-            bitpos = shift_table[scan];
-            /* get_bitval will destroy bitpos */
-            ob = numbits + bitpos;
-
-            get_bitval();
-
-            /* extend sign bit */
-            if (scan && valneg) {
-                bitval = (uint16)bitval | (negate_h[ob] << 8) | negate_l[ob];
-            }
-            coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
-        }
-
+        get_coeffs();
         idct_1d_rows();
         idct_1d_cols();
         advance_block();

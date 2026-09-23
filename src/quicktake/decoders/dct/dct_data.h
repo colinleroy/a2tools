@@ -16,6 +16,10 @@ extern uint8 valneg;
 extern int16 bitval;
 
 extern uint8 SCAN[64];
+extern int8 coef[64];
+extern uint8 scan;
+extern uint8 ob;
+
 extern int8 nbits_avail;
 extern uint8 bitmask_h[16];
 extern uint8 bitmask_l[16];

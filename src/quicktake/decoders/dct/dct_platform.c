@@ -2,6 +2,7 @@
 
 #include "platform.h"
 #include "dct_data.h"
+#include "dct_platform.h"
 
 int8 mul_362(int8 w)
 {
@@ -33,6 +34,29 @@ int8 mul_669(int8 w)
   x = (int16)(w * 669);
   x >>= 8;
   return (int8)x & 0xFF;
+}
+
+void get_coeffs(void) {
+  for (scan = 0; scan < 64; scan++) {
+      uint8 r = SCAN[scan];
+
+      if (!(numbits = bits_table[scan])) {
+          coef[r] = 0;
+          continue;
+      }
+
+      bitpos = shift_table[scan];
+      /* get_bitval will destroy bitpos */
+      ob = numbits + bitpos;
+
+      get_bitval();
+
+      /* extend sign bit */
+      if (scan && valneg) {
+          bitval = (uint16)bitval | (negate_h[ob] << 8) | negate_l[ob];
+      }
+      coef[r] = (int8)(bitval >> (DESCALE_FACTOR+2));
+  }
 }
 
 void get_bitval(void) {
