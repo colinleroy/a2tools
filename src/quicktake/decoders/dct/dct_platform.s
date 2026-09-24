@@ -265,9 +265,8 @@ inc_row:
         sta     _tmp3
 
         lda     _tmp12
-        beq     :+
         MULT_362
-:       sec
+        sec
         sbc     _tmp13
         sta     _tmp12
 
@@ -288,30 +287,26 @@ inc_row:
         lda     _z11
         sec
         sbc     _z13
-        beq     :+
         MULT_362
-:       sta     _tmp11
+        sta     _tmp11
 
         lda     _z10
-        beq     :+
         MULT_669
-:       sta     _z13
+        sta     _z13
 
         lda     _z10
         clc
         adc     _z12
-        beq     :+
         MULT_473
-:       sta     _z5
+        sta     _z5
 
         sec
         sbc     _z13
         sta     _tmp12
 
         lda     _z12
-        beq     :+
         MULT_277
-:       sec
+        sec
         sbc     _z5
         sta     _tmp10
 

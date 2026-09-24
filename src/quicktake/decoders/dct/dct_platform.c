@@ -103,39 +103,21 @@ void idct_common(void) {
         tmp0 = tmp10 + tmp13;
         tmp3 = tmp10 - tmp13;
 
-        if (tmp12) {
-          tmp12 = mul_362(tmp12);
-        }
+        tmp12 = mul_362(tmp12);
         tmp12 -= tmp13;
         tmp1 = tmp11 + tmp12;
         tmp2 = tmp11 - tmp12;
 
         tmp7 = z11 + z13;
 
-        if (z11 - z13) {
-          tmp11 = mul_362(z11 - z13);
-        } else {
-          tmp11 = 0;
-        }
+        tmp11 = mul_362(z11 - z13);
 
-        if (z10) {
-          z13 = mul_669(z10);
-        } else {
-          z13 = 0;
-        }
+        z13 = mul_669(z10);
 
-        if (z10 + z12) {
-          z5 = mul_473(z10 + z12);
-        } else {
-          z5 = 0;
-        }
+        z5 = mul_473(z10 + z12);
         tmp12 = z5 - z13;
 
-        if (z12) {
-          tmp10 = mul_277(z12);
-        } else {
-          tmp10 = 0;
-        }
+        tmp10 = mul_277(z12);
         tmp10 -= z5;
 
         tmp6 = tmp12 - tmp7;
