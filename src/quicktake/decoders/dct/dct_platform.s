@@ -452,7 +452,7 @@ full_rows:
 .scope
         asl
         bcc     :+
-        lda     #$80
+        lda     #$FF
 :
 .endscope
 .endmacro

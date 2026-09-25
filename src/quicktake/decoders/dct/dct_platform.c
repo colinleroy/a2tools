@@ -52,11 +52,6 @@ void get_coeffs(void) {
       bitpos = 0;
 
       get_bitval();
-
-      /* extend sign bit */
-      if (scan && valneg) {
-          bitval = (uint16)bitval | negate[bitpos];
-      }
       coef[r] = (int8)(bitval);
   }
 }
@@ -79,10 +74,15 @@ void get_bitval(void) {
       continue;
     }
     if (valneg) {
-      bitval |= bitmask[bitpos] ;
+      bitval |= bitmask[bitpos];
     }
     bitpos++;
   } while (--numbits);
+
+  /* extend sign bit */
+  if (scan && valneg) {
+      bitval = (uint16)bitval | negate[bitpos];
+  }
 }
 
 void advance_block(void) {
@@ -170,7 +170,7 @@ void idct_1d_rows(void) {
 }
 
 
-#define CLAMPU(x) (((uint8)(x) & 0x80) != 0 ? -128 : ((x)<<DESCALE_FACTOR))
+#define CLAMPU(x) (((uint8)(x) & 0x80) != 0 ? 255 : ((x)<<DESCALE_FACTOR))
 void idct_1d_cols(void) {
     uint8 x;
     for (x = 0; x < 16; x+=2) {
