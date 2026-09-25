@@ -81,15 +81,12 @@ void get_bitval(void) {
       bitval >>= 1;
       bitval |= 0x80;
     } while (--ign_bits);
-    goto done;
+    return;
   }
 shift_pos:
   do {
     bitval >>= 1;
   } while (--ign_bits);
-
-done:
-  printf("bitval %08B scan %d\n", bitval, scan);
 }
 
 void advance_block(void) {

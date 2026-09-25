@@ -4,7 +4,7 @@
         .export _idx
         .export _numbits
         .export _SCAN, _coef, _scan, _ign_bits
-        .export _nbits_avail, _bitmask, _negate
+        .export _nbits_avail
         .export _mul362_m, _mul362_l
         .export _mul473_m, _mul473_l
         .export _mul277_m, _mul277_l
@@ -22,11 +22,12 @@
 
         .export xbck, ybck, abck
 
-        .importzp _zp6, _zp7, _zp8
+        .importzp _zp6, _zp7, _zp8, _zp10
 
-xbck = _zp6
-ybck = _zp7
-abck = _zp8
+xbck         = _zp6
+ybck         = _zp7
+abck         = _zp8
+_nbits_avail = _zp10                    ; Used across bands
 
 DESCALE_FACTOR = 1
 IGNORE_BITS_0 = (DESCALE_FACTOR+2-0)
@@ -83,24 +84,6 @@ _SCAN:                  .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
                         .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
                         .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
 
-_bitmask:               .byte %00000001
-                        .byte %00000010
-                        .byte %00000100
-                        .byte %00001000
-                        .byte %00010000
-                        .byte %00100000
-                        .byte %01000000
-                        .byte %10000000
-
-_negate:                .byte %11111111
-                        .byte %11111110
-                        .byte %11111100
-                        .byte %11111000
-                        .byte %11110000
-                        .byte %11100000
-                        .byte %11000000
-                        .byte %10000000
-
 _cache_start:           .addr _cache
 
         .segment "BSS"
@@ -154,7 +137,6 @@ _blocks_rem_in_row:     .res 1
 _scan:                  .res 1
 _ign_bits:              .res 1
 _numbits:               .res 1
-_nbits_avail:           .res 1
 
         .segment "DATA"
 

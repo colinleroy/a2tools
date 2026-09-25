@@ -17,7 +17,6 @@
         .import _cache
         .import _bitmask, _negate, _ign_bits
         .import _SCAN, _scan
-        .import _nbits_avail, _numbits
 
         .import _blocks_per_row, _blocks_rem_in_row
         .import _actual_width
@@ -26,7 +25,7 @@
         .import _read, _cputsxy
         .import decsp4, pushax 
         .importzp _prev_ram_irq_vector, c_sp
-        .importzp xbck, ybck, abck
+        .importzp xbck, ybck, abck, _nbits_avail
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
 
@@ -89,8 +88,8 @@ _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
 .proc fill_cache
-        stx     xbck
         sty     ybck
+        sta     abck
         ldx     #0
         lda     #7
         jsr     pushax
@@ -130,42 +129,35 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         lda     #<_decoding_str
         ldx     #>_decoding_str
         jsr     _cputsxy
-        ldx     xbck
         ldy     ybck
-        jmp     inc_cache_finish
+        lda     abck
+        ; Fallthrough
 .endproc
-
-.proc inc_cache_high
-        inc     _cache_read+1
-        lda     _cache_read+1
-        cmp     #>CACHE_END
-        bne     inc_cache_finish
-        jmp     fill_cache
+.proc inc_cache_finish
+        ldx     #7                      ; re-set nbits_avail
+        bne     inc_cache_done
 .endproc
 
 .proc inc_cache
-        sta     abck
-        lda     #7
-        sta     _nbits_avail
+        ldx     #7
         inc     _cache_read
-        beq     inc_cache_high
+        bne     inc_cache_done
+        inc     _cache_read+1
+        ldx     _cache_read+1
+        cpx     #>CACHE_END
+        bne     inc_cache_finish
+        jmp     fill_cache
 .endproc
-        ; Fallthrough
-.proc inc_cache_finish
-        lda     abck
-        jmp     inc_cache_done
-.endproc
-; Much left to optimize there
-; Split read to avoid lda/ora/sta *2
-; use ZP
 
 ; Enter with _numbits in Y, _ign_bits in X
 ; Exits with carry set if last bit set (neg)
 ; Exits with bitval in A
 .macro GET_BITVAL
         lda     #0                      ; Init bitval
+        stx     _ign_bits
+        ldx     _nbits_avail
 next_bit:
-        dec     _nbits_avail
+        dex
         bmi     inc_cache
 inc_cache_done:
 _cache_read = *+1
@@ -174,6 +166,9 @@ _cache_read = *+1
         dey
         bne     next_bit
 
+        stx     _nbits_avail            ; Remember how many bits we have
+
+        ldx     _ign_bits
         ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
         beq     shift_pos
         cmp     #$80
@@ -195,7 +190,6 @@ done:
         ldy     #0
 next_coeff:
         sty     _scan
-        ldx     _SCAN,y
 
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
@@ -206,8 +200,8 @@ shift_table = *+1
 
         GET_BITVAL                      ; Exits with carry if neg, low byte in A
         ; coef[r] = (int8)(bitval);
-        ldx     _SCAN,y
 inc_scan:
+        ldx     _SCAN,y
         sta     _coef,x                 ; zero, easy way out
         iny
         cpy     #64

@@ -27,6 +27,8 @@ extern uint8 scan;
 extern uint8 ob;
 
 extern int8 nbits_avail;
+#pragma zpsym("nbits_avail")
+
 extern uint8 bitmask[8];
 extern uint8 negate[8];
 
