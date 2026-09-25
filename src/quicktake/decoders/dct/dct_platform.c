@@ -49,8 +49,6 @@ void get_coeffs(void) {
       }
       ign_bits = shift_table[scan];
 
-      bitpos = 0;
-
       get_bitval();
       coef[r] = (int8)(bitval);
   }
@@ -59,8 +57,6 @@ void get_coeffs(void) {
 void get_bitval(void) {
   bitval = valneg = 0;
 
-  bitpos = numbits - ign_bits;
-  
   do {
     if (--nbits_avail < 0) {
         nbits_avail = 7;
@@ -78,12 +74,21 @@ void get_bitval(void) {
     }
   } while (--numbits);
 
-  while (ign_bits-- > 0) {
-    bitval >>= 1;
-    if (scan && valneg) {
+  if (!scan) {
+    goto shift_pos;
+  } else if (valneg) {
+    do {
+      bitval >>= 1;
       bitval |= 0x80;
-    }
+    } while (--ign_bits);
+    goto done;
   }
+shift_pos:
+  do {
+    bitval >>= 1;
+  } while (--ign_bits);
+
+done:
   printf("bitval %08B scan %d\n", bitval, scan);
 }
 

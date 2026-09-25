@@ -2,7 +2,7 @@
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
         .export _idx
-        .export _numbits, _bitpos
+        .export _numbits
         .export _SCAN, _coef, _scan, _ign_bits
         .export _nbits_avail, _bitmask, _negate
         .export _mul362_m, _mul362_l
@@ -36,41 +36,41 @@ IGNORE_BITS_3 = (DESCALE_FACTOR+2-3)
 
         .segment "DATA"
 .align 256
-_normal_bits:           .byte 8,8,8,7,7,7,7,7
-                        .byte 7,7,6,5,6,7,7,7
-                        .byte 6,5,5,5,5,3,0,0
-                        .byte 5,5,5,6,6,5,4,4
-                        .byte 0,0,0,0,0,0,0,0
-                        .byte 4,4,4,0,0,0,0,0
-                        .byte 0,0,0,0,0,0,0,0
-                        .byte 0,0,0,0,0,0,0,0
+_normal_bits:           .byte 8, 8, 8, 7, 7, 7, 7, 7
+                        .byte 7, 7, 6, 5, 6, 7, 7, 7
+                        .byte 6, 5, 5, 5, 5, 3, 0, 0
+                        .byte 5, 5, 5, 6, 6, 5, 4, 4
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
+                        .byte 4, 4, 4, 0, 0, 0, 0, 0
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
 
-_normal_shift:          .byte IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2
-                        .byte IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_3,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2
-                        .byte IGNORE_BITS_2,IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_2,IGNORE_BITS_3,IGNORE_BITS_0,IGNORE_BITS_0
-                        .byte IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_3
-                        .byte IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0
-                        .byte IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_3,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0
-                        .byte IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0
-                        .byte IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0
+_normal_shift:          .byte 1, 1, 1, 2, 2, 2, 2, 2
+                        .byte 2, 2, 3, 3, 3, 2, 2, 2
+                        .byte 3, 3, 3, 3, 4, 5, 0, 0
+                        .byte 3, 3, 3, 3, 3, 3, 4, 4
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
+                        .byte 4, 4, 4, 0, 0, 0, 0, 0
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
+                        .byte 0, 0, 0, 0, 0, 0, 0, 0
 
-_superfine_bits:        .byte 10,10,10,9,9,9,8,8
-                        .byte 8,8,7,7,7,8,8,8
-                        .byte 7,7,7,7,6,5,6,6
-                        .byte 7,7,7,7,7,7,6,6
-                        .byte 6,6,5,4,4,4,5,6
-                        .byte 6,6,6,6,6,6,5,4
-                        .byte 3,3,3,5,6,6,5,4
-                        .byte 3,3,3,3,4,3,3,3
+_superfine_bits:        .byte 10,10,10,9, 9, 9, 8, 8
+                        .byte 8, 8, 7, 7, 7, 8, 8, 8
+                        .byte 7, 7, 7, 7, 6, 5, 6, 6
+                        .byte 7, 7, 7, 7, 7, 7, 6, 6
+                        .byte 6, 6, 5, 4, 4, 4, 5, 6
+                        .byte 6, 6, 6, 6, 6, 6, 5, 4
+                        .byte 3, 3, 3, 5, 6, 6, 5, 4
+                        .byte 3, 3, 3, 3, 4, 3, 3, 3
 
-_superfine_shift:       .byte IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_0,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1
-                        .byte IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_1,IGNORE_BITS_2
-                        .byte IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2,IGNORE_BITS_2
+_superfine_shift:       .byte 1, 1, 1, 2, 2, 2, 2, 2
+                        .byte 2, 2, 3, 3, 3, 2, 2, 2
+                        .byte 3, 3, 3, 3, 4, 5, 4, 4
+                        .byte 3, 3, 3, 3, 3, 3, 4, 4
+                        .byte 4, 4, 5, 6, 6, 6, 5, 4
+                        .byte 4, 4, 4, 4, 4, 4, 5, 6
+                        .byte 6, 6, 6, 5, 4, 4, 5, 5
+                        .byte 6, 6, 6, 6, 5, 6, 6, 6
 
 .assert <* = 0, error
 
@@ -154,7 +154,6 @@ _blocks_rem_in_row:     .res 1
 _scan:                  .res 1
 _ign_bits:              .res 1
 _numbits:               .res 1
-_bitpos:                .res 1
 _nbits_avail:           .res 1
 
         .segment "DATA"

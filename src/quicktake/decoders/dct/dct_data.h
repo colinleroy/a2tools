@@ -18,7 +18,6 @@ extern uint8 *idx6;
 extern uint8 *idx7;
 
 extern uint8 numbits;
-extern uint8 bitpos;
 extern uint8 valneg;
 extern int16 bitval;
 

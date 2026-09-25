@@ -159,33 +159,36 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 ; Split read to avoid lda/ora/sta *2
 ; use ZP
 
+; Enter with _numbits in Y, _ign_bits in X
 ; Exits with carry set if last bit set (neg)
-; Exits with bitval low in A, bitpos in X
+; Exits with bitval in A
 .macro GET_BITVAL
         lda     #0                      ; Init bitval
-        tax                             ; bitpos is X
-
-        ldy     _numbits                ; Get all bits
 next_bit:
         dec     _nbits_avail
         bmi     inc_cache
 inc_cache_done:
 _cache_read = *+1
         lsr     $FFFF
-        dec     _ign_bits
-        bpl     bit_done
-        bcc     :+
-        ora     _bitmask,x
-:       inx                             ; update bitpos
-bit_done:
+        ror
         dey
         bne     next_bit
 
-        ldy     _scan                   ; is coef negative?
-        beq     store_coef
-        bcc     store_coef
-
-        ora     _negate,x               ; extend sign bit
+        ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
+        beq     shift_pos
+        cmp     #$80
+        bcc     shift_pos               ; is last bit 1 (negative) ?
+shift_neg:
+:       sec
+        ror
+        dex
+        bne     :-
+        beq     done
+shift_pos:
+:       lsr
+        dex
+        bne     :-
+done:
 .endmacro
 
 .proc _get_coeffs
@@ -197,15 +200,11 @@ next_coeff:
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
         beq     inc_scan                ; eq jmp here
-load_coef:
-        sta     _numbits
 shift_table = *+1
-        lda     $FFFF,y                 ; get ignored bits shift
-        sta     _ign_bits
+        ldx     $FFFF,y                 ; get ignored bits shift
+        tay                             ; num_bits in Y
 
         GET_BITVAL                      ; Exits with carry if neg, low byte in A
-
-store_coef:
         ; coef[r] = (int8)(bitval);
         ldx     _SCAN,y
 inc_scan:
