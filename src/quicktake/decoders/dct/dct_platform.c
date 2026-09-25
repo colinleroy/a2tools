@@ -59,6 +59,8 @@ void get_coeffs(void) {
 void get_bitval(void) {
   bitval = valneg = 0;
 
+  bitpos = numbits - ign_bits;
+  
   do {
     if (--nbits_avail < 0) {
         nbits_avail = 7;
@@ -70,19 +72,19 @@ void get_bitval(void) {
 
     valneg = *cur_cache_ptr & 1;
     *cur_cache_ptr >>= 1;
-    if (--ign_bits >= 0) {
-      continue;
-    }
+    bitval >>= 1;
     if (valneg) {
-      bitval |= bitmask[bitpos];
+      bitval |= 0x80;
     }
-    bitpos++;
   } while (--numbits);
 
-  /* extend sign bit */
-  if (scan && valneg) {
-      bitval = (uint16)bitval | negate[bitpos];
+  while (ign_bits-- > 0) {
+    bitval >>= 1;
+    if (scan && valneg) {
+      bitval |= 0x80;
+    }
   }
+  printf("bitval %08B scan %d\n", bitval, scan);
 }
 
 void advance_block(void) {

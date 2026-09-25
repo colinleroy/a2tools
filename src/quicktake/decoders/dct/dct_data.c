@@ -51,49 +51,52 @@ uint8 negate[8] = {
   0b10000000,
 };
 
+/* bits : how many bits to read */
 uint8 normal_bits[64] = {
-    8,8,8,7,7,7,7,7,
-    7,7,6,5,6,7,7,7,
-    6,5,5,5,5,3,0,0,
-    5,5,5,6,6,5,4,4,
-    0,0,0,0,0,0,0,0,
-    4,4,4,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0
+    8, 8, 8, 7, 7, 7, 7, 7,
+    7, 7, 6, 5, 6, 7, 7, 7,
+    6, 5, 5, 5, 5, 3, 0, 0,
+    5, 5, 5, 6, 6, 5, 4, 4,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    4, 4, 4, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
 };
 
-#define IGNORE_BITS(x) (DESCALE_FACTOR+2-(x))
+/* shift: how many times to shift right after getting bits,
+ * to align them right while shifting >> 3.
+ */
 uint8 normal_shift[64] = {
-    IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2),
-    IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(3), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2),
-    IGNORE_BITS(2), IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(2), IGNORE_BITS(3), IGNORE_BITS(0), IGNORE_BITS(0),
-    IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(3),
-    IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0),
-    IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(3), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0),
-    IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0),
-    IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0)
+    1, 1, 1, 2, 2, 2, 2, 2,
+    2, 2, 3, 3, 3, 2, 2, 2,
+    3, 3, 3, 3, 4, 5, 0, 0,
+    3, 3, 3, 3, 3, 3, 4, 4,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    4, 4, 4, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
 };
 
 uint8 superfine_bits[64] = {
-    10,10,10,9,9,9,8,8,
-    8,8,7,7,7,8,8,8,
-    7,7,7,7,6,5,6,6,
-    7,7,7,7,7,7,6,6,
-    6,6,5,4,4,4,5,6,
-    6,6,6,6,6,6,5,4,
-    3,3,3,5,6,6,5,4,
-    3,3,3,3,4,3,3,3
+    10,10,10,9, 9, 9, 8, 8,
+    8, 8, 7, 7, 7, 8, 8, 8,
+    7, 7, 7, 7, 6, 5, 6, 6,
+    7, 7, 7, 7, 7, 7, 6, 6,
+    6, 6, 5, 4, 4, 4, 5, 6,
+    6, 6, 6, 6, 6, 6, 5, 4,
+    3, 3, 3, 5, 6, 6, 5, 4,
+    3, 3, 3, 3, 4, 3, 3, 3
 };
 
 uint8 superfine_shift[64] = {
-    IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(0), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1),
-    IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(1), IGNORE_BITS(2),
-    IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2), IGNORE_BITS(2)
+    1, 1, 1, 2, 2, 2, 2, 2,
+    2, 2, 3, 3, 3, 2, 2, 2,
+    3, 3, 3, 3, 4, 5, 4, 4,
+    3, 3, 3, 3, 3, 3, 4, 4,
+    4, 4, 5, 6, 6, 6, 5, 4,
+    4, 4, 4, 4, 4, 4, 5, 6,
+    6, 6, 6, 5, 4, 4, 5, 5,
+    6, 6, 6, 6, 5, 6, 6, 6
 };
 
 #ifdef __CC65__
