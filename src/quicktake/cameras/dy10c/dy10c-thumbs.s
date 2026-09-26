@@ -1,28 +1,50 @@
         .export           _dy10c_thumb_histogram
-        .export           _dy10c_load_thumb_data
+        .export           _load_normal_thumb
+
+        .import           _err_buf, _thumb_buf, _thumb_len
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
-        .import           pushax, pusha0, push0
+        .import           pushax, pusha0, push0ax, tossub0ax
+        .import           tosudiva0
 
-        .importzp         sreg
+        .importzp         _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, sreg
 
         .include          "../qt-thumbs.inc"
         .include          "stdio.inc"
+        .include          "fcntl.inc"
 
+page            = _zp6        ; word
+rem_bytes       = _zp8        ; byte
+cur_byte        = _zp9        ; byte
+curr_hist       = _zp10       ; word
+prev_x          = _zp12       ; byte
+cur_x           = _zp13       ; byte
 .segment "DY10C"
 
 .proc _dy10c_thumb_histogram
-        ; Seek to start of data
-        lda     _ifd
+        lda     _ifd          ; go to end of file
         jsr     pusha0
 
-        jsr     push0         ; Whence is long
-        lda     #(96*2)       ; Offset 96*2 to skip two lines
-        jsr     pusha0
-        lda     #SEEK_SET
-        ldx     #0
+        lda     #0
+        tax
+        jsr     push0ax
+        lda     #<SEEK_END
+        ldx     #>SEEK_END
         jsr     _lseek
 
+        stx     _thumb_len    ; Note size.
+
+        lda     _ifd          ; Rewind file
+        jsr     pusha0
+
+        lda     #0
+        tax
+        jsr     push0ax
+        lda     #<SEEK_SET
+        ldx     #>SEEK_SET
+        jsr     _lseek
+
+        ldx     #$00
 next:                         ; Don't really do the histogram.
         txa
         sta     _opt_histogram,x
@@ -31,49 +53,48 @@ next:                         ; Don't really do the histogram.
         rts
 .endproc
 
-.proc _dy10c_load_thumb_data
-        and     #$03
+.proc read_line
+        pha
+        lda     _ifd          ; Rewind file
+        jsr     pusha0
+
+        lda     #<(_buffer+256)
+        ldx     #>(_buffer+256)
+        jsr     pushax
+        pla
+        ldx     #$00
+        jmp     _read
+.endproc
+
+.proc _load_normal_thumb
+        and     #$3
         beq     :+
         rts
 
-:       lda     _ifd
-        jsr     pusha0
-        lda     #<(_buffer + 256)
-        ldx     #>(_buffer + 256)
-        jsr     pushax
-        lda     #<(96)
-        ldx     #>(96)
-        jsr     _read
-    
-        ldx     #8
-        ldy     #0
-next:
-        lda     _buffer+256,x
-        and     #$F0
+:       lda     #20
+        jsr     read_line
+
+        ldx     #19
+        ldy     #159
+
+:       lda     _buffer+256,x
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
-
-        lda     _buffer+256+1,x
-        asl
-        asl
-        asl
-        asl
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
-
-        clc
-        txa
-        adc     #3
-        tax
-        tya
-        adc     #8
-        tay
-        cpy     #(THUMB_WIDTH*2)
-        bcc     next
-
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        dex
+        bne     :-
         rts
 .endproc
