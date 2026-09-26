@@ -567,39 +567,28 @@ static uint8 setup(int argc, char *argv[]) {
   #if DEBUG_THUMB==50
   load_driver("DC50.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_DC50;
-  while (1) {
-    clear_dhgr();
-    qt_edit_image("/DC50/THUMB", THUMB_WIDTH*2);
-    cgetc();
-  }
   #endif
   #if DEBUG_THUMB==100
   load_driver("QT1X0.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_100;
-  while (1) {
-    clear_dhgr();
-    qt_edit_image("/QT100/THUMB", THUMB_WIDTH*2);
-    cgetc();
-  }
   #endif
   #if DEBUG_THUMB==150
   load_driver("QT1X0.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_150;
-  while (1) {
-    clear_dhgr();
-    qt_edit_image("/QT150/THUMB", THUMB_WIDTH*2);
-    cgetc();
-  }
   #endif
   #if DEBUG_THUMB==200
   load_driver("FUJI.ZX", SER_BAUD_115200);
   serial_model = QT_MODEL_FUJI;
+  #endif
+  #if DEBUG_THUMB==3000
+  load_driver("DY10C.ZX", SER_BAUD_115200);
+  serial_model = QT_MODEL_DY10C;
+  #endif
   while (1) {
     clear_dhgr();
-    qt_edit_image("/QT200/THUMB", THUMB_WIDTH*2);
+    qt_edit_image("/QTTEST/THUMB", THUMB_WIDTH*2);
     cgetc();
   }
-  #endif
 #endif
 #ifdef DEBUG_HD
   if (argc == 1) {
@@ -625,22 +614,19 @@ static uint8 setup(int argc, char *argv[]) {
   if (argc == 1) {
     exec_pass = 1;
     #if DEBUG_FLOPPY==50
-    zexec("-RADCCONV /DC50/TEST50.KDC 0 0 640 480");
+    zexec("-RADCCONV /QTTEST/TEST50.KDC 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==100
-    zexec("-QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
-    #endif
-    #if DEBUG_FLOPPY==98
-    zexec("-QKTKCONV /QT100/TEST100.QTK 0 0 640 480");
+    zexec("-QKTKCONV /QTTEST/TEST100.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==150
-    zexec("-RADCCONV /QT150/TEST150.QTK 0 0 640 480");
+    zexec("-RADCCONV /QTTEST/TEST150.QTK 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==200
-    zexec("-JPEGCONV /QT200/TEST200.JPG 0 0 640 480");
+    zexec("-JPEGCONV /QTTEST/TEST200.JPG 0 0 640 480");
     #endif
     #if DEBUG_FLOPPY==3000
-    zexec("-DCTCONV /ES3000/TEST3000.DCT 0 0 640 480");
+    zexec("-DCTCONV /QTTEST/TEST3000.DCT 0 0 640 480");
     #endif
   }
 #endif

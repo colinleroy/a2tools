@@ -4,23 +4,23 @@ if [ "$1" != "" ]; then
   TYPE=$1
   if [ "$TYPE" = "50" ]; then
     FLOPNAME="dc50"
-    FLOP2="-flop2 ../../disks/dc50.dsk"
+    FLOP2="-flop2 ../../disks/dc50.po"
   elif  [ "$TYPE" = "100" ]; then
     FLOPNAME="qt100"
-	  FLOP2="-flop2 ../../disks/qt100.dsk"
+	  FLOP2="-flop2 ../../disks/qt100.po"
   elif  [ "$TYPE" = "150" ]; then
     FLOPNAME="qt150"
-	  FLOP2="-flop2 ../../disks/qt150.dsk"
+	  FLOP2="-flop2 ../../disks/qt150.po"
   elif  [ "$TYPE" = "50" ]; then
     FLOPNAME="dc50"
-    FLOP2="-flop2 ../../disks/dc50.dsk"
+    FLOP2="-flop2 ../../disks/dc50.po"
   elif  [ "$TYPE" = "3000" ]; then
     FLOPNAME="es3000"
-    FLOP2="-flop2 ../../disks/es3000.dsk"
+    FLOP2="-flop2 ../../disks/es3000.po"
   fi
 else
   FLOPNAME="qt100"
-	FLOP2="-flop2 ../../disks/qt100.dsk"
+	FLOP2="-flop2 ../../disks/qt100.po"
 fi
 
 if [ "$1" = "200" ]; then
@@ -36,10 +36,11 @@ fi
 TESTFILE=TEST$1.$EXT
 if [ "$2" != "" ]; then
   TESTFILE=$2
-  java -jar ../../bin/ac.jar -d ../../disks/$FLOPNAME.dsk TEST$1.$EXT
+  [ -f ../../disks/$FLOPNAME.po ] || java -jar ../../bin/ac.jar -pro140 ../../disks/$FLOPNAME.po QTTEST
+  java -jar ../../bin/ac.jar -d ../../disks/$FLOPNAME.po TEST$1.$EXT
   
-  echo "Putting $TESTFILE as TEST$1.$EXT into $FLOPNAME.dsk"
-  java -jar ../../bin/ac.jar -p ../../disks/$FLOPNAME.dsk \
+  echo "Putting $TESTFILE as TEST$1.$EXT into $FLOPNAME.po"
+  java -jar ../../bin/ac.jar -p ../../disks/$FLOPNAME.po \
     TEST$1.$EXT BIN '$2000' < "$TESTFILE"
 fi
 

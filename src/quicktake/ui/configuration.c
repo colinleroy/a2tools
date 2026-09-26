@@ -92,6 +92,9 @@ void main(int argc, char *argv) {
 #ifdef DEBUG_HD
   zexec("-SLOWTAKE");
 #endif
+#ifdef DEBUG_THUMB
+  zexec("-SLOWTAKE");
+#endif
 
 #ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
