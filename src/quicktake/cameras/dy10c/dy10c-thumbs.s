@@ -1,9 +1,7 @@
         .export           _dy10c_thumb_histogram
-        .export           _load_normal_thumb
-        .export           _load_fine_thumb
-        .export           _load_superfine_thumb
+        .export           _dy10c_load_thumb_data
 
-        .import           _err_buf, _thumb_buf, _thumb_len
+        .import           _err_buf, _thumb_buf
 
         .import           _read, _lseek, _ifd, _buffer, _opt_histogram
         .import           pushax, pusha0, push0ax, tossub0ax
@@ -23,6 +21,8 @@ prev_x          = _zp12       ; byte
 cur_x           = _zp13       ; byte
 .segment "DY10C"
 
+thumb_len:      .byte 1
+
 .proc _dy10c_thumb_histogram
         lda     _ifd          ; go to end of file
         jsr     pusha0
@@ -34,7 +34,7 @@ cur_x           = _zp13       ; byte
         ldx     #>SEEK_END
         jsr     _lseek
 
-        stx     _thumb_len    ; Note size.
+        stx     thumb_len     ; Note size.
 
         lda     _ifd          ; Rewind file
         jsr     pusha0
@@ -166,4 +166,18 @@ next:                         ; Don't really do the histogram.
         dex
         bne     :-
         rts
+.endproc
+
+.proc _dy10c_load_thumb_data
+        ldx    thumb_len
+        cpx    #>2048
+        beq    do_normal
+        cpx    #>8192
+        beq    do_fine
+do_superfine:
+        jmp    _load_superfine_thumb
+do_fine:
+        jmp    _load_fine_thumb
+do_normal:
+        jmp    _load_normal_thumb
 .endproc

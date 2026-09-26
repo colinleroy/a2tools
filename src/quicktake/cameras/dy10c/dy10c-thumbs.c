@@ -9,7 +9,6 @@
 extern int ifd;
 
 uint8 thumb_len;
-#ifndef __CC65__
 void dy10c_thumb_histogram(void) {
   uint8 x = 0;
   thumb_len = lseek(ifd, 0, SEEK_END) >> 8;
@@ -30,14 +29,14 @@ static void load_normal_thumb(uint8 line) {
     off = 159;
     do {
       c   = (buffer+256)[i];
-      THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
     } while (i--);
   }
 }
@@ -52,10 +51,10 @@ static void load_fine_thumb(uint8 line) {
     off = 159;
     do {
       c   = (buffer+256)[i];
-      THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
     } while (i--);
   }
 }
@@ -75,19 +74,14 @@ static void load_superfine_thumb(uint8 line) {
 
       c = a | b;
 
-      THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] =
-        THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
+      THUMBNAIL_BUF_START[off--] = c;
       i--;
     } while (i);
   }
 }
-#else
-void load_normal_thumb(uint8 line);
-void load_fine_thumb(uint8 line);
-void load_superfine_thumb(uint8 line);
-#endif
 
 void dy10c_load_thumb_data(uint8 line) {
   switch (thumb_len) {
