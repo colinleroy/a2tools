@@ -20,6 +20,8 @@ static cam_driver cameras[] = {
   {"FUJI.ZX",  "Apple Quicktake 200"},
   {"SRRA.ZX",  "Epson PhotoPC PCDC001"},
   {"PS350.ZX", "Canon PowerShot 350"},
+  {"DY10C.ZX", "Chinon ES-3000"},
+  {"DY10C.ZX", "Dycam 10-C"},
   {"FUJI.ZX",  "Fujifilm DS-7"},
   {"FUJI.ZX",  "Fujifilm DX-8"},
   {"DC50.ZX",  "Kodak DC50 Zoom"},

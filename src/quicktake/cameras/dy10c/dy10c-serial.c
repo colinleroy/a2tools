@@ -114,7 +114,7 @@ extern thumb_info th_info;
  */
 static uint8 dy10c_wakeup(CamSpeed speed) {
   uint8 c, tries = 3;
-  cputs("Pinging Kodak DY10C...");
+  cputs("Pinging Dycam 10-C / Chinon ES-3000...");
 
 again:
   simple_serial_set_speed(SER_BAUD_9600);
