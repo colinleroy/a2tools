@@ -1,5 +1,7 @@
         .export           _dy10c_thumb_histogram
         .export           _load_normal_thumb
+        .export           _load_fine_thumb
+        .export           _load_superfine_thumb
 
         .import           _err_buf, _thumb_buf, _thumb_len
 
@@ -94,6 +96,73 @@ next:                         ; Don't really do the histogram.
         dey
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
         dey
+
+        dex
+        bne     :-
+        rts
+.endproc
+
+.proc _load_fine_thumb
+        and     #$1
+        beq     :+
+        rts
+
+:       lda     #40
+        jsr     read_line
+
+        ldx     #39
+        ldy     #159
+
+:       lda     _buffer+256,x
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+
+        dex
+        bne     :-
+        rts
+.endproc
+
+.proc _load_superfine_thumb
+        and     #$1
+        beq     :+
+        rts
+
+:       lda     #80
+        jsr     read_line
+
+        ldx     #80
+        ldy     #159
+
+:       lda     _buffer+256-1,x
+        asl
+        asl
+        asl
+        asl
+        asl
+        asl
+        sta     tmp1
+        
+        dex
+        lda     _buffer+256-1,x
+        lsr
+        lsr
+        ora     tmp1
+
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+        sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
+        dey
+
         dex
         bne     :-
         rts

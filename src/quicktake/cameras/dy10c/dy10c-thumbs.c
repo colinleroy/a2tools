@@ -41,25 +41,53 @@ static void load_normal_thumb(uint8 line) {
     } while (i--);
   }
 }
-#else
-void load_normal_thumb(uint8 line);
-#endif
 
 static void load_fine_thumb(uint8 line) {
-  uint8 i, x, c;
-  read(ifd, buffer+256, 40);
-  for (i = 0, x = 0; x < 80;) {
-    c   = (buffer+256)[i];
-    THUMBNAIL_BUF_START[x] =
-      THUMBNAIL_BUF_START[x+1] = c;
+  uint8 i, off, c;
 
-    x+=2;
-    i++;
+  if (!(line & 1)) {
+    read(ifd, buffer+256, 40);
+    /* Unpack */
+    i = 39;
+    off = 159;
+    do {
+      c   = (buffer+256)[i];
+      THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] = c;
+    } while (i--);
   }
 }
 
 static void load_superfine_thumb(uint8 line) {
+  uint8 i, off, a, b, c;
+
+  if (!(line & 1)) {
+    read(ifd, buffer+256, 80);
+    /* Unpack */
+    i = 79;
+    off = 159;
+    do {
+      a = (buffer+256)[i] << 6;
+      i--;
+      b = (buffer+256)[i] >> 2;
+
+      c = a | b;
+
+      THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] =
+        THUMBNAIL_BUF_START[off--] = c;
+      i--;
+    } while (i);
+  }
 }
+#else
+void load_normal_thumb(uint8 line);
+void load_fine_thumb(uint8 line);
+void load_superfine_thumb(uint8 line);
+#endif
 
 void dy10c_load_thumb_data(uint8 line) {
   switch (thumb_len) {
