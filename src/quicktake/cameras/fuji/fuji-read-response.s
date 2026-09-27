@@ -11,6 +11,8 @@
         .include            "stdio.inc"
         .include            "fuji.inc"
 
+.segment "FUJI"
+
 .proc _fuji_read_response
         lda       _ack_timeout; Set minimal timeout if needed
         bne       try_read

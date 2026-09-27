@@ -237,7 +237,7 @@ static uint8 dy10c_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (dy10c_send_and_read_response(1, 0) != 0) {
+  if (dy10c_send_command() != 0) {
     return -1;
   }
 
@@ -366,7 +366,7 @@ static void dy10c_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 static uint8 dy10c_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint32 pic_size, hdr_pic_size;
-  uint8 c, blocks_to_read, d;
+  uint8 blocks_to_read, d;
 
   if (dy10c_get_picture_info(n_pic) != 0) {
     return -1;
@@ -493,23 +493,28 @@ static uint8 dy10c_get_thumbnail(uint8 n_pic, int fd) {
     case 0: blocks_to_read = 10; break;
   }
 
-  d = 0;
+  d = 1;
   dy10c_send_command();
+  goto next_block;
 
-  while (d++ < blocks_to_read) {
-    if (dy10c_read_response((char *)buffer, 1024) == 0) {
-      PC_DEBUG_PRINTF("Thumbnail block %d/%d\n", d, blocks_to_read);
-      write(fd, buffer, 1024);
+next_block:
+  if (dy10c_read_response((char *)buffer, 1024) == 0) {
+    PC_DEBUG_PRINTF("Thumbnail block %d/%d\n", d, blocks_to_read);
+    write(fd, buffer, 1024);
 
-      progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
+    progress_bar(2, wherey(), scrw - 2, d, blocks_to_read);
 
-      /* FIXME verify checksum */
+    /* FIXME verify checksum */
+    if (d++ < blocks_to_read) {
       simple_serial_putc(REP_CORRECT);
+      goto next_block;
     } else {
-      return -1;
+      simple_serial_putc(REP_CORRECT);
+      return wait_command_completion();
     }
+  } else {
+    return -1;
   }
-  return wait_command_completion();
 }
 
 #pragma warn(unused-param, push, off)
