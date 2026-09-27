@@ -223,7 +223,7 @@ static uint8 dc50_set_speed(CamSpeed speed) {
       break;
   }
 
-  if (dc50_send_and_read_response(1, 0) != 0) {
+  if (dc50_send_command() != 0) {
     return -1;
   }
 

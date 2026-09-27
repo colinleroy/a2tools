@@ -14,25 +14,17 @@
 #pragma data-name(push, "DC50")
 #pragma bss-name(push, "DC50")
 
-extern uint16 response_len;
-extern uint8 response_continues;
+static uint8 c;
 
 /* Read a reply from the camera */
 uint8 dc50_read_response(char *dest, uint16 len) {
-  int8 c;
-
-  if (len == 0) {
-    return 0;
-  }
-
-  // bzero(buffer, sizeof buffer);
-  c = simple_serial_read_no_irq(dest, len);
-  if (c == EOF) {
+  if (simple_serial_read_no_irq(dest, len) == EOF) {
+    PC_DEBUG_BUFFER("Short data", dest, len);
     return -1;
   }
   PC_DEBUG_BUFFER("Data", dest, len);
   /* Checksum */
-  simple_serial_read_no_irq((char *)&c, 1);
+  c = serial_read_byte_no_irq();
   PC_DEBUG_PRINTF("checksum %02X\n", c);
 
   return 0;
