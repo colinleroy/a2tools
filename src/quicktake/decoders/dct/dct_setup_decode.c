@@ -8,19 +8,21 @@
 uint32 data_size;
 
 char qt_setup_decode(void) {
-  if (memcmp (cache_start, DCT_MAGIC, 4)) {
+  cur_cache_ptr = cache + INITIAL_CACHE_OFFSET;
+  if (memcmp (cur_cache_ptr, DCT_MAGIC, 4)) {
 err_out:
     cputs("Invalid file.\r\n");
     return -1;
   }
 
   data_size = 
-        ((uint32)cache[DATASIZE_IDX]) |
-        ((uint32)cache[DATASIZE_IDX+1] << 8) |
-        ((uint32)cache[DATASIZE_IDX+2] << 16) |
-        ((uint32)cache[DATASIZE_IDX+3] << 24);
+        ((uint32)cur_cache_ptr[DATASIZE_IDX]) |
+        ((uint32)cur_cache_ptr[DATASIZE_IDX+1] << 8) |
+        ((uint32)cur_cache_ptr[DATASIZE_IDX+2] << 16) |
+        ((uint32)cur_cache_ptr[DATASIZE_IDX+3] << 24);
 
-  cur_cache_ptr = cache + (0x200);
+  /* Rollback one char for alignment */
+  cur_cache_ptr += (0x200) - 1;
 #ifdef __CC65__
   cache_read = cur_cache_ptr;
 #endif
@@ -49,7 +51,7 @@ err_out:
     goto err_out;
   }
 
-  nbits_avail = 8;
+  nbits_avail = 0;
 
   return 0;
 }

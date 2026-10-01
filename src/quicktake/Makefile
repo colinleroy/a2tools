@@ -323,22 +323,33 @@ jpegconv_GCCCFLAGS = \
 	-DFILE_WIDTH=256 \
 	-DJPEGCONV=1 \
 
-
+# Read 12272 bytes at offset 16 first, so we can check for cache
+# end at the end of each block coeffs instead of all the time.
+# We need the cache to be a multiple of 256 (for end of cache check)
+# and we need the cache to be a multiple of 48 as each Superfine
+# image block consumes 48 bytes (24 for Fine/Normal images).
+# The first read with the 512 bytes header breaks this, so we read with
+# offset to compensate: ((12288-512)/48 = 11760, +512 bytes of header =
+# 12272. Offset 16 to reach end-of-cache at the normal 12288.
 dctconv_CLCFLAGS = \
-	-DCACHE_SIZE=12288  --asm-define CACHE_SIZE=12288 \
-	-DRAW_X_OFFSET=0    --asm-define RAW_X_OFFSET=0 \
-	-DRAW_Y_OFFSET=0    --asm-define RAW_Y_OFFSET=0 \
-	-DRAW_WIDTH=512     --asm-define RAW_WIDTH=512 \
-	-DBAND_HEIGHT=40    --asm-define BAND_HEIGHT=40 \
-	-DFILE_WIDTH=256    --asm-define FILE_WIDTH=256 \
-	-DDECODE_WIDTH=320  --asm-define DECODE_WIDTH=320 \
-	-DDECODE_HEIGHT=240 --asm-define DECODE_HEIGHT=240 \
+	-DCACHE_SIZE=12288          --asm-define CACHE_SIZE=12288 \
+	-DINITIAL_CACHE_READ=12272  --asm-define INITIAL_CACHE_READ=12272 \
+	-DINITIAL_CACHE_OFFSET=16   --asm-define INITIAL_CACHE_OFFSET=16 \
+	-DRAW_X_OFFSET=0            --asm-define RAW_X_OFFSET=0 \
+	-DRAW_Y_OFFSET=0            --asm-define RAW_Y_OFFSET=0 \
+	-DRAW_WIDTH=512             --asm-define RAW_WIDTH=512 \
+	-DBAND_HEIGHT=40            --asm-define BAND_HEIGHT=40 \
+	-DFILE_WIDTH=256            --asm-define FILE_WIDTH=256 \
+	-DDECODE_WIDTH=320          --asm-define DECODE_WIDTH=320 \
+	-DDECODE_HEIGHT=240         --asm-define DECODE_HEIGHT=240 \
 	-DDCTCONV=1 \
 	$(CLCFLAGS) -C ../../config/apple2enh-dctconv.cfg \
 	--start-addr 0x1000  #Two file buffers
 
 dctconv_GCCCFLAGS = \
 	-DCACHE_SIZE=12288 \
+	-DINITIAL_CACHE_READ=12272 \
+	-DINITIAL_CACHE_OFFSET=16 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
 	-DRAW_WIDTH=512 \

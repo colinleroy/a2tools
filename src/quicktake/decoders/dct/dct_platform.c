@@ -40,6 +40,12 @@ static int8 mul_669(int8 w)
 int8 ign_bits;
 
 void get_coeffs(void) {
+  assert(nbits_avail == 0);
+  cur_cache_ptr++;
+  nbits_avail = 8;
+  if (cur_cache_ptr == cache_end) {
+      read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
+  }
   for (scan = 0; scan < 64; scan++) {
       uint8 r = SCAN[scan];
 
@@ -61,9 +67,6 @@ void get_bitval(void) {
     if (--nbits_avail < 0) {
         nbits_avail = 7;
         cur_cache_ptr++;
-        if (cur_cache_ptr == cache_end) {
-            read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
-        }
     }
 
     valneg = *cur_cache_ptr & 1;

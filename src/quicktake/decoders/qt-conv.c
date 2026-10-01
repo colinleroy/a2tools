@@ -88,6 +88,9 @@ uint8 *cur_cache_ptr;
 #ifndef INITIAL_CACHE_READ
 #define INITIAL_CACHE_READ CACHE_SIZE
 #endif
+#ifndef INITIAL_CACHE_OFFSET
+#define INITIAL_CACHE_OFFSET 0
+#endif
 
 static uint8 identify(const char *name)
 {
@@ -95,7 +98,7 @@ static uint8 identify(const char *name)
   height = width = 0;
 
   /* Fill cache */
-  read(ifd, cache_start, INITIAL_CACHE_READ);
+  read(ifd, cache_start+INITIAL_CACHE_OFFSET, INITIAL_CACHE_READ);
 
   cputsxy(0, 0, "Decompressing image ");
   cputs((char *)name);

@@ -88,8 +88,6 @@ _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 
 .proc fill_cache
-        sty     ybck
-        sta     abck
         ldx     #0
         lda     #7
         jsr     pushax
@@ -129,13 +127,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         lda     #<_decoding_str
         ldx     #>_decoding_str
         jsr     _cputsxy
-        ldy     ybck
-        lda     abck
-        ; Fallthrough
-.endproc
-.proc inc_cache_finish
-        ldx     #7                      ; re-set nbits_avail
-        bne     inc_cache_done
+        rts
 .endproc
 
 .proc inc_cache
@@ -143,10 +135,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         inc     _cache_read
         bne     inc_cache_done
         inc     _cache_read+1
-        ldx     _cache_read+1
-        cpx     #>CACHE_END
-        bne     inc_cache_finish
-        jmp     fill_cache
+        bne     inc_cache_done
 .endproc
 
 ; Enter with _numbits in Y, _ign_bits in X
@@ -187,6 +176,17 @@ done:
 .endmacro
 
 .proc _get_coeffs
+        ; Are we at cache end ?
+        inc     _cache_read
+        bne     :+
+        inc     _cache_read+1
+        ldx     _cache_read+1
+        cpx     #>CACHE_END
+        bne     :+
+        jsr     fill_cache
+:       ldx     #8
+        stx     _nbits_avail
+
         ldy     #0
 next_coeff:
         sty     _scan
