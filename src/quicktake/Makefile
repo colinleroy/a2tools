@@ -76,9 +76,9 @@ slowtake_SOURCES := \
 	cameras/fuji/fuji-serial.c \
 	cameras/fuji/fuji-read-response.s \
 	cameras/dc50/dc50-serial.c \
-	cameras/dc50/dc50-read-response.c \
+	cameras/dc50/dc50-read-response.s \
 	cameras/dy10c/dy10c-serial.c \
-	cameras/dy10c/dy10c-read-response.c \
+	cameras/dy10c/dy10c-read-response.s \
 	cameras/sierra/sierra-serial.c \
 	cameras/sierra/sierra-read-packet.s \
 	cameras/ps350/ps350-serial.c \
@@ -390,12 +390,12 @@ SRRA.DRV: slowtake.bin
 %.ZX: %.DRV
 	zx02 -f $< $@
 
-../zxloader/zxloader.system: ../zxloader/loader.s
-	make -C ../zxloader/ clean all
+# ../zxloader/zxloader.system: ../zxloader/loader.s
+# 	make -C ../zxloader/ clean all
 
 add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX DCTCONV.BZX ../zxloader/zxloader.system
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
-	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG.SYSTEM SYS   < ../zxloader/zxloader.system; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG.SYSTEM SYS   < /share/cc65/target/apple2/util/zxloader.system; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00  < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00   < FUJI.ZX; \
