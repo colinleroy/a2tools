@@ -23,7 +23,7 @@
 
         .import _ifd, _cache_start
         .import _read, _cputsxy
-        .import decsp4, pushax 
+        .import decsp4, pushax
         .importzp _prev_ram_irq_vector, c_sp
         .importzp xbck, ybck, abck, _nbits_avail
 
@@ -246,40 +246,91 @@ inc_row:
         jmp     _update_idx
 .endproc
 
+; int8 clamp of sum/sub:
+; x = (a + b) or (a - b)
+; no overflow               ? good
+; overflow and result > 127 ? 127
+; overflow and result < 127 ? -128
+.macro CLAMPI b
+        bvc     done
+        bmi     plus
+        lda     #$80
+        bne     done
+plus:   lda     #$7F
+done:
+.endmacro
+
+.macro ADDI b
+.scope
+        clc
+        adc     b
+        CLAMPI
+.endscope
+.endmacro
+.macro SUBI b
+.scope
+        sec
+        sbc     b
+        CLAMPI
+.endscope
+.endmacro
+
+.macro ADDIY b
+.scope
+        clc
+        adc     b,y
+        CLAMPI
+.endscope
+.endmacro
+.macro SUBIY b
+.scope
+        sec
+        sbc     b,y
+        CLAMPI
+.endscope
+.endmacro
+
+.macro ADDIX b
+.scope
+        clc
+        adc     b,x
+        CLAMPI
+.endscope
+.endmacro
+.macro SUBIX b
+.scope
+        sec
+        sbc     b,x
+        CLAMPI
+.endscope
+.endmacro
+
 .proc _idct_common
         lda     _tmp10
-        clc
-        adc     _tmp13
+        ADDI    _tmp13
         sta     _tmp0
-
         lda     _tmp10
-        sec
-        sbc     _tmp13
+        SUBI    _tmp13
         sta     _tmp3
 
         lda     _tmp12
         MULT_362
-        sec
-        sbc     _tmp13
+        SUBI    _tmp13
         sta     _tmp12
 
-        clc
-        adc     _tmp11
+        ADDI    _tmp11
         sta     _tmp1
 
         lda     _tmp11
-        sec
-        sbc     _tmp12
+        SUBI    _tmp12
         sta     _tmp2
 
         lda     _z11
-        clc
-        adc     _z13
+        ADDI    _z13
         sta     _tmp7
 
         lda     _z11
-        sec
-        sbc     _z13
+        SUBI    _z13
         MULT_362
         sta     _tmp11
 
@@ -288,33 +339,27 @@ inc_row:
         sta     _z13
 
         lda     _z10
-        clc
-        adc     _z12
+        ADDI    _z12
         MULT_473
         sta     _z5
 
-        sec
-        sbc     _z13
+        SUBI    _z13
         sta     _tmp12
 
         lda     _z12
         MULT_277
-        sec
-        sbc     _z5
+        SUBI    _z5
         sta     _tmp10
 
         lda     _tmp12
-        sec
-        sbc     _tmp7
+        SUBI    _tmp7
         sta     _tmp6
 
         lda     _tmp11
-        sec
-        sbc     _tmp6
+        SUBI    _tmp6
         sta     _tmp5
 
-        clc
-        adc     _tmp10
+        ADDI    _tmp10
         sta     _tmp4
 
         rts
@@ -352,41 +397,34 @@ next_y:
 
 full_rows:
         lda     _coef+0,y
-        clc
-        adc     _coef+8,y
+        ADDIY   _coef+8
         sta     _tmp10
         lda     _coef+0,y
-        sec
-        sbc     _coef+8,y
+        SUBIY   _coef+8
         sta     _tmp11
 
         lda     _coef+4,y
-        sec
-        sbc     _coef+12,y
+        SUBIY   _coef+12
         sta     _tmp12
+
         lda     _coef+4,y
-        clc
-        adc     _coef+12,y
+        ADDIY   _coef+12
         sta     _tmp13
 
         lda     _coef+10,y
-        sec
-        sbc     _coef+6,y
+        SUBIY   _coef+6
         sta     _z10
 
         lda     _coef+2,y
-        clc
-        adc     _coef+14,y
+        ADDIY   _coef+14
         sta     _z11
 
         lda     _coef+2,y
-        sec
-        sbc     _coef+14,y
+        SUBIY   _coef+14
         sta     _z12
 
         lda     _coef+10,y
-        clc
-        adc     _coef+6,y
+        ADDIY   _coef+6
         sta     _z13
 
         sty     ybck
@@ -394,43 +432,35 @@ full_rows:
         ldy     ybck
 
         lda     _tmp0
-        clc
-        adc     _tmp7
+        ADDI    _tmp7
         sta     _row_out+0,y
 
         lda     _tmp1
-        clc
-        adc     _tmp6
+        ADDI    _tmp6
         sta     _row_out+2,y
 
         lda     _tmp2
-        clc
-        adc     _tmp5
+        ADDI    _tmp5
         sta     _row_out+4,y
 
         lda     _tmp3
-        sec
-        sbc     _tmp4
+        SUBI    _tmp4
         sta     _row_out+6,y
 
         lda     _tmp3
-        clc
-        adc     _tmp4
+        ADDI    _tmp4
         sta     _row_out+8,y
 
         lda     _tmp2
-        sec
-        sbc     _tmp5
+        SUBI    _tmp5
         sta     _row_out+10,y
 
         lda     _tmp1
-        sec
-        sbc     _tmp6
+        SUBI    _tmp6
         sta     _row_out+12,y
 
         lda     _tmp0
-        sec
-        sbc     _tmp7
+        SUBI    _tmp7
         sta     _row_out+14,y
 
         tya
@@ -441,12 +471,52 @@ full_rows:
 :       rts
 .endproc
 
+; uint8 clamp of int8 x << 1:
+; x < 0  ? => 0
+; x >= 0 ? => x<<1
 .macro CLAMPU
 .scope
         asl
         bcc     :+
-        lda     #$FF
+        lda     #0
 :
+.endscope
+.endmacro
+
+; Organized in a not-extremely obvious way, to minimize
+; cost on standard path (no overflow).
+; depending on (a + b) or (a - b)
+; x < 0    ?  => 0
+; x 0..127 ?  => 0..254
+; x > 127  ?  => 255
+.macro ADD_CLAMPU
+.scope
+        bvc     inrange
+        bpl     oneg
+opos:   lda     #$FF
+        bne     done
+oneg:   lda     #$00
+        beq     done
+inrange:
+        bmi     oneg
+        asl
+done:
+.endscope
+.endmacro
+
+.macro ADDU b
+.scope
+        clc
+        adc     b
+        ADD_CLAMPU
+.endscope
+.endmacro
+
+.macro SUBU b
+.scope
+        sec
+        sbc     b
+        ADD_CLAMPU
 .endscope
 .endmacro
 
@@ -511,43 +581,35 @@ idx3_3: sta     $FFFF,y
 full_cols:
 
         lda     _row_out+0,x
-        clc
-        adc     _row_out+64,x
+        ADDIX   _row_out+64
         sta     _tmp10
 
         lda     _row_out+0,x
-        sec
-        sbc     _row_out+64,x
+        SUBIX   _row_out+64
         sta     _tmp11
 
         lda     _row_out+32,x
-        sec
-        sbc     _row_out+96,x
+        SUBIX   _row_out+96
         sta     _tmp12
 
         lda     _row_out+32,x
-        clc
-        adc     _row_out+96,x
+        ADDIX   _row_out+96
         sta     _tmp13
 
         lda     _row_out+80,x
-        sec
-        sbc     _row_out+48,x
+        SUBIX   _row_out+48
         sta     _z10
 
         lda     _row_out+16,x
-        clc
-        adc     _row_out+112,x
+        ADDIX   _row_out+112
         sta     _z11
 
         lda     _row_out+16,x
-        sec
-        sbc     _row_out+112,x
+        SUBIX   _row_out+112
         sta     _z12
 
         lda     _row_out+80,x
-        clc
-        adc     _row_out+48,x
+        ADDIX   _row_out+48
         sta     _z13
 
         stx     xbck
@@ -565,58 +627,42 @@ full_cols_no_scale:
         iny                             ; Y = X+1
 
         lda     _tmp0
-        clc
-        adc     _tmp7
-        CLAMPU
+        ADDU    _tmp7
 idx0_4: sta     $FFFF,x
 idx0_5: sta     $FFFF,y
 
         lda     _tmp2
-        clc
-        adc     _tmp5
-        CLAMPU
+        ADDU    _tmp5
 idx2_4: sta     $FFFF,x
 idx2_5: sta     $FFFF,y
 
         lda     _tmp3
-        clc
-        adc     _tmp4
-        CLAMPU
+        ADDU    _tmp4
 idx4_4: sta     $FFFF,x
 idx4_5: sta     $FFFF,y
 
         lda     _tmp1
-        sec
-        sbc     _tmp6
-        CLAMPU
+        SUBU    _tmp6
 idx6_4: sta     $FFFF,x
 idx6_5: sta     $FFFF,y
 
         lda     _tmp1
-        clc
-        adc     _tmp6
-        CLAMPU
+        ADDU    _tmp6
 idx1_4: sta     $FFFF,x
 idx1_5: sta     $FFFF,y
 
         lda     _tmp3
-        sec
-        sbc     _tmp4
-        CLAMPU
+        SUBU    _tmp4
 idx3_4: sta     $FFFF,x
 idx3_5: sta     $FFFF,y
 
         lda     _tmp2
-        sec
-        sbc     _tmp5
-        CLAMPU
+        SUBU    _tmp5
 idx5_4: sta     $FFFF,x
 idx5_5: sta     $FFFF,y
 
         lda     _tmp0
-        sec
-        sbc     _tmp7
-        CLAMPU
+        SUBU    _tmp7
 idx7_4: sta     $FFFF,x
 idx7_5: sta     $FFFF,y
 
@@ -633,27 +679,19 @@ full_cols_scale_down:
         tay
 
         lda     _tmp0
-        clc
-        adc     _tmp7
-        CLAMPU
+        ADDU    _tmp7
 idx0_6: sta     $FFFF,y
 
         lda     _tmp2
-        clc
-        adc     _tmp5
-        CLAMPU
+        ADDU    _tmp5
 idx1_6: sta     $FFFF,y
 
         lda     _tmp3
-        clc
-        adc     _tmp4
-        CLAMPU
+        ADDU    _tmp4
 idx2_6: sta     $FFFF,y
 
         lda     _tmp1
-        sec
-        sbc     _tmp6
-        CLAMPU
+        SUBU    _tmp6
 idx3_6: sta     $FFFF,y
 
         inx

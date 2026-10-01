@@ -103,38 +103,40 @@ void advance_block(void) {
   update_idx();
 }
 
+#define CLAMPI(x) ((x < -128 ? -128 : (x > 127 ? 127 : x)))
+#define CLAMPU(x) (((x) < 0) ? 0 : ((x) > 127 ? 255 : ((x)<<DESCALE_FACTOR)))
+
+/* no need to clamp mults as (669*127) >> 8 fits in 7 bits */
 void idct_common(void) {
-        tmp0 = tmp10 + tmp13;
-        tmp3 = tmp10 - tmp13;
+        tmp0 = CLAMPI(tmp10 + tmp13);
+        tmp3 = CLAMPI(tmp10 - tmp13);
 
         tmp12 = mul_362(tmp12);
-        tmp12 -= tmp13;
-        tmp1 = tmp11 + tmp12;
-        tmp2 = tmp11 - tmp12;
+        tmp12 = CLAMPI(tmp12 - tmp13);
+        tmp1 = CLAMPI(tmp11 + tmp12);
+        tmp2 = CLAMPI(tmp11 - tmp12);
 
-        tmp7 = z11 + z13;
+        tmp7 = CLAMPI(z11 + z13);
 
-        tmp11 = mul_362(z11 - z13);
+        tmp11 = mul_362(CLAMPI(z11 - z13));
 
         z13 = mul_669(z10);
 
-        z5 = mul_473(z10 + z12);
-        tmp12 = z5 - z13;
+        z5 = (mul_473(CLAMPI(z10 + z12)));
+        tmp12 = CLAMPI(z5 - z13);
 
         tmp10 = mul_277(z12);
-        tmp10 -= z5;
+        tmp10 = CLAMPI(tmp10 - z5);
 
-        tmp6 = tmp12 - tmp7;
-        tmp5 = tmp11 - tmp6;
-        tmp4 = tmp5 + tmp10;
+        tmp6 = CLAMPI(tmp12 - tmp7);
+        tmp5 = CLAMPI(tmp11 - tmp6);
+        tmp4 = CLAMPI(tmp5 + tmp10);
 }
 
 void idct_1d_rows(void) {
     uint8 y;
 
     for (y = 0; y < 8*16; y+=16) {
-        // const int8 *x = &coef[y];
-
         if (coef[y + 2] == 0 && coef[y + 4] == 0 &&
             coef[y + 6] == 0 && coef[y + 8] == 0 &&
             coef[y + 10] == 0 && coef[y + 12] == 0 &&
@@ -151,30 +153,28 @@ void idct_1d_rows(void) {
             continue;
         }
 
-        tmp10 = coef[y + 0] + coef[y + 8];
-        tmp11 = coef[y + 0] - coef[y + 8];
-        tmp12 = coef[y + 4] - coef[y + 12];
-        tmp13 = coef[y + 4] + coef[y + 12];
-        z10   = coef[y + 10] - coef[y + 6];
-        z11   = coef[y + 2] + coef[y + 14];
-        z12   = coef[y + 2] - coef[y + 14];
-        z13   = coef[y + 10] + coef[y + 6];
+        tmp10 = CLAMPI(coef[y + 0] + coef[y + 8]);
+        tmp11 = CLAMPI(coef[y + 0] - coef[y + 8]);
+        tmp12 = CLAMPI(coef[y + 4] - coef[y + 12]);
+        tmp13 = CLAMPI(coef[y + 4] + coef[y + 12]);
+        z10   = CLAMPI(coef[y + 10] - coef[y + 6]);
+        z11   = CLAMPI(coef[y + 2] + coef[y + 14]);
+        z12   = CLAMPI(coef[y + 2] - coef[y + 14]);
+        z13   = CLAMPI(coef[y + 10] + coef[y + 6]);
 
         idct_common();
 
-        row_out[y + 0] = (uint8)(tmp0 + tmp7);
-        row_out[y + 2] = (uint8)(tmp1 + tmp6);
-        row_out[y + 4] = (uint8)(tmp2 + tmp5);
-        row_out[y + 6] = (uint8)(tmp3 - tmp4);
-        row_out[y + 8] = (uint8)(tmp3 + tmp4);
-        row_out[y + 10] = (uint8)(tmp2 - tmp5);
-        row_out[y + 12] = (uint8)(tmp1 - tmp6);
-        row_out[y + 14] = (uint8)(tmp0 - tmp7);
+        row_out[y + 0]  = CLAMPI(tmp0 + tmp7);
+        row_out[y + 2]  = CLAMPI(tmp1 + tmp6);
+        row_out[y + 4]  = CLAMPI(tmp2 + tmp5);
+        row_out[y + 6]  = CLAMPI(tmp3 - tmp4);
+        row_out[y + 8]  = CLAMPI(tmp3 + tmp4);
+        row_out[y + 10] = CLAMPI(tmp2 - tmp5);
+        row_out[y + 12] = CLAMPI(tmp1 - tmp6);
+        row_out[y + 14] = CLAMPI(tmp0 - tmp7);
     }
 }
 
-
-#define CLAMPU(x) (((uint8)(x) & 0x80) != 0 ? 255 : ((x)<<DESCALE_FACTOR))
 void idct_1d_cols(void) {
     uint8 x;
     for (x = 0; x < 16; x+=2) {
@@ -208,14 +208,14 @@ void idct_1d_cols(void) {
                 idx3[x/2] = CLAMPU(row_out[x + 0]);
             }
         } else {
-            tmp10 = row_out[x + 0] + row_out[x + 64];
-            tmp11 = row_out[x + 0] - row_out[x + 64];
-            tmp12 = row_out[x+32] - row_out[x + 96];
-            tmp13 = row_out[x + 32] + row_out[x + 96];
-            z10 = row_out[x + 80] - row_out[x + 48];
-            z11 = row_out[x + 16] + row_out[x + 112];
-            z12 = row_out[x + 16] - row_out[x + 112];
-            z13 = row_out[x + 80] + row_out[x + 48];
+            tmp10 = CLAMPI(row_out[x + 0]  + row_out[x + 64]);
+            tmp11 = CLAMPI(row_out[x + 0]  - row_out[x + 64]);
+            tmp12 = CLAMPI(row_out[x + 32] - row_out[x + 96]);
+            tmp13 = CLAMPI(row_out[x + 32] + row_out[x + 96]);
+            z10   = CLAMPI(row_out[x + 80] - row_out[x + 48]);
+            z11   = CLAMPI(row_out[x + 16] + row_out[x + 112]);
+            z12   = CLAMPI(row_out[x + 16] - row_out[x + 112]);
+            z13   = CLAMPI(row_out[x + 80] + row_out[x + 48]);
 
             idct_common();
 
