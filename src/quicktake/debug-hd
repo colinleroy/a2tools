@@ -14,11 +14,18 @@ else
   EXT=QTK
 fi
 
+if [ -f ../../disks/smart0.po ]; then
+  echo Disk exists
+else
+  ../../bin/cp2/cp2 create-disk-image ../../disks/smart0.po 32M prodos
+	../../bin/cp2/cp2 rename ../../disks/smart0.po : HD
+fi
+
 TESTFILE=TEST$1.$EXT
 if [ "$2" != "" ]; then
   TESTFILE=$2
   java -jar ../../bin/ac.jar -d ../../disks/smart0.po TEST$1.$EXT
-  
+
   echo "Putting $TESTFILE as TEST$1.$EXT"
   java -jar ../../bin/ac.jar -p ../../disks/smart0.po \
     TEST$1.$EXT BIN '$2000' < "$TESTFILE"
