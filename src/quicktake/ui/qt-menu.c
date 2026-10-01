@@ -210,6 +210,7 @@ static uint8 print_menu(void) {
       cprintf(" F. Set flash to %s\r\n",
               cam_get_flash_str(0, cam_info.flash_mode + 1));
   } else {
+    cputs(" M. Modify camera model\r\n");
     cputs(" R. Retry connecting camera\r\n");
   }
   cputs(  "\r\n"
@@ -791,6 +792,8 @@ menu:
   } else if (choice == 'r') {
     exec_pass = 1;
     zexec("-SLOWTAKE");
+  } else if (choice == 'm') {
+    zexec("1"); /* Config, forced */
   }
 
   goto menu;
