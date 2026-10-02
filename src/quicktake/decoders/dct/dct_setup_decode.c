@@ -15,7 +15,7 @@ err_out:
     return -1;
   }
 
-  data_size = 
+  data_size =
         ((uint32)cur_cache_ptr[DATASIZE_IDX]) |
         ((uint32)cur_cache_ptr[DATASIZE_IDX+1] << 8) |
         ((uint32)cur_cache_ptr[DATASIZE_IDX+2] << 16) |
@@ -23,6 +23,8 @@ err_out:
 
   /* Rollback one char for alignment */
   cur_cache_ptr += (0x200) - 1;
+  nbits_avail = 0;
+
 #ifdef __CC65__
   cache_read = cur_cache_ptr;
 #endif
@@ -51,7 +53,9 @@ err_out:
     goto err_out;
   }
 
-  nbits_avail = 0;
-
+  /* zero coef so we don't have to store zeroes in the
+   * always-zero coefficients for normal/fine pictures
+   */
+  bzero(coef, sizeof(coef));
   return 0;
 }

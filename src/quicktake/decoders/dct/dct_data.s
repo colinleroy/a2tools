@@ -2,7 +2,6 @@
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
         .export _idx
-        .export _numbits
         .export _SCAN, _coef, _scan, _ign_bits
         .export _nbits_avail
         .export _mul362_m, _mul362_l
@@ -20,14 +19,38 @@
         .export _orig_y_table_l, _orig_y_table_h
         .export _orig_x_offset, _special_x_orig_offset
 
-        .export xbck, ybck, abck
+        .export xbck, ybck
 
-        .importzp _zp6, _zp7, _zp8, _zp10
+        .importzp _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
+        .importzp tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
 
-xbck         = _zp6
-ybck         = _zp7
-abck         = _zp8
-_nbits_avail = _zp10                    ; Used across bands
+; For all
+xbck         = tmp1
+ybck         = tmp2
+
+; For _get_coeffs
+_scan        = _zp8
+_nbits_avail = _zp9
+_ign_bits    = _zp10
+
+; For idct
+_tmp0       = _zp6
+_tmp1       = _zp7
+_tmp2       = _zp8
+_tmp3       = _zp9
+_tmp4       = _zp10
+_tmp5       = _zp11
+_tmp6       = _zp12
+_tmp7       = _zp13
+_tmp10      = ptr1
+_tmp11      = ptr1+1
+_tmp12      = ptr2
+_tmp13      = ptr2+1
+_z5         = ptr3
+_z10        = ptr3+1
+_z11        = ptr4
+_z12        = ptr4+1
+_z13        = tmp3
 
 DESCALE_FACTOR = 1
 IGNORE_BITS_0 = (DESCALE_FACTOR+2-0)
@@ -108,24 +131,6 @@ _row_out:               .res 128
 _orig_y_table_l:        .res BAND_HEIGHT
 _orig_y_table_h:        .res BAND_HEIGHT
 
-_tmp0:                  .res 1
-_tmp1:                  .res 1
-_tmp2:                  .res 1
-_tmp3:                  .res 1
-_tmp4:                  .res 1
-_tmp5:                  .res 1
-_tmp6:                  .res 1
-_tmp7:                  .res 1
-_tmp10:                 .res 1
-_tmp11:                 .res 1
-_tmp12:                 .res 1
-_tmp13:                 .res 1
-_z5:                    .res 1
-_z10:                   .res 1
-_z11:                   .res 1
-_z12:                   .res 1
-_z13:                   .res 1
-
 _idx:                   .res 2
 
 _actual_width:          .res 2
@@ -133,10 +138,6 @@ _total_blocks:          .res 2
 _blocks_per_band:       .res 2
 _blocks_per_row:        .res 1
 _blocks_rem_in_row:     .res 1
-
-_scan:                  .res 1
-_ign_bits:              .res 1
-_numbits:               .res 1
 
         .segment "DATA"
 

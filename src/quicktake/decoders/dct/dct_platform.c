@@ -50,7 +50,6 @@ void get_coeffs(void) {
       uint8 r = SCAN[scan];
 
       if (!(numbits = bits_table[scan])) {
-          coef[r] = 0;
           continue;
       }
       ign_bits = shift_table[scan];

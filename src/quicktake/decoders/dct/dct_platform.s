@@ -9,14 +9,10 @@
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
-        .import _tmp10, _tmp11, _tmp12, _tmp13
-        .import _z5, _z10, _z11, _z12, _z13
         .import _coef, _row_out, _raw_image
 
         .import _cache
-        .import _bitmask, _negate, _ign_bits
-        .import _SCAN, _scan
+        .import _SCAN
 
         .import _blocks_per_row, _blocks_rem_in_row
         .import _actual_width
@@ -24,8 +20,12 @@
         .import _ifd, _cache_start
         .import _read, _cputsxy
         .import decsp4, pushax
-        .importzp _prev_ram_irq_vector, c_sp
-        .importzp xbck, ybck, abck, _nbits_avail
+
+        .importzp _prev_ram_irq_vector, c_sp, tmp1
+        .importzp xbck, ybck, _nbits_avail, _scan, _ign_bits
+        .importzp _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
+        .importzp _tmp10, _tmp11, _tmp12, _tmp13
+        .importzp _z5, _z10, _z11, _z12, _z13
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
 
@@ -138,12 +138,11 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         bne     inc_cache_done
 .endproc
 
-; Enter with _numbits in Y, _ign_bits in X
+; Enter with numbits in Y, _ign_bits in X
 ; Exits with carry set if last bit set (neg)
 ; Exits with bitval in A
 .macro GET_BITVAL
         lda     #0                      ; Init bitval
-        stx     _ign_bits
         ldx     _nbits_avail
 next_bit:
         dex
@@ -176,11 +175,10 @@ done:
 .endmacro
 
 .proc _get_coeffs
-        ; Are we at cache end ?
-        inc     _cache_read
+        inc     _cache_read             ; Increment cache pointer
         bne     :+
         inc     _cache_read+1
-        ldx     _cache_read+1
+        ldx     _cache_read+1           ; Cache end ?
         cpx     #>CACHE_END
         bne     :+
         jsr     fill_cache
@@ -189,20 +187,21 @@ done:
 
         ldy     #0
 next_coeff:
-        sty     _scan
+shift_table = *+1
+        lda     $FFFF,y                 ; get ignored bits shift
+        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
+        sta     _ign_bits
 
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
-        beq     inc_scan                ; eq jmp here
-shift_table = *+1
-        ldx     $FFFF,y                 ; get ignored bits shift
+        sty     _scan
         tay                             ; num_bits in Y
 
-        GET_BITVAL                      ; Exits with carry if neg, low byte in A
-        ; coef[r] = (int8)(bitval);
-inc_scan:
+        GET_BITVAL
+        ldy     _scan                   ; Store value in the right place
         ldx     _SCAN,y
-        sta     _coef,x                 ; zero, easy way out
+        sta     _coef,x
+inc_scan:
         iny
         cpy     #64
         bcc     next_coeff
