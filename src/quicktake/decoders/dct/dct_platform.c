@@ -205,24 +205,25 @@ void idct_1d_cols(void) {
                 idx3[x/2] = CLAMPU(row_out[x + 0]);
             }
         } else {
-            tmp10 = CLAMPI(row_out[x + 0]  + row_out[x + 64]);
             tmp11 = CLAMPI(row_out[x + 0]  - row_out[x + 64]);
-            tmp12 = CLAMPI(row_out[x + 32] - row_out[x + 96]);
             tmp13 = CLAMPI(row_out[x + 32] + row_out[x + 96]);
             z10   = CLAMPI(row_out[x + 80] - row_out[x + 48]);
             z11   = CLAMPI(row_out[x + 16] + row_out[x + 112]);
             z12   = CLAMPI(row_out[x + 16] - row_out[x + 112]);
             z13   = CLAMPI(row_out[x + 80] + row_out[x + 48]);
+            tmp7 = CLAMPI(z11 + z13);
 
+            tmp10 = CLAMPI(row_out[x + 0]  + row_out[x + 64]);
             tmp0 = CLAMPI(tmp10 + tmp13);
-            tmp3 = CLAMPI(tmp10 - tmp13);
 
+            tmp12 = CLAMPI(row_out[x + 32] - row_out[x + 96]);
             tmp12 = mul_362(tmp12);
             tmp12 = CLAMPI(tmp12 - tmp13);
             tmp1 = CLAMPI(tmp11 + tmp12);
-            tmp2 = CLAMPI(tmp11 - tmp12);
 
-            tmp7 = CLAMPI(z11 + z13);
+            tmp3 = CLAMPI(tmp10 - tmp13);
+
+            tmp2 = CLAMPI(tmp11 - tmp12);
 
             tmp11 = mul_362(CLAMPI(z11 - z13));
 

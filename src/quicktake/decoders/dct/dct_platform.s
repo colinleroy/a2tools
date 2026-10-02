@@ -572,16 +572,8 @@ idx3_3: sta     $FFFF,y
 full_cols:
 
         lda     _row_out+0,x
-        ADDIX   _row_out+64
-        sta     _tmp10
-
-        lda     _row_out+0,x
         SUBIX   _row_out+64
         sta     _tmp11
-
-        lda     _row_out+32,x
-        SUBIX   _row_out+96
-        sta     _tmp12
 
         lda     _row_out+32,x
         ADDIX   _row_out+96
@@ -603,16 +595,22 @@ full_cols:
         ADDIX   _row_out+48
         sta     _z13
 
-        stx     xbck
-; idct_common start
-        lda     _tmp10
+        ADDI    _z11
+        sta     _tmp7
+
+        lda     _row_out+0,x
+        ADDIX   _row_out+64
+        sta     _tmp10
+
         ADDI    _tmp13
         sta     _tmp0
-        lda     _tmp10
-        SUBI    _tmp13
-        sta     _tmp3
 
-        lda     _tmp12
+        lda     _row_out+32,x
+        SUBIX   _row_out+96
+        sta     _tmp12
+
+        stx     xbck                    ; Keep X before mults
+
         MULT_362
         SUBI    _tmp13
         sta     _tmp12
@@ -620,13 +618,13 @@ full_cols:
         ADDI    _tmp11
         sta     _tmp1
 
+        lda     _tmp10
+        SUBI    _tmp13
+        sta     _tmp3
+
         lda     _tmp11
         SUBI    _tmp12
         sta     _tmp2
-
-        lda     _z11
-        ADDI    _z13
-        sta     _tmp7
 
         lda     _z11
         SUBI    _z13
