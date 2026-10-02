@@ -394,17 +394,12 @@ full_rows:
         SUBI    _tmp12
         sta     _tmp2
 
-        lda     _z11
-        SUBI    _z13_0
-        MULT_362
-        sta     _tmp11
-
         lda     _z10
         MULT_669
-        sta     _z13_0
+        sta     _z13_1
 
         lda     _z5
-        SUBI    _z13_0
+        SUBI    _z13_1
         SUBI    _tmp7
         sta     _tmp6
 
@@ -413,7 +408,9 @@ full_rows:
         SUBI    _z5
         sta     _tmp10
 
-        lda     _tmp11
+        lda     _z11
+        SUBI    _z13_0
+        MULT_362
         SUBI    _tmp6
         sta     _tmp5
 
@@ -611,7 +608,6 @@ full_cols:
 
         lda     _row_out+32,x
         SUBIX   _row_out+96
-        sta     _tmp12
 
         stx     xbck                    ; Keep X before mults
 
@@ -750,7 +746,62 @@ idx3_6: sta     $FFFF,y
 .endproc
 
 .proc _update_idx
+
+        .assert <_raw_image = 0, error
+        ldy     idx0_1+1
+        sty     idx0_2+1
+        sty     idx0_3+1
+        sty     idx0_4+1
+        sty     idx0_5+1
+        sty     idx0_6+1
+
+        sty     idx1_1+1
+        sty     idx1_2+1
+        sty     idx1_3+1
+        sty     idx1_4+1
+        sty     idx1_5+1
+        sty     idx1_6+1
+
+        sty     idx2_1+1
+        sty     idx2_2+1
+        sty     idx2_3+1
+        sty     idx2_4+1
+        sty     idx2_5+1
+        sty     idx2_6+1
+
+        sty     idx3_1+1
+        sty     idx3_2+1
+        sty     idx3_3+1
+        sty     idx3_4+1
+        sty     idx3_5+1
+        sty     idx3_6+1
+
+        sty     idx4_1+1
+        sty     idx4_2+1
+        sty     idx4_4+1
+        sty     idx4_5+1
+
+        sty     idx5_1+1
+        sty     idx5_2+1
+        sty     idx5_4+1
+        sty     idx5_5+1
+
+        sty     idx6_1+1
+        sty     idx6_2+1
+        sty     idx6_4+1
+        sty     idx6_5+1
+
+        sty     idx7_1+1
+        sty     idx7_2+1
+        sty     idx7_4+1
+        sty     idx7_5+1
+
         ldy     idx0_1+2
+prev_idx0 = *+1
+        cpy     #$00                    ; Don't patch unchanged high bytes
+        bne     :+
+        rts
+:       sty     prev_idx0
         sty     idx0_2+2
         sty     idx0_3+2
         sty     idx0_4+2
@@ -811,54 +862,5 @@ idx3_6: sta     $FFFF,y
         sty     idx7_2+2
         sty     idx7_4+2
         sty     idx7_5+2
-
-        .assert <_raw_image = 0, error
-        ldy     idx0_1+1
-        sty     idx0_2+1
-        sty     idx0_3+1
-        sty     idx0_4+1
-        sty     idx0_5+1
-        sty     idx0_6+1
-
-        sty     idx1_1+1
-        sty     idx1_2+1
-        sty     idx1_3+1
-        sty     idx1_4+1
-        sty     idx1_5+1
-        sty     idx1_6+1
-
-        sty     idx2_1+1
-        sty     idx2_2+1
-        sty     idx2_3+1
-        sty     idx2_4+1
-        sty     idx2_5+1
-        sty     idx2_6+1
-
-        sty     idx3_1+1
-        sty     idx3_2+1
-        sty     idx3_3+1
-        sty     idx3_4+1
-        sty     idx3_5+1
-        sty     idx3_6+1
-
-        sty     idx4_1+1
-        sty     idx4_2+1
-        sty     idx4_4+1
-        sty     idx4_5+1
-
-        sty     idx5_1+1
-        sty     idx5_2+1
-        sty     idx5_4+1
-        sty     idx5_5+1
-
-        sty     idx6_1+1
-        sty     idx6_2+1
-        sty     idx6_4+1
-        sty     idx6_5+1
-
-        sty     idx7_1+1
-        sty     idx7_2+1
-        sty     idx7_4+1
-        sty     idx7_5+1
         rts
 .endproc
