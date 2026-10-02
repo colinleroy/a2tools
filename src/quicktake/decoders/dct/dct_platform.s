@@ -636,8 +636,6 @@ full_cols:
         sta     _z5
 
         SUBI    _z13_1
-        sta     _tmp12
-
         SUBI    _tmp7
         sta     _tmp6
 
@@ -649,8 +647,6 @@ full_cols:
         lda     _z11
         SUBI    _z13_0
         MULT_362
-        sta     _tmp11
-
         SUBI    _tmp6
         sta     _tmp5
 
@@ -659,8 +655,8 @@ full_cols:
 ; idct_common end
         ldx     xbck
 
-        lda     _actual_width
-        cmp     #<160
+        ldy     _actual_width
+        cpy     #<160
         beq     full_cols_no_scale
         jmp     full_cols_scale_down
 
@@ -668,6 +664,10 @@ full_cols_no_scale:
         txa
         tay
         iny                             ; Y = X+1
+
+        ADDU    _tmp3
+idx4_4: sta     $FFFF,x
+idx4_5: sta     $FFFF,y
 
         lda     _tmp0
         ADDU    _tmp7
@@ -678,11 +678,6 @@ idx0_5: sta     $FFFF,y
         ADDU    _tmp5
 idx2_4: sta     $FFFF,x
 idx2_5: sta     $FFFF,y
-
-        lda     _tmp3
-        ADDU    _tmp4
-idx4_4: sta     $FFFF,x
-idx4_5: sta     $FFFF,y
 
         lda     _tmp1
         SUBU    _tmp6
