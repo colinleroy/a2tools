@@ -1,6 +1,6 @@
         .export _get_coeffs, _cache_read
         .export _advance_block
-        .export _idct_common, _idct_1d_rows, _idct_1d_cols
+        .export _idct_1d_rows, _idct_1d_cols
         .export _shift_table, _bits_table
         .export _init_idx, _update_idx
 
@@ -304,66 +304,6 @@ done:
 .endscope
 .endmacro
 
-.proc _idct_common
-        lda     _tmp10
-        ADDI    _tmp13
-        sta     _tmp0
-        lda     _tmp10
-        SUBI    _tmp13
-        sta     _tmp3
-
-        lda     _tmp12
-        MULT_362
-        SUBI    _tmp13
-        sta     _tmp12
-
-        ADDI    _tmp11
-        sta     _tmp1
-
-        lda     _tmp11
-        SUBI    _tmp12
-        sta     _tmp2
-
-        lda     _z11
-        ADDI    _z13
-        sta     _tmp7
-
-        lda     _z11
-        SUBI    _z13
-        MULT_362
-        sta     _tmp11
-
-        lda     _z10
-        MULT_669
-        sta     _z13
-
-        lda     _z10
-        ADDI    _z12
-        MULT_473
-        sta     _z5
-
-        SUBI    _z13
-        sta     _tmp12
-
-        lda     _z12
-        MULT_277
-        SUBI    _z5
-        sta     _tmp10
-
-        lda     _tmp12
-        SUBI    _tmp7
-        sta     _tmp6
-
-        lda     _tmp11
-        SUBI    _tmp6
-        sta     _tmp5
-
-        ADDI    _tmp10
-        sta     _tmp4
-
-        rts
-.endproc
-
 .proc _idct_1d_rows
         lda     #0
 next_y:
@@ -410,6 +350,12 @@ full_rows:
         ADDIY   _coef+12
         sta     _tmp13
 
+        ADDI    _tmp10                  ; tmp0 = CLAMPI(tmp10 + tmp13);
+        sta     _tmp0
+        lda     _tmp10                  ; tmp3 = CLAMPI(tmp10 - tmp13);
+        SUBI    _tmp13
+        sta     _tmp3
+
         lda     _coef+10,y
         SUBIY   _coef+6
         sta     _z10
@@ -418,16 +364,62 @@ full_rows:
         ADDIY   _coef+14
         sta     _z11
 
-        lda     _coef+2,y
-        SUBIY   _coef+14
-        sta     _z12
-
         lda     _coef+10,y
         ADDIY   _coef+6
         sta     _z13
 
-        sty     ybck
-        jsr     _idct_common
+        ADDI    _z11
+        sta     _tmp7
+
+        lda     _coef+2,y
+        SUBIY   _coef+14
+        sta     _z12
+
+        sty     ybck                    ; Backup Y before mults
+; idct_common start
+
+        ADDI    _z10
+        MULT_473
+        sta     _z5
+
+        lda     _tmp12
+        MULT_362
+        SUBI    _tmp13
+        sta     _tmp12
+
+        ADDI    _tmp11
+        sta     _tmp1
+
+        lda     _tmp11
+        SUBI    _tmp12
+        sta     _tmp2
+
+        lda     _z11
+        SUBI    _z13
+        MULT_362
+        sta     _tmp11
+
+        lda     _z10
+        MULT_669
+        sta     _z13
+
+        lda     _z5
+        SUBI    _z13
+        SUBI    _tmp7
+        sta     _tmp6
+
+        lda     _z12
+        MULT_277
+        SUBI    _z5
+        sta     _tmp10
+
+        lda     _tmp11
+        SUBI    _tmp6
+        sta     _tmp5
+
+        ADDI    _tmp10
+        sta     _tmp4
+; idct_common end
         ldy     ybck
 
         lda     _tmp0
@@ -612,7 +604,63 @@ full_cols:
         sta     _z13
 
         stx     xbck
-        jsr     _idct_common
+; idct_common start
+        lda     _tmp10
+        ADDI    _tmp13
+        sta     _tmp0
+        lda     _tmp10
+        SUBI    _tmp13
+        sta     _tmp3
+
+        lda     _tmp12
+        MULT_362
+        SUBI    _tmp13
+        sta     _tmp12
+
+        ADDI    _tmp11
+        sta     _tmp1
+
+        lda     _tmp11
+        SUBI    _tmp12
+        sta     _tmp2
+
+        lda     _z11
+        ADDI    _z13
+        sta     _tmp7
+
+        lda     _z11
+        SUBI    _z13
+        MULT_362
+        sta     _tmp11
+
+        lda     _z10
+        MULT_669
+        sta     _z13
+
+        lda     _z10
+        ADDI    _z12
+        MULT_473
+        sta     _z5
+
+        SUBI    _z13
+        sta     _tmp12
+
+        lda     _z12
+        MULT_277
+        SUBI    _z5
+        sta     _tmp10
+
+        lda     _tmp12
+        SUBI    _tmp7
+        sta     _tmp6
+
+        lda     _tmp11
+        SUBI    _tmp6
+        sta     _tmp5
+
+        ADDI    _tmp10
+        sta     _tmp4
+; idct_common end
         ldx     xbck
 
         lda     _actual_width
