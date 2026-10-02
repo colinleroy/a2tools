@@ -9,7 +9,7 @@
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _coef, _row_out, _raw_image
+        .import _coef, _coef_sign, _row_out, _raw_image
 
         .import _cache
         .import _SCAN
@@ -162,11 +162,13 @@ _cache_read = *+1
         cmp     #$80
         bcc     shift_pos               ; is last bit 1 (negative) ?
 shift_neg:
-:       sec
-        ror
-        dex
+        ldy     _ign_bits
+:       lsr
+        dey
         bne     :-
-        beq     done
+        ora     _coef_sign,x
+        ldy     _scan
+        jmp     done
 shift_pos:
 :       lsr
         dex
@@ -198,7 +200,6 @@ bits_table = *+1
         tay                             ; num_bits in Y
 
         GET_BITVAL
-        ldy     _scan                   ; Store value in the right place
         ldx     _SCAN,y
         sta     _coef,x
 inc_scan:

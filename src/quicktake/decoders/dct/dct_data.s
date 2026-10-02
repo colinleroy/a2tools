@@ -2,7 +2,7 @@
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
         .export _idx
-        .export _SCAN, _coef, _scan, _ign_bits
+        .export _SCAN, _coef, _scan, _ign_bits, _coef_sign
         .export _nbits_avail
         .export _mul362_m, _mul362_l
         .export _mul473_m, _mul473_l
@@ -107,6 +107,9 @@ _SCAN:                  .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
                         .byte 29*2,22*2,15*2,23*2,30*2,37*2,44*2,51*2
                         .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
                         .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
+
+_coef_sign:             .byte   $00,$80,$C0,$E0,$F0,$F8,$FC
+
 
 _cache_start:           .addr _cache
 
