@@ -25,7 +25,7 @@ int dst_65816_bank = 0;
 int start_addr = 0;
 long inter_cycle = 0;
 
-const char *count_sym_name = NULL;
+char *count_sym_name = NULL;
 
 unsigned char memory_contents[65536] = {0};
 
@@ -222,9 +222,10 @@ skip_to_start:
       dbg_slocdef *sloc = NULL;
       dbg_symbol *instr_symbol = NULL;
       dbg_symbol *param_symbol = NULL;
-      const char *instr, *arg;
+      char *instr, *arg;
       char comment[BUF_SIZE];
-      char * cur_lineaddress;
+      char *cur_lineaddress;
+      char *ptr;
       int addr_field;
       unsigned char a, x, y, p;
       int instruction_is_write = 0;
@@ -352,8 +353,8 @@ skip_to_start:
         param_symbol = symbol_get_by_addr(cpu, param_addr, dest, lc_bank);
 
       } else if (arg && arg[0] == '$') {
-        if (strchr(arg, '\n'))
-          *strchr(arg, '\n') = '\0';
+        if ((ptr = (char *)strchr(arg, '\n')) != NULL)
+          ptr = '\0';
 
         param_addr = 0;
         /* calculate offset */
@@ -364,8 +365,8 @@ skip_to_start:
           param_addr = y;
         }
 
-        if (strchr(arg, ','))
-          *strchr(arg, ',') = '\0';
+        if ((ptr = (char *)strchr(arg, ',')) != NULL)
+          ptr = '\0';
 
         if (cpu == CPU_65816) {
           write_to = read_from;
@@ -497,7 +498,7 @@ try_gen:
           if (print && !do_callgrind) {
             char count_buf[32];
             int count_buf_len = 0;
-            const char *sym_name = symbol_get_name(instr_symbol);
+            char *sym_name = symbol_get_name(instr_symbol);
             printf("%s", sym_name);
 
             /* Show cycle count between two PC matching symbol name */

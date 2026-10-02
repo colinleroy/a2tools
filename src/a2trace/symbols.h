@@ -23,13 +23,13 @@ void load_lbls(const char *file);
 void map_slocs_to_adresses(char **excluded_segments);
 
 dbg_symbol *symbol_get_by_addr(int cpu, int addr, int main, int lc);
-dbg_symbol *symbol_get_by_name(const char *name, sym_type type);
+dbg_symbol *symbol_get_by_name(char *name, sym_type type);
 int symbol_get_addr(dbg_symbol *symbol);
-const char *symbol_get_name(dbg_symbol *symbol);
-dbg_symbol *generate_symbol(const char *param_name, int param_addr, int main, int lc, const char *extra);
+char *symbol_get_name(dbg_symbol *symbol);
+dbg_symbol *generate_symbol(char *param_name, int param_addr, int main, int lc, char *extra);
 
 dbg_slocdef *sloc_get_for_addr(int addr);
-const char *sloc_get_filename(dbg_slocdef *sloc);
+char *sloc_get_filename(dbg_slocdef *sloc);
 int sloc_get_line(dbg_slocdef *sloc);
 
 #endif

@@ -1,6 +1,6 @@
 #ifndef __mame_params_h
 #define __mame_params_h
 
-const char * fix_mame_param(const char *param);
+char * fix_mame_param(char *param);
 
 #endif

@@ -100,7 +100,7 @@ static const struct dasm_data a2_stuff[] =
 };
 
 static char parambuf[7];
-const char * fix_mame_param(const char *param) {
+char * fix_mame_param(char *param) {
   int low = 0, high = 0, i = 0;
   if (!param)
     return NULL;

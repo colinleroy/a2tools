@@ -80,7 +80,7 @@ static int num_gen_symbols = 0;
 dbg_symbol ****gen_sym_cache = NULL;
 
 /* Conversion helpers */
-static int get_int_val(const char *str) {
+static int get_int_val(char *str) {
   char *val = strchr(str, '=');
   if (val) {
     return atol(val + 1);
@@ -88,7 +88,7 @@ static int get_int_val(const char *str) {
   return -1;
 }
 
-static unsigned long get_hex_val(const char *str) {
+static unsigned long get_hex_val(char *str) {
   char *val = strchr(str, '=');
   if (val) {
     return strtoul(val + 1, (char**)0, 0);
@@ -96,7 +96,7 @@ static unsigned long get_hex_val(const char *str) {
   return -1;
 }
 
-static char *get_str_val(const char *str) {
+static char *get_str_val(char *str) {
   char *val = strchr(str, '=');
   if (val) {
     return (val + 1);
@@ -706,7 +706,7 @@ dbg_symbol *symbol_get_by_addr(int cpu, int addr, int mem, int lc) {
 }
 
 /* Get symbol by name */
-dbg_symbol *symbol_get_by_name(const char *name, sym_type type) {
+dbg_symbol *symbol_get_by_name(char *name, sym_type type) {
   int i;
   dbg_symbol **sym_table = symbols;
 
@@ -737,7 +737,7 @@ dbg_symbol *symbol_get_by_name(const char *name, sym_type type) {
 /* Generate a fake symbol. Rather than a raw address,
  * it helps to remind us what the current banking
  * configuration is */
-dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int lc, const char *extra) {
+dbg_symbol *generate_symbol(char *param_name, int param_addr, int mem, int lc, char *extra) {
   dbg_symbol *s;
   char full_name[64] = "";
 
@@ -785,7 +785,7 @@ dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int
 }
 
 /* Symbol name getter */
-const char *symbol_get_name(dbg_symbol *symbol) {
+char *symbol_get_name(dbg_symbol *symbol) {
   if (!symbol)
     return NULL;
 
@@ -808,7 +808,7 @@ dbg_slocdef *sloc_get_for_addr(int addr) {
 }
 
 /* SLOC filename getter */
-const char *sloc_get_filename(dbg_slocdef *sloc) {
+char *sloc_get_filename(dbg_slocdef *sloc) {
   return sloc ?
           sloc->file ? sloc->file->name
             : NULL
