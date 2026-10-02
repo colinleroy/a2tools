@@ -25,7 +25,7 @@
         .importzp xbck, ybck, _nbits_avail, _scan, _ign_bits
         .importzp _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .importzp _tmp10, _tmp11, _tmp12, _tmp13
-        .importzp _z5, _z10, _z11, _z12, _z13
+        .importzp _z5, _z10, _z11, _z12, _z13_0, _z13_1
 
 cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
 
@@ -366,7 +366,7 @@ full_rows:
 
         lda     _coef+10,y
         ADDIY   _coef+6
-        sta     _z13
+        sta     _z13_0
 
         ADDI    _z11
         sta     _tmp7
@@ -395,16 +395,16 @@ full_rows:
         sta     _tmp2
 
         lda     _z11
-        SUBI    _z13
+        SUBI    _z13_0
         MULT_362
         sta     _tmp11
 
         lda     _z10
         MULT_669
-        sta     _z13
+        sta     _z13_0
 
         lda     _z5
-        SUBI    _z13
+        SUBI    _z13_0
         SUBI    _tmp7
         sta     _tmp6
 
@@ -571,10 +571,6 @@ idx3_3: sta     $FFFF,y
 
 full_cols:
 
-        lda     _row_out+0,x
-        SUBIX   _row_out+64
-        sta     _tmp11
-
         lda     _row_out+32,x
         ADDIX   _row_out+96
         sta     _tmp13
@@ -593,7 +589,7 @@ full_cols:
 
         lda     _row_out+80,x
         ADDIX   _row_out+48
-        sta     _z13
+        sta     _z13_0
 
         ADDI    _z11
         sta     _tmp7
@@ -604,6 +600,14 @@ full_cols:
 
         ADDI    _tmp13
         sta     _tmp0
+
+        lda     _tmp10
+        SUBI    _tmp13
+        sta     _tmp3
+
+        lda     _row_out+0,x
+        SUBIX   _row_out+64
+        sta     _tmp11
 
         lda     _row_out+32,x
         SUBIX   _row_out+96
@@ -618,41 +622,35 @@ full_cols:
         ADDI    _tmp11
         sta     _tmp1
 
-        lda     _tmp10
-        SUBI    _tmp13
-        sta     _tmp3
-
         lda     _tmp11
         SUBI    _tmp12
         sta     _tmp2
 
-        lda     _z11
-        SUBI    _z13
-        MULT_362
-        sta     _tmp11
-
         lda     _z10
         MULT_669
-        sta     _z13
+        sta     _z13_1
 
         lda     _z10
         ADDI    _z12
         MULT_473
         sta     _z5
 
-        SUBI    _z13
+        SUBI    _z13_1
         sta     _tmp12
+
+        SUBI    _tmp7
+        sta     _tmp6
 
         lda     _z12
         MULT_277
         SUBI    _z5
         sta     _tmp10
 
-        lda     _tmp12
-        SUBI    _tmp7
-        sta     _tmp6
+        lda     _z11
+        SUBI    _z13_0
+        MULT_362
+        sta     _tmp11
 
-        lda     _tmp11
         SUBI    _tmp6
         sta     _tmp5
 

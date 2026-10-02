@@ -13,7 +13,7 @@
         .export _blocks_per_row, _blocks_per_band, _blocks_rem_in_row
         .export _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .export _tmp10, _tmp11, _tmp12, _tmp13
-        .export _z5, _z10, _z11, _z12, _z13
+        .export _z5, _z10, _z11, _z12, _z13_0, _z13_1
         .export _row_out
         .export _histogram_low, _histogram_high
         .export _orig_y_table_l, _orig_y_table_h
@@ -22,7 +22,7 @@
         .export xbck, ybck
 
         .importzp _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
-        .importzp tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
+        .importzp tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 
 ; For all
 xbck         = tmp1
@@ -50,7 +50,8 @@ _z5         = ptr3
 _z10        = ptr3+1
 _z11        = ptr4
 _z12        = ptr4+1
-_z13        = tmp3
+_z13_0      = tmp3
+_z13_1      = tmp4
 
 DESCALE_FACTOR = 1
 IGNORE_BITS_0 = (DESCALE_FACTOR+2-0)
