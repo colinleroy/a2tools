@@ -9,7 +9,7 @@
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _lsr_tables, _asr_tables
+        .import _asr1, _lsr1
         
         .import _coef, _coef_sign, _row_out, _raw_image
 
@@ -163,34 +163,20 @@ _cache_read = *+1
 
         stx     _nbits_avail            ; Remember how many bits we have
 
-        ldx     _ign_bits               ; Preload bits to shift out
+        tax
         cmp     #$80                    ; is last bit 1 (negative) ?
         bcc     shift_pos
 shift_neg:
         ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
         beq     shift_pos               ; if scan == 0 ignore sign extension
-        ldy     _asr_tables,x
-        sty     asrtab+2
-        tax
 asrtab:
         lda     $FF00,x
-;         ldy     _ign_bits               ; Need a copy for iterating
-; :       lsr
-;         dey
-;         bne     :-
-;         ora     _coef_sign,x
         jmp     done
 shift_pos:
-        ldy     _lsr_tables,x
-        sty     lsrtab+2
-        tax
+        ldy     _scan
 lsrtab:
         lda     $FF00,x
-; :       lsr
-;         dex
-;         bne     :-
 done:
-        ldy     _scan
 .endmacro
 
 .proc _get_coeffs
@@ -201,14 +187,19 @@ done:
 :       ldx     #8
         stx     _nbits_avail
         ldy     #0
+        clc
 next_coeff:
 shift_table = *+1
-        lda     $FFFF,y                 ; get ignored bits shift
-        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
-        sta     _ign_bits
+        lda     $FFFF,y                 ; get ignored bits shift table
+        beq     :+
+        sta     asrtab+2
+        adc     #>(_lsr1 - _asr1)
+        sta     lsrtab+2
+:
 
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
+        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
         sty     _scan
         tay                             ; num_bits in Y
 
