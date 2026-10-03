@@ -9,6 +9,8 @@
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
+        .import _lsr_tables, _asr_tables
+        
         .import _coef, _coef_sign, _row_out, _raw_image
 
         .import _cache
@@ -167,16 +169,26 @@ _cache_read = *+1
 shift_neg:
         ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
         beq     shift_pos               ; if scan == 0 ignore sign extension
-        ldy     _ign_bits               ; Need a copy for iterating
-:       lsr
-        dey
-        bne     :-
-        ora     _coef_sign,x
+        ldy     _asr_tables,x
+        sty     asrtab+2
+        tax
+asrtab:
+        lda     $FF00,x
+;         ldy     _ign_bits               ; Need a copy for iterating
+; :       lsr
+;         dey
+;         bne     :-
+;         ora     _coef_sign,x
         jmp     done
 shift_pos:
-:       lsr
-        dex
-        bne     :-
+        ldy     _lsr_tables,x
+        sty     lsrtab+2
+        tax
+lsrtab:
+        lda     $FF00,x
+; :       lsr
+;         dex
+;         bne     :-
 done:
         ldy     _scan
 .endmacro
