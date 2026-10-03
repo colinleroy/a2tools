@@ -11,7 +11,7 @@
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _asr1, _lsr1
+        .import _asr1
         
         .import _coef, _row_out, _raw_image
 
@@ -140,7 +140,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         lda     #<_decoding_str
         ldx     #>_decoding_str
         jsr     _cputsxy
-        rts
+        jmp     cache_ok
 .endproc
 
 .proc inc_cache
@@ -156,9 +156,31 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 ; or load buffer and ROR ZP: 48 LSR A + 48 ror ZP = 336 cycles + 2 LDA imm, 3 STA ZP, (4 LDA ABS*48) = 528
 ; LSR abs+ror A wins
 
-; Enter with numbits in Y
-; Exits with bitval in A and _scan in Y
-.macro GET_BITVAL
+start_floppy_motor:
+        sta     motor_on                ; Patched if on floppy
+        cpx     #>CACHE_END             ; Check for cache end and refill cache
+        bne     cache_ok
+        jmp     fill_cache
+
+.proc _get_coeffs
+        ldx     _cache_read+1           ; Cache end ?
+        cpx     #(>CACHE_END)-4
+        bpl     start_floppy_motor
+cache_ok:
+        ldx     #8
+        stx     _nbits_avail
+        ldy     #0                      ; _scan iterator
+next_coeff:
+shift_table = *+1
+        lda     $FFFF,y                 ; get ignored bits shift table
+        beq     inc_scan
+        sta     asrtab+2
+
+bits_table = *+1
+        lda     $FFFF,y                 ; get numbits
+        sty     _scan
+        tay                             ; num_bits in Y
+
         lda     #0                      ; Init bitval
         ldx     _nbits_avail
 
@@ -174,54 +196,15 @@ _cache_read = *+1
 
         stx     _nbits_avail            ; Remember how many bits we have
 
-        tax
-        cmp     #$80                    ; is last bit 1 (negative) ?
-        bcc     shift_pos
-shift_neg:
-        ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
-        beq     shift_pos               ; if scan == 0 ignore sign extension
+        tay
 asrtab:
-        lda     $FF00,x
-        jmp     done
-shift_pos:
+        lda     $FF00,y                 ; Shift and sign-extend
         ldy     _scan                   ; Reload _scan for caller
-lsrtab:
-        lda     $FF00,x
-done:
-.endmacro
+        beq     force_pos               ; and force coef[0] positive
+got_bits:
 
-.proc _get_coeffs
-        ldx     _cache_read+1           ; Cache end ?
-        cpx     #(>CACHE_END)-4
-        bmi     :+
-start_floppy_motor:
-        sta     motor_on                ; Patched if on floppy
-
-:       cpx     #>CACHE_END             ; Check for cache end and refill cache
-        bne     :+
-        jsr     fill_cache
-:       ldx     #8
-        stx     _nbits_avail
-        ldy     #0
-        clc
-next_coeff:
-shift_table = *+1
-        lda     $FFFF,y                 ; get ignored bits shift table
-        beq     :+
-        sta     asrtab+2                ; don't update if no change
-        adc     #>(_lsr1 - _asr1)
-        sta     lsrtab+2
-:
-
-bits_table = *+1
-        lda     $FFFF,y                 ; get numbits
-        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
-        sty     _scan
-        tay                             ; num_bits in Y
-
-        GET_BITVAL
-        ldx     _SCAN,y
-        sta     _coef,x
+        ldx     _SCAN,y                 ; Load coef number
+        sta     _coef,x                 ; And store it
 inc_scan:
         iny
         cpy     #64
@@ -231,12 +214,16 @@ inc_scan:
         bne     :+
         inc     _cache_read+1
 :       rts
+
+force_pos:
+        and     #$7F
+        jmp     got_bits
 .endproc
-_bits_table = _get_coeffs::bits_table
-_shift_table = _get_coeffs::shift_table
+_bits_table    = _get_coeffs::bits_table
+_shift_table   = _get_coeffs::shift_table
 inc_cache_done = _get_coeffs::inc_cache_done
-_cache_read = _get_coeffs::_cache_read
-start_floppy_motor = _get_coeffs::start_floppy_motor
+cache_ok       = _get_coeffs::cache_ok
+_cache_read    = _get_coeffs::_cache_read
 
 ; Fixme lots to optimize
 ; Move block increment to a single-byte var and use it as index in idct_1d_cols
