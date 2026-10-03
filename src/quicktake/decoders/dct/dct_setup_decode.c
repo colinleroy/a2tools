@@ -25,12 +25,16 @@ err_out:
    * 02EE00 */
   data_size = cache[DATASIZE_IDX + INITIAL_CACHE_OFFSET + 1];
 
-  cur_cache_ptr = cache + INITIAL_CACHE_OFFSET + HEADER_SIZE;
-
 #ifdef __CC65__
-  cache_read = cur_cache_ptr;
+  /* Asm impl uses a patched absolute address instead of a pointer
+   * (because one can't simply lsr (zp),y - and also because Y would
+   * be busy anyway), so cache_read instead of cur_cache_ptr */
+  cache_read = cache + INITIAL_CACHE_OFFSET + HEADER_SIZE;
   setup_floppy_restart();
+#else
+  cur_cache_ptr = cache + INITIAL_CACHE_OFFSET + HEADER_SIZE;
 #endif
+
   bits_table = normal_bits;
   shift_table = normal_shift;
   actual_width = width = 320;

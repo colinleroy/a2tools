@@ -31,8 +31,6 @@
         .importzp _tmp10, _tmp11, _tmp12, _tmp13
         .importzp _z5, _z10, _z11, _z12, _z13_0, _z13_1
 
-cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
-
 ; Not a convenience to change. We want 1 for 7-bits precision
 DESCALE_FACTOR = 1
 
