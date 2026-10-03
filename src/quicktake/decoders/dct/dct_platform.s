@@ -138,6 +138,11 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         bne     inc_cache_done
 .endproc
 
+; 64 coefficients - 48 bytes per coeff
+; LSR buffer: 48 lsr abs + 48 ror A = 384 cycles per block (+2 lda abs)
+; or load buffer and ROR ZP: 48 LSR A + 48 ror ZP = 336 cycles + 2 LDA imm, 3 STA ZP, (4 LDA ABS*48) = 528
+; LSR abs+ror A wins
+
 ; Enter with numbits in Y, _ign_bits in X
 ; Exits with carry set if last bit set (neg)
 ; Exits with bitval in A
@@ -156,24 +161,24 @@ _cache_read = *+1
 
         stx     _nbits_avail            ; Remember how many bits we have
 
-        ldx     _ign_bits
-        ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
-        beq     shift_pos
-        cmp     #$80
-        bcc     shift_pos               ; is last bit 1 (negative) ?
+        ldx     _ign_bits               ; Preload bits to shift out
+        cmp     #$80                    ; is last bit 1 (negative) ?
+        bcc     shift_pos
 shift_neg:
-        ldy     _ign_bits
+        ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
+        beq     shift_pos               ; if scan == 0 ignore sign extension
+        ldy     _ign_bits               ; Need a copy for iterating
 :       lsr
         dey
         bne     :-
         ora     _coef_sign,x
-        ldy     _scan
         jmp     done
 shift_pos:
 :       lsr
         dex
         bne     :-
 done:
+        ldy     _scan
 .endmacro
 
 .proc _get_coeffs
