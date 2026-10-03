@@ -11,7 +11,7 @@
 
         .import _asr1, _lsr1
         
-        .import _coef, _coef_sign, _row_out, _raw_image
+        .import _coef, _row_out, _raw_image
 
         .import _cache
         .import _SCAN
@@ -24,7 +24,7 @@
         .import decsp4, pushax
 
         .importzp _prev_ram_irq_vector, c_sp, tmp1
-        .importzp xbck, ybck, _nbits_avail, _scan, _ign_bits
+        .importzp xbck, ybck, _nbits_avail, _scan
         .importzp _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .importzp _tmp10, _tmp11, _tmp12, _tmp13
         .importzp _z5, _z10, _z11, _z12, _z13_0, _z13_1
@@ -145,12 +145,12 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 ; or load buffer and ROR ZP: 48 LSR A + 48 ror ZP = 336 cycles + 2 LDA imm, 3 STA ZP, (4 LDA ABS*48) = 528
 ; LSR abs+ror A wins
 
-; Enter with numbits in Y, _ign_bits in X
-; Exits with carry set if last bit set (neg)
-; Exits with bitval in A
+; Enter with numbits in Y
+; Exits with bitval in A and _scan in Y
 .macro GET_BITVAL
         lda     #0                      ; Init bitval
         ldx     _nbits_avail
+
 next_bit:
         dex
         bmi     inc_cache
@@ -173,7 +173,7 @@ asrtab:
         lda     $FF00,x
         jmp     done
 shift_pos:
-        ldy     _scan
+        ldy     _scan                   ; Reload _scan for caller
 lsrtab:
         lda     $FF00,x
 done:
@@ -192,7 +192,7 @@ next_coeff:
 shift_table = *+1
         lda     $FFFF,y                 ; get ignored bits shift table
         beq     :+
-        sta     asrtab+2
+        sta     asrtab+2                ; don't update if no change
         adc     #>(_lsr1 - _asr1)
         sta     lsrtab+2
 :
