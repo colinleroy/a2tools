@@ -3,6 +3,8 @@
         .export _idct_1d_rows, _idct_1d_cols
         .export _shift_table, _bits_table
         .export _init_idx, _update_idx
+        .export _setup_floppy_restart
+        .import floppy_motor_on
 
         .import _mul362_h, _mul362_m, _mul362_l
         .import _mul473_h, _mul473_m, _mul473_l
@@ -38,6 +40,15 @@ CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
         .segment "CODE"
+
+.proc _setup_floppy_restart
+        lda     floppy_motor_on         ; Patch motor_on if we use a floppy
+        beq     :+
+        sta     start_floppy_motor+1
+        lda     #$C0                    ; Firmware access space
+        sta     start_floppy_motor+2
+:       rts
+.endproc
 
 ; int8 * x => >> 8 => (int8)
 .macro do_mul TABL, TABM;, TABH
@@ -181,7 +192,12 @@ done:
 
 .proc _get_coeffs
         ldx     _cache_read+1           ; Cache end ?
-        cpx     #>CACHE_END
+        cpx     #(>CACHE_END)-4
+        bmi     :+
+start_floppy_motor:
+        sta     motor_on                ; Patched if on floppy
+
+:       cpx     #>CACHE_END             ; Check for cache end and refill cache
         bne     :+
         jsr     fill_cache
 :       ldx     #8
@@ -220,6 +236,7 @@ _bits_table = _get_coeffs::bits_table
 _shift_table = _get_coeffs::shift_table
 inc_cache_done = _get_coeffs::inc_cache_done
 _cache_read = _get_coeffs::_cache_read
+start_floppy_motor = _get_coeffs::start_floppy_motor
 
 ; Fixme lots to optimize
 ; Move block increment to a single-byte var and use it as index in idct_1d_cols
@@ -873,3 +890,6 @@ prev_idx0 = *+1
         sty     idx7_5+2
         rts
 .endproc
+
+.segment "BSS"
+motor_on: .res 2

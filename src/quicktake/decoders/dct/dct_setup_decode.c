@@ -7,6 +7,10 @@
 
 uint32 data_size;
 
+#ifdef __CC65__
+void setup_floppy_restart(void);
+#endif
+
 char qt_setup_decode(void) {
   cur_cache_ptr = cache + INITIAL_CACHE_OFFSET;
   if (memcmp (cur_cache_ptr, DCT_MAGIC, 4)) {
@@ -25,6 +29,7 @@ err_out:
 
 #ifdef __CC65__
   cache_read = cur_cache_ptr;
+  setup_floppy_restart();
 #endif
   bits_table = normal_bits;
   shift_table = normal_shift;
