@@ -1,8 +1,9 @@
 ; Too bad there's no #pragma align in cc65
         .export _normal_bits, _superfine_bits
         .export _normal_shift, _superfine_shift
+        .export _asr1, _lsr1
         .export _idx
-        .export _SCAN, _coef, _scan, _ign_bits, _coef_sign
+        .export _SCAN, _coef, _scan
         .export _nbits_avail
         .export _mul362_m, _mul362_l
         .export _mul473_m, _mul473_l
@@ -31,7 +32,6 @@ ybck         = tmp2
 ; For _get_coeffs
 _scan        = _zp8
 _nbits_avail = _zp9
-_ign_bits    = _zp10
 
 ; For idct
 _tmp0       = _zp6
@@ -61,7 +61,8 @@ IGNORE_BITS_3 = (DESCALE_FACTOR+2-3)
 
         .segment "DATA"
 .align 256
-_normal_bits:           .byte 8, 8, 8, 7, 7, 7, 7, 7
+.proc _normal_bits
+                        .byte 8, 8, 8, 7, 7, 7, 7, 7
                         .byte 7, 7, 6, 5, 6, 7, 7, 7
                         .byte 6, 5, 5, 5, 5, 3, 0, 0
                         .byte 5, 5, 5, 6, 6, 5, 4, 4
@@ -69,17 +70,23 @@ _normal_bits:           .byte 8, 8, 8, 7, 7, 7, 7, 7
                         .byte 4, 4, 4, 0, 0, 0, 0, 0
                         .byte 0, 0, 0, 0, 0, 0, 0, 0
                         .byte 0, 0, 0, 0, 0, 0, 0, 0
+.endproc
 
-_normal_shift:          .byte 1, 1, 1, 2, 2, 2, 2, 2
-                        .byte 2, 2, 3, 3, 3, 2, 2, 2
-                        .byte 3, 3, 3, 3, 4, 5, 0, 0
-                        .byte 3, 3, 3, 3, 3, 3, 4, 4
-                        .byte 0, 0, 0, 0, 0, 0, 0, 0
-                        .byte 4, 4, 4, 0, 0, 0, 0, 0
-                        .byte 0, 0, 0, 0, 0, 0, 0, 0
-                        .byte 0, 0, 0, 0, 0, 0, 0, 0
+; $00 = no table change
+; LSR tables derived from _lsr1 - _asr1
+.proc _normal_shift
+                        .byte >_asr1, $00,    $00,    >_asr2, $00,    $00,    $00,    $00
+                        .byte $00,    $00,    >_asr3, $00,    $00,    >_asr2, $00,    $00
+                        .byte >_asr3, $00,    $00,    $00,    >_asr4, >_asr5, $00,    $00
+                        .byte >_asr3, $00,    $00,    $00,    $00,    $00,    >_asr4, $00
+                        .byte $00,    $00,    $00,    $00,    $00,    $00,    $00,    $00
+                        .byte >_asr4, $00,    $00,    $00,    $00,    $00,    $00,    $00
+                        .byte $00,    $00,    $00,    $00,    $00,    $00,    $00,    $00
+                        .byte $00,    $00,    $00,    $00,    $00,    $00,    $00,    $00
+.endproc
 
-_superfine_bits:        .byte 10,10,10,9, 9, 9, 8, 8
+.proc _superfine_bits
+                        .byte 10,10,10,9, 9, 9, 8, 8
                         .byte 8, 8, 7, 7, 7, 8, 8, 8
                         .byte 7, 7, 7, 7, 6, 5, 6, 6
                         .byte 7, 7, 7, 7, 7, 7, 6, 6
@@ -87,19 +94,115 @@ _superfine_bits:        .byte 10,10,10,9, 9, 9, 8, 8
                         .byte 6, 6, 6, 6, 6, 6, 5, 4
                         .byte 3, 3, 3, 5, 6, 6, 5, 4
                         .byte 3, 3, 3, 3, 4, 3, 3, 3
+.endproc
 
-_superfine_shift:       .byte 1, 1, 1, 2, 2, 2, 2, 2
-                        .byte 2, 2, 3, 3, 3, 2, 2, 2
-                        .byte 3, 3, 3, 3, 4, 5, 4, 4
-                        .byte 3, 3, 3, 3, 3, 3, 4, 4
-                        .byte 4, 4, 5, 6, 6, 6, 5, 4
-                        .byte 4, 4, 4, 4, 4, 4, 5, 6
-                        .byte 6, 6, 6, 5, 4, 4, 5, 5
-                        .byte 6, 6, 6, 6, 5, 6, 6, 6
+; $00 = no table change
+.proc _superfine_shift
+                        .byte >_asr1, $00,    $00,    >_asr2, $00,    $00,    $00,    $00
+                        .byte $00,    $00,    >_asr3, $00,    $00,    >_asr2, $00,    $00
+                        .byte >_asr3, $00,    $00,    $00,    >_asr4, >_asr5, >_asr4, $00
+                        .byte >_asr3, $00,    $00,    $00,    $00,    $00,    >_asr4, $00
+                        .byte $00,    $00,    >_asr5, >_asr6, $00,    $00,    >_asr5, >_asr4
+                        .byte $00,    $00,    $00,    $00,    $00,    $00,    >_asr5, >_asr6
+                        .byte $00,    $00,    $00,    >_asr5, >_asr4, $00,    >_asr5, $00
+                        .byte >_asr6, $00,    $00,    $00,    >_asr5, >_asr6, $00,    $00
+.endproc
 
 .assert <* = 0, error
 
-_SCAN:                  .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
+; LSR tables derived from (_lsr1 - _asr1) so keep them together and in order!
+.proc _lsr1
+.repeat 256, I
+  .byte I .SHR 1
+.endrepeat
+.endproc
+
+.proc _lsr2
+.repeat 256, I
+  .byte I .SHR 2
+.endrepeat
+.endproc
+
+.proc _lsr3
+.repeat 256, I
+  .byte I .SHR 3
+.endrepeat
+.endproc
+
+.proc _lsr4
+.repeat 256, I
+  .byte I .SHR 4
+.endrepeat
+.endproc
+
+.proc _lsr5
+.repeat 256, I
+  .byte I .SHR 5
+.endrepeat
+.endproc
+
+.proc _lsr6
+.repeat 256, I
+  .byte I .SHR 6
+.endrepeat
+.endproc
+
+.proc _asr1
+.repeat 128, I
+  .byte I .SHR 1
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 1) .BITOR $80
+.endrepeat
+.endproc
+
+.proc _asr2
+.repeat 128, I
+  .byte I .SHR 2
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 2) .BITOR $C0
+.endrepeat
+.endproc
+
+.proc _asr3
+.repeat 128, I
+  .byte I .SHR 3
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 3) .BITOR $E0
+.endrepeat
+.endproc
+
+.proc _asr4
+.repeat 128, I
+  .byte I .SHR 4
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 4) .BITOR $F0
+.endrepeat
+.endproc
+
+.proc _asr5
+.repeat 128, I
+  .byte I .SHR 5
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 5) .BITOR $F8
+.endrepeat
+.endproc
+
+.proc _asr6
+.repeat 128, I
+  .byte I .SHR 6
+.endrepeat
+.repeat 128, I
+  .byte ((I+128) .SHR 6) .BITOR $FC
+.endrepeat
+.endproc
+
+.proc _SCAN
+                        .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
                         .byte 17*2,24*2,32*2,25*2,18*2,11*2, 4*2, 5*2
                         .byte 12*2,19*2,26*2,33*2,40*2,48*2,41*2,34*2
                         .byte 27*2,20*2,13*2, 6*2, 7*2,14*2,21*2,28*2
@@ -107,9 +210,7 @@ _SCAN:                  .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
                         .byte 29*2,22*2,15*2,23*2,30*2,37*2,44*2,51*2
                         .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
                         .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
-
-_coef_sign:             .byte   $00,$80,$C0,$E0,$F0,$F8,$FC
-
+.endproc
 
 _cache_start:           .addr _cache
 

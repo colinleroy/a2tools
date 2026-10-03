@@ -3,13 +3,17 @@
         .export _idct_1d_rows, _idct_1d_cols
         .export _shift_table, _bits_table
         .export _init_idx, _update_idx
+        .export _setup_floppy_restart
+        .import floppy_motor_on
 
         .import _mul362_h, _mul362_m, _mul362_l
         .import _mul473_h, _mul473_m, _mul473_l
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
 
-        .import _coef, _coef_sign, _row_out, _raw_image
+        .import _asr1, _lsr1
+        
+        .import _coef, _row_out, _raw_image
 
         .import _cache
         .import _SCAN
@@ -22,7 +26,7 @@
         .import decsp4, pushax
 
         .importzp _prev_ram_irq_vector, c_sp, tmp1
-        .importzp xbck, ybck, _nbits_avail, _scan, _ign_bits
+        .importzp xbck, ybck, _nbits_avail, _scan
         .importzp _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .importzp _tmp10, _tmp11, _tmp12, _tmp13
         .importzp _z5, _z10, _z11, _z12, _z13_0, _z13_1
@@ -36,6 +40,15 @@ CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
         .segment "CODE"
+
+.proc _setup_floppy_restart
+        lda     floppy_motor_on         ; Patch motor_on if we use a floppy
+        beq     :+
+        sta     start_floppy_motor+1
+        lda     #$C0                    ; Firmware access space
+        sta     start_floppy_motor+2
+:       rts
+.endproc
 
 ; int8 * x => >> 8 => (int8)
 .macro do_mul TABL, TABM;, TABH
@@ -143,12 +156,12 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
 ; or load buffer and ROR ZP: 48 LSR A + 48 ror ZP = 336 cycles + 2 LDA imm, 3 STA ZP, (4 LDA ABS*48) = 528
 ; LSR abs+ror A wins
 
-; Enter with numbits in Y, _ign_bits in X
-; Exits with carry set if last bit set (neg)
-; Exits with bitval in A
+; Enter with numbits in Y
+; Exits with bitval in A and _scan in Y
 .macro GET_BITVAL
         lda     #0                      ; Init bitval
         ldx     _nbits_avail
+
 next_bit:
         dex
         bmi     inc_cache
@@ -161,42 +174,48 @@ _cache_read = *+1
 
         stx     _nbits_avail            ; Remember how many bits we have
 
-        ldx     _ign_bits               ; Preload bits to shift out
+        tax
         cmp     #$80                    ; is last bit 1 (negative) ?
         bcc     shift_pos
 shift_neg:
         ldy     _scan                   ; is scan != 0? (note: caller expects _scan in Y)
         beq     shift_pos               ; if scan == 0 ignore sign extension
-        ldy     _ign_bits               ; Need a copy for iterating
-:       lsr
-        dey
-        bne     :-
-        ora     _coef_sign,x
+asrtab:
+        lda     $FF00,x
         jmp     done
 shift_pos:
-:       lsr
-        dex
-        bne     :-
+        ldy     _scan                   ; Reload _scan for caller
+lsrtab:
+        lda     $FF00,x
 done:
-        ldy     _scan
 .endmacro
 
 .proc _get_coeffs
         ldx     _cache_read+1           ; Cache end ?
-        cpx     #>CACHE_END
+        cpx     #(>CACHE_END)-4
+        bmi     :+
+start_floppy_motor:
+        sta     motor_on                ; Patched if on floppy
+
+:       cpx     #>CACHE_END             ; Check for cache end and refill cache
         bne     :+
         jsr     fill_cache
 :       ldx     #8
         stx     _nbits_avail
         ldy     #0
+        clc
 next_coeff:
 shift_table = *+1
-        lda     $FFFF,y                 ; get ignored bits shift
-        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
-        sta     _ign_bits
+        lda     $FFFF,y                 ; get ignored bits shift table
+        beq     :+
+        sta     asrtab+2                ; don't update if no change
+        adc     #>(_lsr1 - _asr1)
+        sta     lsrtab+2
+:
 
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
+        beq     inc_scan                ; eq jmp here, no bits shift = no bits = coef 0
         sty     _scan
         tay                             ; num_bits in Y
 
@@ -217,6 +236,7 @@ _bits_table = _get_coeffs::bits_table
 _shift_table = _get_coeffs::shift_table
 inc_cache_done = _get_coeffs::inc_cache_done
 _cache_read = _get_coeffs::_cache_read
+start_floppy_motor = _get_coeffs::start_floppy_motor
 
 ; Fixme lots to optimize
 ; Move block increment to a single-byte var and use it as index in idct_1d_cols
@@ -870,3 +890,6 @@ prev_idx0 = *+1
         sty     idx7_5+2
         rts
 .endproc
+
+.segment "BSS"
+motor_on: .res 2
