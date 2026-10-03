@@ -21,9 +21,7 @@ err_out:
         ((uint32)cur_cache_ptr[DATASIZE_IDX+2] << 16) |
         ((uint32)cur_cache_ptr[DATASIZE_IDX+3] << 24);
 
-  /* Rollback one char for alignment */
-  cur_cache_ptr += (0x200) - 1;
-  nbits_avail = 0;
+  cur_cache_ptr += (0x200);
 
 #ifdef __CC65__
   cache_read = cur_cache_ptr;

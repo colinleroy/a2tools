@@ -177,16 +177,12 @@ done:
 .endmacro
 
 .proc _get_coeffs
-        inc     _cache_read             ; Increment cache pointer
-        bne     :+
-        inc     _cache_read+1
         ldx     _cache_read+1           ; Cache end ?
         cpx     #>CACHE_END
         bne     :+
         jsr     fill_cache
 :       ldx     #8
         stx     _nbits_avail
-
         ldy     #0
 next_coeff:
 shift_table = *+1
@@ -206,7 +202,11 @@ inc_scan:
         iny
         cpy     #64
         bcc     next_coeff
-        rts
+
+        inc     _cache_read             ; Increment cache pointer
+        bne     :+
+        inc     _cache_read+1
+:       rts
 .endproc
 _bits_table = _get_coeffs::bits_table
 _shift_table = _get_coeffs::shift_table
