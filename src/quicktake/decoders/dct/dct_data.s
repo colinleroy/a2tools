@@ -163,52 +163,8 @@ IGNORE_BITS_3 = (DESCALE_FACTOR+2-3)
                         .endrepeat
 .endproc
 
-.proc _SCAN
-                        .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
-                        .byte 17*2,24*2,32*2,25*2,18*2,11*2, 4*2, 5*2
-                        .byte 12*2,19*2,26*2,33*2,40*2,48*2,41*2,34*2
-                        .byte 27*2,20*2,13*2, 6*2, 7*2,14*2,21*2,28*2
-                        .byte 35*2,42*2,49*2,56*2,57*2,50*2,43*2,36*2
-                        .byte 29*2,22*2,15*2,23*2,30*2,37*2,44*2,51*2
-                        .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
-                        .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
-.endproc
-
-_cache_start:           .addr _cache
-
-        .segment "BSS"
-
-; raw_image has 512px wide lines to help with alignment
-; only the first 320 of each contain image data
-; We'll fill in the blanks with the rest of the BSS data
-; far enough that the scaler won't overwrite it (it will
-; overwrite 256*16 bytes)
-.align 256
-_raw_image:             .res (BAND_HEIGHT)*RAW_WIDTH
-_cache:                 .res CACHE_SIZE
-
 .assert <* = 0, error
-_histogram_low:         .res 256
-_histogram_high:        .res 256
-_orig_x_offset:         .res 256
-_special_x_orig_offset: .res 256
-_coef:                  .res 128
-_row_out:               .res 128
 
-_orig_y_table_l:        .res BAND_HEIGHT
-_orig_y_table_h:        .res BAND_HEIGHT
-
-_idx:                   .res 2
-
-_actual_width:          .res 2
-_total_blocks:          .res 2
-_blocks_per_band:       .res 2
-_blocks_per_row:        .res 1
-_blocks_rem_in_row:     .res 1
-
-        .segment "DATA"
-
-.align 256
 .proc _mul362_l
   .repeat 256, I
     .byte (I*362) .BITAND $FF
@@ -240,6 +196,51 @@ _blocks_rem_in_row:     .res 1
 ;     .byte ((I*473) .SHR 16) .BITAND $FF
 ;   .endrepeat
 ; .endproc
+
+.assert <* = 0, error
+
+.proc _SCAN
+                        .byte  0*2, 1*2, 8*2,16*2, 9*2, 2*2, 3*2,10*2
+                        .byte 17*2,24*2,32*2,25*2,18*2,11*2, 4*2, 5*2
+                        .byte 12*2,19*2,26*2,33*2,40*2,48*2,41*2,34*2
+                        .byte 27*2,20*2,13*2, 6*2, 7*2,14*2,21*2,28*2
+                        .byte 35*2,42*2,49*2,56*2,57*2,50*2,43*2,36*2
+                        .byte 29*2,22*2,15*2,23*2,30*2,37*2,44*2,51*2
+                        .byte 58*2,59*2,52*2,45*2,38*2,31*2,39*2,46*2
+                        .byte 53*2,60*2,61*2,54*2,47*2,55*2,62*2,63*2
+.endproc
+
+_cache_start:           .addr _cache
+
+        .segment "BSS"
+
+; raw_image has 512px wide lines to help with alignment
+; only the first 320 of each contain image data
+; We'll fill in the blanks with the rest of the BSS data
+; far enough that the scaler won't overwrite it (it will
+; overwrite 256*16 bytes)
+.align 256
+_raw_image:             .res (BAND_HEIGHT)*RAW_WIDTH
+_cache:                 .res CACHE_SIZE
+
+_coef                   = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-3)*RAW_WIDTH ; 128
+_row_out                = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-2)*RAW_WIDTH ; 128
+_orig_y_table_l         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-1)*RAW_WIDTH ; BAND_HEIGHT_BYTES
+_orig_y_table_h         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-1)*RAW_WIDTH + BAND_HEIGHT
+
+.assert <* = 0, error
+_histogram_low:         .res 256
+_histogram_high:        .res 256
+_orig_x_offset:         .res 256
+_special_x_orig_offset: .res 256
+
+_idx:                   .res 2
+
+_actual_width:          .res 2
+_total_blocks:          .res 2
+_blocks_per_band:       .res 2
+_blocks_per_row:        .res 1
+_blocks_rem_in_row:     .res 1
 
         .segment "LC"
 

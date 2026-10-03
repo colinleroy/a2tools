@@ -328,12 +328,13 @@ jpegconv_GCCCFLAGS = \
 # We need the cache to be a multiple of 256 (for end of cache check)
 # and we need the cache to be a multiple of 48 as each Superfine
 # image block consumes 48 bytes (24 for Fine/Normal images).
+# (so multiple of 768, smallest common multiplier of 48 and 256);
 # The first read with the 512 bytes header breaks this, so we read with
 # offset to compensate: ((12288-512)/48 = 11760, +512 bytes of header =
 # 12272. Offset 16 to reach end-of-cache at the normal 12288.
 dctconv_CLCFLAGS = \
-	-DCACHE_SIZE=10752          --asm-define CACHE_SIZE=10752 \
-	-DINITIAL_CACHE_READ=10736  --asm-define INITIAL_CACHE_READ=10736 \
+	-DCACHE_SIZE=11520          --asm-define CACHE_SIZE=11520 \
+	-DINITIAL_CACHE_READ=11504  --asm-define INITIAL_CACHE_READ=11504 \
 	-DINITIAL_CACHE_OFFSET=16   --asm-define INITIAL_CACHE_OFFSET=16 \
 	-DRAW_X_OFFSET=0            --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0            --asm-define RAW_Y_OFFSET=0 \
@@ -347,8 +348,8 @@ dctconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 dctconv_GCCCFLAGS = \
-	-DCACHE_SIZE=10752 \
-	-DINITIAL_CACHE_READ=10736 \
+	-DCACHE_SIZE=11520 \
+	-DINITIAL_CACHE_READ=11504 \
 	-DINITIAL_CACHE_OFFSET=16 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
