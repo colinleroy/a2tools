@@ -672,10 +672,6 @@ full_cols_no_scale:
         tay
         iny                             ; Y = X+1
 
-        ADDU    _tmp3
-idx4_4: sta     $FFFF,x
-idx4_5: sta     $FFFF,y
-
         lda     _tmp0
         ADDU    _tmp7
 idx0_4: sta     $FFFF,x
@@ -685,6 +681,11 @@ idx0_5: sta     $FFFF,y
         ADDU    _tmp5
 idx2_4: sta     $FFFF,x
 idx2_5: sta     $FFFF,y
+
+        lda     _tmp4
+        ADDU    _tmp3
+idx4_4: sta     $FFFF,x
+idx4_5: sta     $FFFF,y
 
         lda     _tmp1
         SUBU    _tmp6

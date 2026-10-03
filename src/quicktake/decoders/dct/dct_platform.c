@@ -238,9 +238,9 @@ void idct_1d_cols(void) {
             tmp4 = CLAMPI(tmp5 + tmp10);
 
             if (actual_width == 160) {
-              idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
               idx0[x] = idx0[x + 1] = CLAMPU(tmp0 + tmp7);
               idx2[x] = idx2[x + 1] = CLAMPU(tmp2 + tmp5);
+              idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
               idx6[x] = idx6[x + 1] = CLAMPU(tmp1 - tmp6);
 
               idx1[x] = idx1[x + 1] = CLAMPU(tmp1 + tmp6);
