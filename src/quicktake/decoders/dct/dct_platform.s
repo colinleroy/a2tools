@@ -222,18 +222,7 @@ inc_cache_done = _get_coeffs::inc_cache_done
 cache_ok       = _get_coeffs::cache_ok
 _cache_read    = _get_coeffs::_cache_read
 
-.proc _advance_block
-        dec     _blocks_rem_in_row
-        beq     inc_row
-inc_block:
-        ldx     _actual_width+1
-        lda     block_step,x
-        clc
-        adc     idx0_1+1
-        sta     idx0_1+1
-        bcc     _update_idx
-        bcs     update_idx_high
-inc_row:
+.proc inc_row
         ldx     _actual_width+1
         lda     row_step_l,x
         clc
@@ -247,7 +236,16 @@ inc_row:
         jmp     _update_idx
 .endproc
 
-.proc update_idx_high
+.proc _advance_block
+        dec     _blocks_rem_in_row
+        beq     inc_row
+inc_block:
+        ldx     _actual_width+1
+        lda     block_step,x
+        clc
+        adc     idx0_1+1
+        sta     idx0_1+1
+        bcc     _update_idx
         inc     idx0_1+2
         ; fallthrough
 .endproc
@@ -675,9 +673,8 @@ idx7_2: sta     $FFFF,x
 :       rts
 
 fast_cols_scale_down:
-        txa
-        lsr
-        tay
+        ldy     _asr1,x                 ; Y = X/2 (X < 128)
+
         lda     _row_out+0,x            ; Easy way out, 320w images
         CLAMPU
 idx0_3: sta     $FFFF,y
@@ -834,9 +831,7 @@ idx7_5: sta     $FFFF,y
 :       rts
 
 full_cols_scale_down:
-        txa
-        lsr
-        tay
+        ldy     _asr1,x
 
         lda     _tmp0
         ADDU    _tmp7
