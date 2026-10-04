@@ -207,26 +207,24 @@ _cache_start:           .addr _cache
 ; far enough that the scaler won't overwrite it (it will
 ; overwrite 256*16 bytes)
 .align 256
-_raw_image:             .res (BAND_HEIGHT)*RAW_WIDTH
 _cache:                 .res CACHE_SIZE
-
-_idx                    = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH ; 2
-_actual_width           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 2 ; 2
-_total_blocks           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 4 ; 2
-_blocks_per_band        = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 6 ; 2
-_blocks_per_row         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 8 ; 1
-_blocks_rem_in_row      = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 9 ; 1
-
-_coef                   = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-3)*RAW_WIDTH ; 128
-_row_out                = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-2)*RAW_WIDTH ; 128
-_orig_y_table_l         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-1)*RAW_WIDTH ; BAND_HEIGHT_BYTES
-_orig_y_table_h         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-1)*RAW_WIDTH + BAND_HEIGHT
-
-.assert <* = 0, error
 _histogram_low:         .res 256
 _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
+_raw_image:             .res (BAND_HEIGHT-1)*RAW_WIDTH+DECODE_WIDTH
+
+_idx                    = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH ; 2
+_actual_width           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 2 ; 2
+_total_blocks           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 4 ; 2
+_blocks_per_band        = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 6 ; 2
+_blocks_per_row         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 8 ; 1
+_blocks_rem_in_row      = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 9 ; 1
+
+_coef                   = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH ; 128
+_row_out                = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-3)*RAW_WIDTH ; 128
+_orig_y_table_l         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-2)*RAW_WIDTH ; BAND_HEIGHT
+_orig_y_table_h         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-2)*RAW_WIDTH + BAND_HEIGHT
 
         .segment "LC"
 

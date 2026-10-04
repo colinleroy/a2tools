@@ -333,8 +333,8 @@ jpegconv_GCCCFLAGS = \
 # offset to compensate: ((12288-512)/48 = 11760, +512 bytes of header =
 # 12272. Offset 16 to reach end-of-cache at the normal 12288.
 dctconv_CLCFLAGS = \
-	-DCACHE_SIZE=11520          --asm-define CACHE_SIZE=11520 \
-	-DINITIAL_CACHE_READ=11504  --asm-define INITIAL_CACHE_READ=11504 \
+	-DCACHE_SIZE=12288          --asm-define CACHE_SIZE=12288 \
+	-DINITIAL_CACHE_READ=12272  --asm-define INITIAL_CACHE_READ=12272 \
 	-DINITIAL_CACHE_OFFSET=16   --asm-define INITIAL_CACHE_OFFSET=16 \
 	-DRAW_X_OFFSET=0            --asm-define RAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0            --asm-define RAW_Y_OFFSET=0 \
@@ -348,8 +348,8 @@ dctconv_CLCFLAGS = \
 	--start-addr 0x1000  #Two file buffers
 
 dctconv_GCCCFLAGS = \
-	-DCACHE_SIZE=11520 \
-	-DINITIAL_CACHE_READ=11504 \
+	-DCACHE_SIZE=12288 \
+	-DINITIAL_CACHE_READ=12272 \
 	-DINITIAL_CACHE_OFFSET=16 \
 	-DRAW_X_OFFSET=0 \
 	-DRAW_Y_OFFSET=0 \
