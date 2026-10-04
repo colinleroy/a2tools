@@ -19,7 +19,7 @@ extern uint8 *idx7;
 
 extern uint8 numbits;
 extern uint8 valneg;
-extern int16 bitval;
+extern uint8 bitval;
 
 extern uint8 SCAN[64];
 extern int8 coef[64];

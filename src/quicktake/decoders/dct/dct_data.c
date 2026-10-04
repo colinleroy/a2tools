@@ -8,7 +8,7 @@ uint8 *idx0, *idx1, *idx2, *idx3, *idx4, *idx5, *idx6, *idx7;
 
 uint8 numbits;
 uint8 valneg;
-int8 bitval;
+uint8 bitval;
 
 int8 coef[128];
 uint8 scan;
