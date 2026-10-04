@@ -166,36 +166,22 @@ IGNORE_BITS_3 = (DESCALE_FACTOR+2-3)
 .assert <* = 0, error
 
 .proc _mul362_l
-  .repeat 256, I
-    .byte (I*362) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte (I*362) .BITAND $FF
+                        .endrepeat
 .endproc
 .proc _mul362_m
-  .repeat 256, I
-    .byte ((I*362) .SHR 8) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte ((I*362) .SHR 8) .BITAND $FF
+                        .endrepeat
 .endproc
-; .proc _mul362_h
-;   .repeat 256, I
-;     .byte ((I*362) .SHR 16) .BITAND $FF
-;   .endrepeat
-; .endproc
 
 .proc _mul473_l
-  .repeat 256, I
-    .byte (I*473) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte (I*473) .BITAND $FF
+                        .endrepeat
 .endproc
-.proc _mul473_m
-  .repeat 256, I
-    .byte ((I*473) .SHR 8) .BITAND $FF
-  .endrepeat
-.endproc
-; .proc _mul473_h
-;   .repeat 256, I
-;     .byte ((I*473) .SHR 16) .BITAND $FF
-;   .endrepeat
-; .endproc
+; continued in LC below
 
 .assert <* = 0, error
 
@@ -223,6 +209,13 @@ _cache_start:           .addr _cache
 _raw_image:             .res (BAND_HEIGHT)*RAW_WIDTH
 _cache:                 .res CACHE_SIZE
 
+_idx                    = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH ; 2
+_actual_width           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 2 ; 2
+_total_blocks           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 4 ; 2
+_blocks_per_band        = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 6 ; 2
+_blocks_per_row         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 8 ; 1
+_blocks_rem_in_row      = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH + 9 ; 1
+
 _coef                   = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-3)*RAW_WIDTH ; 128
 _row_out                = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-2)*RAW_WIDTH ; 128
 _orig_y_table_l         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-1)*RAW_WIDTH ; BAND_HEIGHT_BYTES
@@ -234,51 +227,32 @@ _histogram_high:        .res 256
 _orig_x_offset:         .res 256
 _special_x_orig_offset: .res 256
 
-_idx:                   .res 2
-
-_actual_width:          .res 2
-_total_blocks:          .res 2
-_blocks_per_band:       .res 2
-_blocks_per_row:        .res 1
-_blocks_rem_in_row:     .res 1
-
         .segment "LC"
 
+.proc _mul473_m
+                        .repeat 256, I
+                          .byte ((I*473) .SHR 8) .BITAND $FF
+                        .endrepeat
+.endproc
+
 .proc _mul277_l
-  .repeat 256, I
-    .byte (I*277) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte (I*277) .BITAND $FF
+                        .endrepeat
 .endproc
 .proc _mul277_m
-  .repeat 256, I
-    .byte ((I*277) .SHR 8) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte ((I*277) .SHR 8) .BITAND $FF
+                        .endrepeat
 .endproc
-; .proc _mul277_h
-;   .repeat 256, I
-;     .byte ((I*277) .SHR 16) .BITAND $FF
-;   .endrepeat
-; .endproc
 
 .proc _mul669_l
-  .repeat 256, I
-    .byte (I*669) .BITAND $FF
-  .endrepeat
+                        .repeat 256, I
+                          .byte (I*669) .BITAND $FF
+                        .endrepeat
 .endproc
 .proc _mul669_m
-  .repeat 256, I
-    .byte ((I*669) .SHR 8) .BITAND $FF
-  .endrepeat
-.endproc
-; .proc _mul669_h
-;   .repeat 256, I
-;     .byte ((I*669) .SHR 16) .BITAND $FF
-;   .endrepeat
-; .endproc
-
-.assert <* = 0, error
-.proc right_shift_4
-  .repeat 256, I
-    .byte I .SHR 4
-  .endrepeat
+                        .repeat 256, I
+                          .byte ((I*669) .SHR 8) .BITAND $FF
+                        .endrepeat
 .endproc
