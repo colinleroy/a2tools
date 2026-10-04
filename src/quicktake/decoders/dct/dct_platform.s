@@ -127,7 +127,18 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         ; Push count (CACHE_SIZE)
         lda     #<CACHE_SIZE
         ldx     #>CACHE_SIZE
-        jsr     _read
+
+        ; Unless it's a normal picture, in which case we can read
+        ; only the remainder of the data we want. we caould do the
+        ; same for the last reads of the other sizes but it's not
+        ; really worth it (>8kB last read for normal, >4kB for
+        ; superfine)
+        ldy     _actual_width
+        cpy     #<160
+        bne     :+
+        lda     #<((24*600)-INITIAL_CACHE_READ+$200)
+        ldx     #>((24*600)-INITIAL_CACHE_READ+$200)
+:       jsr     _read
 
         ldx     #0
         lda     #7
