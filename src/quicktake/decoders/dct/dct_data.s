@@ -15,6 +15,7 @@
         .export _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .export _tmp10, _tmp11, _tmp12, _tmp13
         .export _z5, _z10, _z11, _z12, _z13_0, _z13_1
+        .export block_step, row_step_l, row_step_h
         .export _row_out
         .export _histogram_low, _histogram_high
         .export _orig_y_table_l, _orig_y_table_h
@@ -256,3 +257,7 @@ _special_x_orig_offset: .res 256
                           .byte ((I*669) .SHR 8) .BITAND $FF
                         .endrepeat
 .endproc
+
+block_step:             .byte 16, 8
+row_step_l:             .byte <(8*RAW_WIDTH-DECODE_WIDTH+16), <(4*RAW_WIDTH-DECODE_WIDTH+8)
+row_step_h:             .byte >(8*RAW_WIDTH-DECODE_WIDTH+16), >(4*RAW_WIDTH-DECODE_WIDTH+8)

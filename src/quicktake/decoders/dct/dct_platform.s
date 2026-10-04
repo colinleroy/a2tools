@@ -10,6 +10,7 @@
         .import _mul473_h, _mul473_m, _mul473_l
         .import _mul277_h, _mul277_m, _mul277_l
         .import _mul669_h, _mul669_m, _mul669_l
+        .import block_step, row_step_l, row_step_h
 
         .import _asr1
         
@@ -69,12 +70,6 @@ neg:    clc
         lda     TABM,x
         eor     #$FF
         adc     #0
-        ; tay
-        ; lda     TABH,x
-        ; eor     #$FF
-        ; adc     #0
-        ; tax
-        ; tya
 done:
 .endscope
 .endmacro
@@ -97,6 +92,8 @@ done:
 
 _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
+
+        .segment "LC"
 
 .proc fill_cache
         ldx     #0
@@ -140,6 +137,8 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         jsr     _cputsxy
         jmp     cache_ok
 .endproc
+
+        .segment "CODE"
 
 .proc inc_cache
         ldx     #7
@@ -223,12 +222,6 @@ inc_cache_done = _get_coeffs::inc_cache_done
 cache_ok       = _get_coeffs::cache_ok
 _cache_read    = _get_coeffs::_cache_read
 
-; Fixme lots to optimize
-; Move block increment to a single-byte var and use it as index in idct_1d_cols
-; Move row increment to LUT-based (always lands at $XX00)
-block_step:     .byte 16, 8
-row_step_l:     .byte <(8*RAW_WIDTH-DECODE_WIDTH+16), <(4*RAW_WIDTH-DECODE_WIDTH+8)
-row_step_h:     .byte >(8*RAW_WIDTH-DECODE_WIDTH+16), >(4*RAW_WIDTH-DECODE_WIDTH+8)
 .proc _advance_block
         dec     _blocks_rem_in_row
         beq     inc_row
@@ -238,10 +231,8 @@ inc_block:
         clc
         adc     idx0_1+1
         sta     idx0_1+1
-        lda     idx0_1+2
-        adc     #0
-        sta     idx0_1+2
-        jmp     _update_idx
+        bcc     _update_idx
+        bcs     update_idx_high
 inc_row:
         ldx     _actual_width+1
         lda     row_step_l,x
@@ -254,6 +245,129 @@ inc_row:
         lda     _blocks_per_row
         sta     _blocks_rem_in_row
         jmp     _update_idx
+.endproc
+
+.proc update_idx_high
+        inc     idx0_1+2
+        ; fallthrough
+.endproc
+.proc _update_idx
+        .assert <_raw_image = 0, error
+        ldy     idx0_1+1
+        sty     idx0_2+1
+        sty     idx0_3+1
+        sty     idx0_4+1
+        sty     idx0_5+1
+        sty     idx0_6+1
+
+        sty     idx1_1+1
+        sty     idx1_2+1
+        sty     idx1_3+1
+        sty     idx1_4+1
+        sty     idx1_5+1
+        sty     idx1_6+1
+
+        sty     idx2_1+1
+        sty     idx2_2+1
+        sty     idx2_3+1
+        sty     idx2_4+1
+        sty     idx2_5+1
+        sty     idx2_6+1
+
+        sty     idx3_1+1
+        sty     idx3_2+1
+        sty     idx3_3+1
+        sty     idx3_4+1
+        sty     idx3_5+1
+        sty     idx3_6+1
+
+        sty     idx4_1+1
+        sty     idx4_2+1
+        sty     idx4_4+1
+        sty     idx4_5+1
+
+        sty     idx5_1+1
+        sty     idx5_2+1
+        sty     idx5_4+1
+        sty     idx5_5+1
+
+        sty     idx6_1+1
+        sty     idx6_2+1
+        sty     idx6_4+1
+        sty     idx6_5+1
+
+        sty     idx7_1+1
+        sty     idx7_2+1
+        sty     idx7_4+1
+        sty     idx7_5+1
+
+        ldy     idx0_1+2
+prev_idx0 = *+1
+        cpy     #$00                    ; Don't patch unchanged high bytes
+        bne     :+
+        rts
+:       sty     prev_idx0
+        sty     idx0_2+2
+        sty     idx0_3+2
+        sty     idx0_4+2
+        sty     idx0_5+2
+        sty     idx0_6+2
+        .assert RAW_WIDTH = 512, error
+        iny
+        iny
+        sty     idx1_1+2
+        sty     idx1_2+2
+        sty     idx1_3+2
+        sty     idx1_4+2
+        sty     idx1_5+2
+        sty     idx1_6+2
+
+        iny
+        iny
+        sty     idx2_1+2
+        sty     idx2_2+2
+        sty     idx2_3+2
+        sty     idx2_4+2
+        sty     idx2_5+2
+        sty     idx2_6+2
+
+        iny
+        iny
+        sty     idx3_1+2
+        sty     idx3_2+2
+        sty     idx3_3+2
+        sty     idx3_4+2
+        sty     idx3_5+2
+        sty     idx3_6+2
+
+        iny
+        iny
+        sty     idx4_1+2
+        sty     idx4_2+2
+        sty     idx4_4+2
+        sty     idx4_5+2
+
+        iny
+        iny
+        sty     idx5_1+2
+        sty     idx5_2+2
+        sty     idx5_4+2
+        sty     idx5_5+2
+
+        iny
+        iny
+        sty     idx6_1+2
+        sty     idx6_2+2
+        sty     idx6_4+2
+        sty     idx6_5+2
+
+        iny
+        iny
+        sty     idx7_1+2
+        sty     idx7_2+2
+        sty     idx7_4+2
+        sty     idx7_5+2
+        rts
 .endproc
 
 ; int8 clamp of sum/sub:
@@ -754,126 +868,6 @@ idx3_6: sta     $FFFF,y
         .assert <_raw_image = 0, error
         ldy     #<_raw_image
         sty     idx0_1+1
-        rts
-.endproc
-
-.proc _update_idx
-
-        .assert <_raw_image = 0, error
-        ldy     idx0_1+1
-        sty     idx0_2+1
-        sty     idx0_3+1
-        sty     idx0_4+1
-        sty     idx0_5+1
-        sty     idx0_6+1
-
-        sty     idx1_1+1
-        sty     idx1_2+1
-        sty     idx1_3+1
-        sty     idx1_4+1
-        sty     idx1_5+1
-        sty     idx1_6+1
-
-        sty     idx2_1+1
-        sty     idx2_2+1
-        sty     idx2_3+1
-        sty     idx2_4+1
-        sty     idx2_5+1
-        sty     idx2_6+1
-
-        sty     idx3_1+1
-        sty     idx3_2+1
-        sty     idx3_3+1
-        sty     idx3_4+1
-        sty     idx3_5+1
-        sty     idx3_6+1
-
-        sty     idx4_1+1
-        sty     idx4_2+1
-        sty     idx4_4+1
-        sty     idx4_5+1
-
-        sty     idx5_1+1
-        sty     idx5_2+1
-        sty     idx5_4+1
-        sty     idx5_5+1
-
-        sty     idx6_1+1
-        sty     idx6_2+1
-        sty     idx6_4+1
-        sty     idx6_5+1
-
-        sty     idx7_1+1
-        sty     idx7_2+1
-        sty     idx7_4+1
-        sty     idx7_5+1
-
-        ldy     idx0_1+2
-prev_idx0 = *+1
-        cpy     #$00                    ; Don't patch unchanged high bytes
-        bne     :+
-        rts
-:       sty     prev_idx0
-        sty     idx0_2+2
-        sty     idx0_3+2
-        sty     idx0_4+2
-        sty     idx0_5+2
-        sty     idx0_6+2
-        .assert RAW_WIDTH = 512, error
-        iny
-        iny
-        sty     idx1_1+2
-        sty     idx1_2+2
-        sty     idx1_3+2
-        sty     idx1_4+2
-        sty     idx1_5+2
-        sty     idx1_6+2
-
-        iny
-        iny
-        sty     idx2_1+2
-        sty     idx2_2+2
-        sty     idx2_3+2
-        sty     idx2_4+2
-        sty     idx2_5+2
-        sty     idx2_6+2
-
-        iny
-        iny
-        sty     idx3_1+2
-        sty     idx3_2+2
-        sty     idx3_3+2
-        sty     idx3_4+2
-        sty     idx3_5+2
-        sty     idx3_6+2
-
-        iny
-        iny
-        sty     idx4_1+2
-        sty     idx4_2+2
-        sty     idx4_4+2
-        sty     idx4_5+2
-
-        iny
-        iny
-        sty     idx5_1+2
-        sty     idx5_2+2
-        sty     idx5_4+2
-        sty     idx5_5+2
-
-        iny
-        iny
-        sty     idx6_1+2
-        sty     idx6_2+2
-        sty     idx6_4+2
-        sty     idx6_5+2
-
-        iny
-        iny
-        sty     idx7_1+2
-        sty     idx7_2+2
-        sty     idx7_4+2
-        sty     idx7_5+2
         rts
 .endproc
 
