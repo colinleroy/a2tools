@@ -93,14 +93,14 @@ shift_pos:
 
 void advance_block(void) {
   if (--blocks_rem_in_row == 0) {
-    if (actual_width == 160) {
+    if (image_size == 0) {
       idx0 += 8*RAW_WIDTH-DECODE_WIDTH+16;
     } else {
       idx0 += 4*RAW_WIDTH-DECODE_WIDTH+8;
     }
     blocks_rem_in_row = blocks_per_row;
   } else {
-    idx0 += actual_width == 160 ? 16 : 8;
+    idx0 += image_size == 0 ? 16 : 8;
   }
   update_idx();
 }
@@ -178,7 +178,7 @@ void idct_1d_cols(void) {
             row_out[x + 80] == 0 && row_out[x + 96] == 0 &&
             row_out[x + 112] == 0) {
 
-            if (actual_width == 160) {
+            if (image_size == 0) {
               idx0[x] =
                 idx1[x] =
                 idx2[x] =
@@ -228,7 +228,7 @@ void idct_1d_cols(void) {
             tmp5 = CLAMPI(mul_362(CLAMPI(z11 - z13_0)) - tmp6);
             tmp4 = CLAMPI(tmp5 + tmp10);
 
-            if (actual_width == 160) {
+            if (image_size == 0) {
               idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
               idx0[x] = idx0[x + 1] = CLAMPU(tmp0 + tmp7);
               idx2[x] = idx2[x + 1] = CLAMPU(tmp2 + tmp5);

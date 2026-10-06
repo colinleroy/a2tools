@@ -20,7 +20,7 @@
         .import _SCAN
 
         .import _blocks_per_row, _blocks_rem_in_row
-        .import _actual_width
+        .import _image_size
 
         .import _ifd, _cache_start
         .import _read, _cputsxy
@@ -132,8 +132,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         ; same for the last reads of the other sizes but it's not
         ; really worth it (>8kB last read for normal, >4kB for
         ; superfine)
-        ldy     _actual_width
-        cpy     #<160
+        ldy     _image_size
         bne     :+
         lda     #<((24*600)-INITIAL_CACHE_READ+$200)
         ldx     #>((24*600)-INITIAL_CACHE_READ+$200)
@@ -233,7 +232,7 @@ cache_ok       = _get_coeffs::cache_ok
 _cache_read    = _get_coeffs::_cache_read
 
 .proc inc_row
-        ldx     _actual_width+1
+        ldx     _image_size
         lda     row_step_l,x
         clc
         adc     idx0_1+1
@@ -250,7 +249,7 @@ _cache_read    = _get_coeffs::_cache_read
         dec     _blocks_rem_in_row
         beq     inc_row
 inc_block:
-        ldx     _actual_width+1
+        ldx     _image_size
         lda     block_step,x
         clc
         adc     idx0_1+1
@@ -648,8 +647,7 @@ next_x:
         ora     _row_out+112,x
         bne     full_cols
 
-        lda     _actual_width
-        cmp     #<160
+        lda     _image_size
         bne     fast_cols_scale_down
 
         lda     _row_out+0,x            ; Easy way out, 160w images
@@ -790,8 +788,7 @@ full_cols:
         ADDI    _tmp10
         sta     _tmp4
 ; idct_common end
-        ldy     _actual_width
-        cpy     #<160
+        ldy     _image_size
         beq     full_cols_no_scale
         jmp     full_cols_scale_down
 

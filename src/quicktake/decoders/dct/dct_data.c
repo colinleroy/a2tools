@@ -88,9 +88,9 @@ uint8 orig_y_table_h[256];
 uint8 *bits_table;
 uint8 *shift_table;
 
-uint16 actual_width;
 uint16 total_blocks;
 uint16 blocks_per_band;
+uint8 image_size;
 uint8 blocks_per_row;
 uint8 blocks_rem_in_row;
 

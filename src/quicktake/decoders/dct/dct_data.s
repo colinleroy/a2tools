@@ -10,7 +10,7 @@
         .export _mul277_m, _mul277_l
         .export _mul669_m, _mul669_l
         .export _raw_image, _cache, _cache_start
-        .export _actual_width, _total_blocks
+        .export _image_size, _total_blocks
         .export _blocks_per_row, _blocks_per_band, _blocks_rem_in_row
         .export _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .export _tmp10, _tmp11, _tmp12, _tmp13
@@ -215,11 +215,11 @@ _special_x_orig_offset: .res 256
 _raw_image:             .res (BAND_HEIGHT-1)*RAW_WIDTH+DECODE_WIDTH
 
 _idx                    = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH ; 2
-_actual_width           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 2 ; 2
-_total_blocks           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 4 ; 2
-_blocks_per_band        = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 6 ; 2
-_blocks_per_row         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 8 ; 1
-_blocks_rem_in_row      = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 9 ; 1
+_image_size             = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 1 ; 1
+_total_blocks           = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 3 ; 2
+_blocks_per_band        = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 5 ; 2
+_blocks_per_row         = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 7 ; 1
+_blocks_rem_in_row      = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-5)*RAW_WIDTH + 8 ; 1
 
 _coef                   = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-4)*RAW_WIDTH ; 128
 _row_out                = _raw_image+DECODE_WIDTH+(BAND_HEIGHT-3)*RAW_WIDTH ; 128

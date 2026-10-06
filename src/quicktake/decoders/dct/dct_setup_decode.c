@@ -37,12 +37,13 @@ err_out:
 
   bits_table = normal_bits;
   shift_table = normal_shift;
-  actual_width = width = 320;
+  image_size = 1; /* 320x480 */
+  width = 320;
   height = 240;
 
   switch (data_size) {
   case 0x5D: /* Normal picture of size 24000, 0x5DC0 */
-    actual_width = 160;
+    image_size = 0; /* 160x240 */
     blocks_per_row = 20;
     total_blocks = 600;
     blocks_per_band = 600/(DECODE_HEIGHT/BAND_HEIGHT);
