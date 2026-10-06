@@ -13,7 +13,7 @@
         .import block_step, row_step_l, row_step_h
 
         .import _asr1
-        
+
         .import _coef, _row_out, _raw_image
 
         .import _cache
@@ -55,19 +55,18 @@ CACHE_END = _cache + CACHE_SIZE
         bmi     neg
         tay
         lda     TABM,y
-        ; ldx     TABH,y
         jmp     done
 
 neg:    clc
         eor     #$FF
         adc     #1
-        tax
+        tay
 
         clc
-        lda     TABL,x
+        lda     TABL,y
         eor     #$FF
         adc     #1
-        lda     TABM,x
+        lda     TABM,y
         eor     #$FF
         adc     #0
 done:
@@ -156,7 +155,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         inc     _cache_read
         bne     inc_cache_done
         inc     _cache_read+1
-        bne     inc_cache_done
+        bne     inc_cache_done          ; eq. JMP here, cache end is checked once per block
 .endproc
 
 ; 64 coefficients - 48 bytes per coeff
@@ -181,23 +180,23 @@ cache_ok:
 next_coeff:
 shift_table = *+1
         lda     $FFFF,y                 ; get ignored bits shift table
-        beq     inc_scan
-        sta     asrtab+2
+        beq     inc_scan                ; ignored bits 0 means bits = 0, skip all
+        sta     asrtab+2                ; update shift/sign table to the correct one
 
 bits_table = *+1
         lda     $FFFF,y                 ; get numbits
         sty     _scan
         tay                             ; num_bits in Y
 
-        lda     #0                      ; Init bitval
+        ; lda     #0                    ; No need to init bitval to 0 as we'll shift min 8 bits into it
         ldx     _nbits_avail
 
 next_bit:
         dex
-        bmi     inc_cache
+        bmi     inc_cache               ; No more bits in cur byte, increment cache pointer
 inc_cache_done:
 _cache_read = *+1
-        lsr     $FFFF
+        lsr     $FFFF                   ; Get next bit
         ror
         dey
         bne     next_bit
@@ -208,7 +207,7 @@ _cache_read = *+1
 asrtab:
         lda     $FF00,y                 ; Shift and sign-extend
         ldy     _scan                   ; Reload _scan for caller
-        beq     force_pos               ; and force coef[0] positive
+        beq     force_pos               ; if scan == 0, force coef[0] positive
 got_bits:
 
         ldx     _SCAN,y                 ; Load coef number
@@ -218,7 +217,7 @@ inc_scan:
         cpy     #64
         bcc     next_coeff
 
-        inc     _cache_read             ; Increment cache pointer
+        inc     _cache_read             ; Increment cache pointer, all bits consumed
         bne     :+
         inc     _cache_read+1
 :       rts
@@ -408,21 +407,6 @@ done:
 .endscope
 .endmacro
 
-.macro ADDIY b
-.scope
-        clc
-        adc     b,y
-        CLAMPI
-.endscope
-.endmacro
-.macro SUBIY b
-.scope
-        sec
-        sbc     b,y
-        CLAMPI
-.endscope
-.endmacro
-
 .macro ADDIX b
 .scope
         clc
@@ -440,48 +424,48 @@ done:
 
 .proc _idct_1d_rows
         lda     #0
-next_y:
-        tay
-        lda     _coef+2,y
-        ora     _coef+4,y
-        ora     _coef+6,y
-        ora     _coef+8,y
-        ora     _coef+10,y
-        ora     _coef+12,y
-        ora     _coef+14,y
+next_x:
+        tax
+        lda     _coef+2,x
+        ora     _coef+4,x
+        ora     _coef+6,x
+        ora     _coef+8,x
+        ora     _coef+10,x
+        ora     _coef+12,x
+        ora     _coef+14,x
         bne     full_rows
 
-        lda     _coef+0,y               ; Easy way, all AC = 0
-        sta     _row_out+0,y
-        sta     _row_out+2,y
-        sta     _row_out+4,y
-        sta     _row_out+6,y
-        sta     _row_out+8,y
-        sta     _row_out+10,y
-        sta     _row_out+12,y
-        sta     _row_out+14,y
+        lda     _coef+0,x               ; Easy way, all AC = 0
+        sta     _row_out+0,x
+        sta     _row_out+2,x
+        sta     _row_out+4,x
+        sta     _row_out+6,x
+        sta     _row_out+8,x
+        sta     _row_out+10,x
+        sta     _row_out+12,x
+        sta     _row_out+14,x
 
-        tya
+        txa
         clc
         adc     #16
         bmi     :+                      ; > 128
-        jmp     next_y
+        jmp     next_x
 :       rts
 
 full_rows:
-        lda     _coef+0,y
-        ADDIY   _coef+8
+        lda     _coef+0,x
+        ADDIX   _coef+8
         sta     _tmp10
-        lda     _coef+0,y
-        SUBIY   _coef+8
+        lda     _coef+0,x
+        SUBIX   _coef+8
         sta     _tmp11
 
-        lda     _coef+4,y
-        SUBIY   _coef+12
+        lda     _coef+4,x
+        SUBIX   _coef+12
         sta     _tmp12
 
-        lda     _coef+4,y
-        ADDIY   _coef+12
+        lda     _coef+4,x
+        ADDIX   _coef+12
         sta     _tmp13
 
         ADDI    _tmp10                  ; tmp0 = CLAMPI(tmp10 + tmp13);
@@ -490,27 +474,24 @@ full_rows:
         SUBI    _tmp13
         sta     _tmp3
 
-        lda     _coef+10,y
-        SUBIY   _coef+6
+        lda     _coef+10,x
+        SUBIX   _coef+6
         sta     _z10
 
-        lda     _coef+2,y
-        ADDIY   _coef+14
+        lda     _coef+2,x
+        ADDIX   _coef+14
         sta     _z11
 
-        lda     _coef+10,y
-        ADDIY   _coef+6
+        lda     _coef+10,x
+        ADDIX   _coef+6
         sta     _z13_0
 
         ADDI    _z11
         sta     _tmp7
 
-        lda     _coef+2,y
-        SUBIY   _coef+14
+        lda     _coef+2,x
+        SUBIX   _coef+14
         sta     _z12
-
-        sty     ybck                    ; Backup Y before mults
-; idct_common start
 
         ADDI    _z10
         MULT_473
@@ -550,46 +531,44 @@ full_rows:
 
         ADDI    _tmp10
         sta     _tmp4
-; idct_common end
-        ldy     ybck
 
         lda     _tmp0
         ADDI    _tmp7
-        sta     _row_out+0,y
+        sta     _row_out+0,x
 
         lda     _tmp1
         ADDI    _tmp6
-        sta     _row_out+2,y
+        sta     _row_out+2,x
 
         lda     _tmp2
         ADDI    _tmp5
-        sta     _row_out+4,y
+        sta     _row_out+4,x
 
         lda     _tmp3
         SUBI    _tmp4
-        sta     _row_out+6,y
+        sta     _row_out+6,x
 
         lda     _tmp3
         ADDI    _tmp4
-        sta     _row_out+8,y
+        sta     _row_out+8,x
 
         lda     _tmp2
         SUBI    _tmp5
-        sta     _row_out+10,y
+        sta     _row_out+10,x
 
         lda     _tmp1
         SUBI    _tmp6
-        sta     _row_out+12,y
+        sta     _row_out+12,x
 
         lda     _tmp0
         SUBI    _tmp7
-        sta     _row_out+14,y
+        sta     _row_out+14,x
 
-        tya
+        txa
         clc
         adc     #16
         bmi     :+                      ; > 128
-        jmp     next_y
+        jmp     next_x
 :       rts
 .endproc
 
@@ -700,7 +679,6 @@ idx3_3: sta     $FFFF,y
 :       rts
 
 full_cols:
-
         lda     _row_out+32,x
         ADDIX   _row_out+96
         sta     _tmp13
@@ -742,8 +720,6 @@ full_cols:
         lda     _row_out+32,x
         SUBIX   _row_out+96
 
-        stx     xbck                    ; Keep X before mults
-
         MULT_362
         SUBI    _tmp13
         sta     _tmp12
@@ -782,8 +758,6 @@ full_cols:
         ADDI    _tmp10
         sta     _tmp4
 ; idct_common end
-        ldx     xbck
-
         ldy     _actual_width
         cpy     #<160
         beq     full_cols_no_scale
