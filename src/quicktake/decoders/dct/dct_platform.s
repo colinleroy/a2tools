@@ -694,82 +694,99 @@ idx3_3: sta     $FFFF,y
 :       rts
 
 full_cols:
+        ; tmp13   = CLAMPI(row_out[x + 32] + row_out[x + 96]);
         lda     _row_out+32,x
         ADDIX   _row_out+96
         sta     _tmp13
 
-        lda     _row_out+80,x
-        SUBIX   _row_out+48
-        sta     _z10
-
-        lda     _row_out+16,x
-        ADDIX   _row_out+112
-        sta     _z11
-
-        lda     _row_out+16,x
-        SUBIX   _row_out+112
-        sta     _z12
-
-        lda     _row_out+80,x
-        ADDIX   _row_out+48
-        sta     _z13_0
-
-        ADDI    _z11
-        sta     _tmp7
-
+        ; tmp10 = CLAMPI(row_out[x + 0]  + row_out[x + 64]);
         lda     _row_out+0,x
         ADDIX   _row_out+64
         sta     _tmp10
 
+        ; tmp0 = CLAMPI(tmp10 + tmp13);
         ADDI    _tmp13
         sta     _tmp0
 
+        ; tmp3 = CLAMPI(tmp10 - tmp13);
         lda     _tmp10
         SUBI    _tmp13
         sta     _tmp3
 
+        ; tmp11 = CLAMPI(row_out[x + 0]  - row_out[x + 64]);
         lda     _row_out+0,x
         SUBIX   _row_out+64
         sta     _tmp11
 
+        ; tmp12 = CLAMPI(mul_362(CLAMPI(row_out[x + 32] - row_out[x + 96])) - tmp13);
         lda     _row_out+32,x
         SUBIX   _row_out+96
-
         MULT_362
         SUBI    _tmp13
         sta     _tmp12
 
+        ; tmp1 = CLAMPI(tmp11 + tmp12);
         ADDI    _tmp11
         sta     _tmp1
 
+        ; tmp2 = CLAMPI(tmp11 - tmp12);
         lda     _tmp11
         SUBI    _tmp12
         sta     _tmp2
 
+        ; z10     = CLAMPI(row_out[x + 80] - row_out[x + 48]);
+        lda     _row_out+80,x
+        SUBIX   _row_out+48
+        sta     _z10
+
+        ; z13_1 = mul_669(z10);
         lda     _z10
         MULT_669
         sta     _z13_1
 
-        lda     _z10
-        ADDI    _z12
+        ; z11     = CLAMPI(row_out[x + 16] + row_out[x + 112]);
+        lda     _row_out+16,x
+        ADDIX   _row_out+112
+        sta     _z11
+
+        ; z13_0   = CLAMPI(row_out[x + 80] + row_out[x + 48]);
+        lda     _row_out+80,x
+        ADDIX   _row_out+48
+        sta     _z13_0
+
+        ; tmp7 = CLAMPI(z11 + z13_0);
+        ADDI    _z11
+        sta     _tmp7
+
+        ; z12     = CLAMPI(row_out[x + 16] - row_out[x + 112]);
+        lda     _row_out+16,x
+        SUBIX   _row_out+112
+        sta     _z12
+
+        ; z5 = mul_473(CLAMPI(z10 + z12));
+        ADDI    _z10
         MULT_473
         sta     _z5
 
+        ; tmp6 = CLAMPI(CLAMPI(z5 - z13_1) - tmp7);
         SUBI    _z13_1
         SUBI    _tmp7
         sta     _tmp6
 
+        ; tmp10 = CLAMPI(mul_277(z12) - z5);
         lda     _z12
         MULT_277
         SUBI    _z5
         sta     _tmp10
 
+        ; tmp5 = CLAMPI(mul_362(CLAMPI(z11 - z13_0)) - tmp6);
         lda     _z11
         SUBI    _z13_0
         MULT_362
         SUBI    _tmp6
         sta     _tmp5
 
+        ; tmp4 = CLAMPI(tmp5 + tmp10);
         ADDI    _tmp10
         sta     _tmp4
 ; idct_common end

@@ -169,6 +169,8 @@ void idct_1d_rows(void) {
 
 void idct_1d_cols(void) {
     uint8 x;
+    int8 z13_0, z13_1;
+
     for (x = 0; x < 16; x+=2) {
 
         if (row_out[x + 16] == 0 && row_out[x + 32] == 0 &&
@@ -201,41 +203,35 @@ void idct_1d_cols(void) {
             }
         } else {
             tmp13   = CLAMPI(row_out[x + 32] + row_out[x + 96]);
-            z10     = CLAMPI(row_out[x + 80] - row_out[x + 48]);
-            z11     = CLAMPI(row_out[x + 16] + row_out[x + 112]);
-            z12     = CLAMPI(row_out[x + 16] - row_out[x + 112]);
-            int8 z13_0   = CLAMPI(row_out[x + 80] + row_out[x + 48]);
-            tmp7 = CLAMPI(z11 + z13_0);
 
             tmp10 = CLAMPI(row_out[x + 0]  + row_out[x + 64]);
             tmp0 = CLAMPI(tmp10 + tmp13);
             tmp3 = CLAMPI(tmp10 - tmp13);
 
             tmp11 = CLAMPI(row_out[x + 0]  - row_out[x + 64]);
-
-            tmp12 = CLAMPI(row_out[x + 32] - row_out[x + 96]);
-
-            tmp12 = mul_362(tmp12);
-            tmp12 = CLAMPI(tmp12 - tmp13);
-
+            tmp12 = CLAMPI(mul_362(CLAMPI(row_out[x + 32] - row_out[x + 96])) - tmp13);
             tmp1 = CLAMPI(tmp11 + tmp12);
             tmp2 = CLAMPI(tmp11 - tmp12);
 
-            int8 z13_1 = mul_669(z10);
+            z10     = CLAMPI(row_out[x + 80] - row_out[x + 48]);
+            z13_1 = mul_669(z10);
 
+            z11     = CLAMPI(row_out[x + 16] + row_out[x + 112]);
+            z13_0   = CLAMPI(row_out[x + 80] + row_out[x + 48]);
+            tmp7 = CLAMPI(z11 + z13_0);
+
+            z12     = CLAMPI(row_out[x + 16] - row_out[x + 112]);
             z5 = mul_473(CLAMPI(z10 + z12));
             tmp6 = CLAMPI(CLAMPI(z5 - z13_1) - tmp7);
 
-            tmp10 = mul_277(z12);
-            tmp10 = CLAMPI(tmp10 - z5);
-
+            tmp10 = CLAMPI(mul_277(z12) - z5);
             tmp5 = CLAMPI(mul_362(CLAMPI(z11 - z13_0)) - tmp6);
             tmp4 = CLAMPI(tmp5 + tmp10);
 
             if (actual_width == 160) {
+              idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
               idx0[x] = idx0[x + 1] = CLAMPU(tmp0 + tmp7);
               idx2[x] = idx2[x + 1] = CLAMPU(tmp2 + tmp5);
-              idx4[x] = idx4[x + 1] = CLAMPU(tmp3 + tmp4);
               idx6[x] = idx6[x + 1] = CLAMPU(tmp1 - tmp6);
 
               idx1[x] = idx1[x + 1] = CLAMPU(tmp1 + tmp6);
@@ -243,8 +239,8 @@ void idct_1d_cols(void) {
               idx5[x] = idx5[x + 1] = CLAMPU(tmp2 - tmp5);
               idx7[x] = idx7[x + 1] = CLAMPU(tmp0 - tmp7);
             } else {
-              idx0[x/2] = CLAMPU(tmp0 + tmp7);
               idx2[x/2] = CLAMPU(tmp3 + tmp4);
+              idx0[x/2] = CLAMPU(tmp0 + tmp7);
               idx1[x/2] = CLAMPU(tmp2 + tmp5);
               idx3[x/2] = CLAMPU(tmp1 - tmp6);
             }
