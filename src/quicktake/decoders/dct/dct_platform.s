@@ -259,34 +259,69 @@ inc_block:
         ; fallthrough
 .endproc
 .proc _update_idx
+        ldy     _image_size
+        beq     patch_small
+patch_large:
+        .assert <_raw_image = 0, error
+        ldy     idx0_1+1
+        sty     idx0_3+1
+        sty     idx0_6+1
+
+        sty     idx1_3+1
+        sty     idx1_6+1
+
+        sty     idx2_3+1
+        sty     idx2_6+1
+
+        sty     idx3_3+1
+        sty     idx3_6+1
+
+        ldy     idx0_1+2
+prev_idx0l = *+1
+        cpy     #$00                    ; Don't patch unchanged high bytes
+        bne     :+
+        rts
+:       sty     prev_idx0l
+        sty     idx0_3+2
+        sty     idx0_6+2
+        .assert RAW_WIDTH = 512, error
+        iny
+        iny
+        sty     idx1_3+2
+        sty     idx1_6+2
+
+        iny
+        iny
+        sty     idx2_3+2
+        sty     idx2_6+2
+
+        iny
+        iny
+        sty     idx3_3+2
+        sty     idx3_6+2
+        rts
+
+patch_small:
         .assert <_raw_image = 0, error
         ldy     idx0_1+1
         sty     idx0_2+1
-        sty     idx0_3+1
         sty     idx0_4+1
         sty     idx0_5+1
-        sty     idx0_6+1
 
         sty     idx1_1+1
         sty     idx1_2+1
-        sty     idx1_3+1
         sty     idx1_4+1
         sty     idx1_5+1
-        sty     idx1_6+1
 
         sty     idx2_1+1
         sty     idx2_2+1
-        sty     idx2_3+1
         sty     idx2_4+1
         sty     idx2_5+1
-        sty     idx2_6+1
 
         sty     idx3_1+1
         sty     idx3_2+1
-        sty     idx3_3+1
         sty     idx3_4+1
         sty     idx3_5+1
-        sty     idx3_6+1
 
         sty     idx4_1+1
         sty     idx4_2+1
@@ -309,43 +344,35 @@ inc_block:
         sty     idx7_5+1
 
         ldy     idx0_1+2
-prev_idx0 = *+1
+prev_idx0s = *+1
         cpy     #$00                    ; Don't patch unchanged high bytes
         bne     :+
         rts
-:       sty     prev_idx0
+:       sty     prev_idx0s
         sty     idx0_2+2
-        sty     idx0_3+2
         sty     idx0_4+2
         sty     idx0_5+2
-        sty     idx0_6+2
         .assert RAW_WIDTH = 512, error
         iny
         iny
         sty     idx1_1+2
         sty     idx1_2+2
-        sty     idx1_3+2
         sty     idx1_4+2
         sty     idx1_5+2
-        sty     idx1_6+2
 
         iny
         iny
         sty     idx2_1+2
         sty     idx2_2+2
-        sty     idx2_3+2
         sty     idx2_4+2
         sty     idx2_5+2
-        sty     idx2_6+2
 
         iny
         iny
         sty     idx3_1+2
         sty     idx3_2+2
-        sty     idx3_3+2
         sty     idx3_4+2
         sty     idx3_5+2
-        sty     idx3_6+2
 
         iny
         iny
