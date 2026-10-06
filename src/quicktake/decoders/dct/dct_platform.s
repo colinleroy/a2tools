@@ -453,76 +453,100 @@ next_x:
 :       rts
 
 full_rows:
-        lda     _coef+0,x
-        ADDIX   _coef+8
-        sta     _tmp10
-        lda     _coef+0,x
-        SUBIX   _coef+8
-        sta     _tmp11
-
-        lda     _coef+4,x
-        SUBIX   _coef+12
-        sta     _tmp12
-
+        ; tmp13 = CLAMPI(coef[y + 4] + coef[y + 12]);
         lda     _coef+4,x
         ADDIX   _coef+12
         sta     _tmp13
 
-        ADDI    _tmp10                  ; tmp0 = CLAMPI(tmp10 + tmp13);
+        ; tmp10 = CLAMPI(coef[y + 0] + coef[y + 8]);
+        lda     _coef+0,x
+        ADDIX   _coef+8
+        sta     _tmp10
+
+        ; tmp0 = CLAMPI(tmp10 + tmp13);
+        ADDI    _tmp13
         sta     _tmp0
-        lda     _tmp10                  ; tmp3 = CLAMPI(tmp10 - tmp13);
+
+        ; tmp3 = CLAMPI(tmp10 - tmp13);
+        lda     _tmp10
         SUBI    _tmp13
         sta     _tmp3
 
-        lda     _coef+10,x
-        SUBIX   _coef+6
-        sta     _z10
+        ; tmp11 = CLAMPI(coef[y + 0] - coef[y + 8]);
+        lda     _coef+0,x
+        SUBIX   _coef+8
+        sta     _tmp11
 
-        lda     _coef+2,x
-        ADDIX   _coef+14
-        sta     _z11
-
-        lda     _coef+10,x
-        ADDIX   _coef+6
-        sta     _z13_0
-
-        ADDI    _z11
-        sta     _tmp7
-
-        lda     _coef+2,x
-        SUBIX   _coef+14
-        sta     _z12
-
-        ADDI    _z10
-        MULT_473
-        sta     _z5
-
-        lda     _tmp12
+        ; tmp12 = CLAMPI(mul_362(CLAMPI(coef[y + 4] - coef[y + 12])) - tmp13);
+        lda     _coef+4,x
+        SUBIX   _coef+12
         MULT_362
         SUBI    _tmp13
         sta     _tmp12
 
+        ; tmp1 = CLAMPI(tmp11 + tmp12);
         ADDI    _tmp11
         sta     _tmp1
 
+        ; tmp2 = CLAMPI(tmp11 - tmp12);
         lda     _tmp11
         SUBI    _tmp12
         sta     _tmp2
 
-        lda     _z10
+        ; z10   = CLAMPI(coef[y + 10] - coef[y + 6]);
+        lda     _coef+10,x
+        SUBIX   _coef+6
+        sta     _z10
+
+        ; z13_1 = mul_669(z10);
         MULT_669
         sta     _z13_1
 
-        lda     _z5
+        ; z11   = CLAMPI(coef[y + 2] + coef[y + 14]);
+        lda     _coef+2,x
+        ADDIX   _coef+14
+        sta     _z11
+
+        ; z13_0 = CLAMPI(coef[y + 10] + coef[y + 6]);
+        lda     _coef+10,x
+        ADDIX   _coef+6
+        sta     _z13_0
+
+        ; tmp7 = CLAMPI(z11 + z13_0);
+        ADDI    _z11
+        sta     _tmp7
+
+        ; row_out[y + 0]  = CLAMPI(tmp0 + tmp7);
+        lda     _tmp0
+        ADDI    _tmp7
+        sta     _row_out+0,x
+
+        ; z12   = CLAMPI(coef[y + 2] - coef[y + 14]);
+        lda     _coef+2,x
+        SUBIX   _coef+14
+        sta     _z12
+
+        ; z5 = (mul_473(CLAMPI(z10 + z12)));
+        ADDI    _z10
+        MULT_473
+        sta     _z5
+
+        ; tmp6 = CLAMPI(CLAMPI(z5 - z13_1) - tmp7);
         SUBI    _z13_1
         SUBI    _tmp7
         sta     _tmp6
 
+        ; row_out[y + 2]  = CLAMPI(tmp1 + tmp6);
+        ADDI    _tmp1
+        sta     _row_out+2,x
+
+        ; tmp10 = CLAMPI(mul_277(z12) - z5);
         lda     _z12
         MULT_277
         SUBI    _z5
         sta     _tmp10
 
+        ; tmp5 = CLAMPI(mul_362(CLAMPI(z11 - z13_0)) - tmp6);
         lda     _z11
         SUBI    _z13_0
         MULT_362
@@ -532,13 +556,8 @@ full_rows:
         ADDI    _tmp10
         sta     _tmp4
 
-        lda     _tmp0
-        ADDI    _tmp7
-        sta     _row_out+0,x
-
-        lda     _tmp1
-        ADDI    _tmp6
-        sta     _row_out+2,x
+        ADDI    _tmp3
+        sta     _row_out+8,x
 
         lda     _tmp2
         ADDI    _tmp5
@@ -547,10 +566,6 @@ full_rows:
         lda     _tmp3
         SUBI    _tmp4
         sta     _row_out+6,x
-
-        lda     _tmp3
-        ADDI    _tmp4
-        sta     _row_out+8,x
 
         lda     _tmp2
         SUBI    _tmp5
@@ -572,7 +587,7 @@ full_rows:
 :       rts
 .endproc
 
-; uint8 clamp of int8 x << 1:
+; uint8 clamp of int8 x << 1: (sign bit goes to carry)
 ; x < 0  ? => 0
 ; x >= 0 ? => x<<1
 .macro CLAMPU
