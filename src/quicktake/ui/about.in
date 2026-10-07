@@ -9,14 +9,14 @@ countless evening hours on pieces of software that are mostly proof of concept.
 Thank you for being with me, and being as proud as I am of the progress I make!
 I love you.
 
-Thanks to my kids, who don't really get an appreciation of how much less is 
+Thanks to my kids, who don't really get an appreciation of how much less is
 available on an Apple II than on the gaming PC with their eight-cores CPUs,
 gigabytes of RAM, and terabytes of storage, but still sense that there's
 something cool in this program.
 
 Thanks to Pierre Dandumont for lending me hardware and letting me have it
-long enough to implement their support.
-
+long enough to implement their support, and to Frank Mariak of MorphOS for
+helping me make sure my DCT decoder was correct.
 Thanks to FozzTexx and Jonathan Adar for extensive testing and debugging on
 different Apple II machines.
 

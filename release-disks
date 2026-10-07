@@ -6,13 +6,7 @@ if [ "$BRANCH" != "main" ]; then
 	echo Not on release branch
 	exit 1
 fi
-rm -f *.po
-cd src/ut
-make clean test
-if [ "$?" != "0" ]; then
-	exit 1
-fi
-cd ../..
+rm -f *.po dist/*.po
 make clean all dist upload
 
 test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/ || \

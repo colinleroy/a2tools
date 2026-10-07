@@ -172,7 +172,7 @@ radcconv_CC65SOURCES := \
 	../lib/approxdiv16x8.s \
 	../lib/a2_features.s \
 	../lib/check_floppy.s
-	
+
 radcconv_GCCSOURCES := \
 	decoders/radc/radc_bithuff.c \
 	decoders/radc/radc_platform.c \
@@ -201,8 +201,6 @@ jpegconv_GCCSOURCES := \
 
 dctconv_SOURCES := \
 	decoders/qt-conv.c \
-	decoders/dct/dct_setup_decode.c \
-	decoders/dct/dct.c \
 	../lib/progress_bar.c \
 	../lib/zexec.c
 
@@ -430,7 +428,7 @@ quicktake.po: splash.h config.bin slowtake.bin qktkconv.bin radcconv.bin jpegcon
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
 
-hdv: 
+hdv:
 	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
 	../../bin/cp2/cp2 copy --recurse quicktake.po $(IMG):$(FLOP_NAME)
 
@@ -442,7 +440,7 @@ splash.h: ui/splash.png
 config.bin: $(config_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"config.dbg" $(CFLAGS) $(config_CLCFLAGS) -vm -m config.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
-slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES) 
+slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^ $(TARGET)-iobuf-0800.o
 
 microserial.x86_64: $(microserial_SOURCES) $(GCCSOURCES)

@@ -27,7 +27,7 @@
 
 
 /* Shared with qt-conv.c */
-char *decoder_name = "Kodac RADC";
+char decoder_name[] = "Kodac RADC";
 
 extern uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;

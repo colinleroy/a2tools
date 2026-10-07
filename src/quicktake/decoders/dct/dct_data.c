@@ -88,10 +88,10 @@ uint8 orig_y_table_h[256];
 uint8 *bits_table;
 uint8 *shift_table;
 
-uint16 total_blocks;
-uint16 blocks_per_band;
-uint8 image_size;
-uint8 blocks_per_row;
+/* Defaults for Fine/Superfine images */
+uint16 blocks_per_band = 2400/(DECODE_HEIGHT/BAND_HEIGHT);
+uint8 image_size = 1;
+uint8 blocks_per_row = 40;
 uint8 blocks_rem_in_row;
 
 int8 row_out[128]; /* Twice as large as needed but simplifies computations. */

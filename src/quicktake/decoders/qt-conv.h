@@ -21,7 +21,7 @@ extern uint8 *cur_cache_ptr;
 #endif
 
 #define RAW_IMAGE_SIZE ((BAND_HEIGHT) * RAW_WIDTH)
- 
+
 #define QKTK_MAGIC      "qktk"
 #define QKTN_MAGIC      "qktn"
 #define KDC_MAGIC       "MM\0*"
@@ -59,7 +59,7 @@ extern uint8 raw_image[];
 extern uint16 raw_width, raw_image_size;
 
 extern char magic[5];
-extern char *decoder_name;
+extern char decoder_name[];
 
 /* Figure out height and width, and position cache
  * at the beginning of the data stream */
