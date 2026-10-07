@@ -3,7 +3,7 @@
         .export _idct_1d_rows, _idct_1d_cols
         .export _shift_table, _bits_table
         .export _init_idx, _update_idx
-        .export _setup_floppy_restart
+        .export _qt_load_raw, _decoder_name, _qt_setup_decode
         .import floppy_motor_on
 
         .import _mul362_h, _mul362_m, _mul362_l
@@ -12,22 +12,26 @@
         .import _mul669_h, _mul669_m, _mul669_l
         .import block_step, row_step_l, row_step_h
 
-        .import _asr1
+        .import _normal_shift, _normal_bits
+        .import _superfine_shift, _superfine_bits
+
+        .import _lsr1
 
         .import _coef, _row_out, _raw_image
 
         .import _cache
         .import _SCAN
 
-        .import _blocks_per_row, _blocks_rem_in_row
-        .import _image_size
+        .import _blocks_per_row, _blocks_rem_in_row, _blocks_per_band
+        .import _image_size, _height, _width
 
         .import _ifd, _cache_start
-        .import _read, _cputsxy
+        .import _read, _cputsxy, _cputs
         .import decsp4, pushax
+        .import return0, returnFFFF
 
         .importzp _prev_ram_irq_vector, c_sp, tmp1
-        .importzp xbck, ybck, _nbits_avail, _scan
+        .importzp _scan
         .importzp _tmp0, _tmp1, _tmp2, _tmp3, _tmp4, _tmp5, _tmp6, _tmp7
         .importzp _tmp10, _tmp11, _tmp12, _tmp13
         .importzp _z5, _z10, _z11, _z12, _z13_0, _z13_1
@@ -38,15 +42,114 @@ DESCALE_FACTOR = 1
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
-        .segment "CODE"
+        .segment "RODATA"
 
-.proc _setup_floppy_restart
+_decoder_name:  .asciiz "Chinon DCT"
+
+DCT_MAGIC:      .byte "Cdcx"
+invalid_file:   .byte "Invalid file.",$0D,$0A,$00
+
+        .segment "BSS"
+
+_block:         .res 2
+
+        .segment "CODE"
+;
+.proc unsupported_file
+        lda      #<invalid_file
+        ldx      #>invalid_file
+        jsr      _cputs
+        jmp      returnFFFF
+.endproc
+
+DATASIZE_IDX = $186
+HEADER_SIZE  = $200
+
+.proc _qt_setup_decode
+        ldx      #3
+check_magic:
+        lda      _cache+INITIAL_CACHE_OFFSET,x
+        cmp      DCT_MAGIC,x
+        bne      unsupported_file
+        dex
+        bpl      check_magic
+
+        ; Init W/H for qt-conv to know what to expect
+        lda      #<320
+        sta      _width
+        lda      #>320
+        sta      _width+1
+        lda      #<240
+        sta      _height
+
+        ; Get image size's high byte. It' either:
+        ; - 24000  bytes (0x00CDC0)
+        ; - 96000  bytes (0x017700)
+        ; - 192000 bytes (0x02EE00)
+        ; which makes it practical to test a single byte
+        lda      _cache+DATASIZE_IDX+INITIAL_CACHE_OFFSET+2
+        bne      fine_or_super
+normal:
+        ; Update variables that are set for Fine by default
+        lda      #0
+        sta      _image_size
+        lda      #20
+        sta      _blocks_per_row
+        lda      #<(600/(DECODE_HEIGHT/BAND_HEIGHT))
+        sta      _blocks_per_band
+        lda      #>(600/(DECODE_HEIGHT/BAND_HEIGHT))
+        sta      _blocks_per_band+1
+        jmp      setup_floppy_restart
+fine_or_super:
+        ; Fine: nothing to do.
+        cmp      #$02
+        bne      setup_floppy_restart
+superfine:
+        ; Superfine: variables OK, but bits/shift tables need update
+        lda      #<_superfine_bits
+        sta      _bits_table
+        lda      #<_superfine_shift
+        sta      _shift_table
+        .assert >_superfine_bits = >_normal_bits, error
+        ; lda      #>_superfine_bits
+        ; sta      _bits_table+1
+        .assert >_superfine_shift = >_normal_shift, error
+        ; lda      #>_superfine_shift
+        ; sta      _shift_table+1
+setup_floppy_restart:
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     :+
         sta     start_floppy_motor+1
         lda     #$C0                    ; Firmware access space
         sta     start_floppy_motor+2
-:       rts
+:       jmp     return0
+.endproc
+
+.proc _qt_load_raw
+        jsr     _init_idx
+        jsr     _update_idx
+
+        lda     _blocks_per_row
+        sta     _blocks_rem_in_row
+
+        lda     _blocks_per_band
+        sta     _block
+        lda     _blocks_per_band+1
+        sta     _block+1
+
+next_block:
+        jsr     _get_coeffs
+        jsr     _idct_1d_rows
+        jsr     _idct_1d_cols
+        jsr     _advance_block
+
+        dec     _block
+        bne     next_block
+        dec     _block+1
+        bpl     next_block
+        lda     #0
+        tax
+        rts
 .endproc
 
 ; int8 * x => >> 8 => (int8)
@@ -91,8 +194,6 @@ done:
 
 _reading_str: .byte          "Reading     ", $0D, $0A, $00
 _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
-
-        .segment "LC"
 
 .proc fill_cache
         ldx     #0
@@ -150,7 +251,7 @@ _decoding_str:.byte          "Decoding    ", $0D, $0A, $00
         .segment "CODE"
 
 .proc inc_cache
-        ldx     #7
+        ldx     #7                      ; Bits available now (7 as we consume the first one immediately)
         inc     _cache_read
         bne     inc_cache_done
         inc     _cache_read+1
@@ -173,44 +274,43 @@ start_floppy_motor:
         cpx     #(>CACHE_END)-4
         bpl     start_floppy_motor
 cache_ok:
-        ldx     #8
-        stx     _nbits_avail
+        ldx     #8                      ; bits available: 8 at start of block
+
         ldy     #0                      ; _scan iterator
 next_coeff:
 shift_table = *+1
-        lda     $FFFF,y                 ; get ignored bits shift table
+        lda     _normal_shift,y         ; get ignored bits shift table
         beq     inc_scan                ; ignored bits 0 means bits = 0, skip all
         sta     asrtab+2                ; update shift/sign table to the correct one
 
+        lda     _SCAN,y                 ; Update where to store coef, patched in to
+        sta     coef_addr               ; avoid an ldx ,y / sta ,x and free X for bits available
+
 bits_table = *+1
-        lda     $FFFF,y                 ; get numbits
+        lda     _normal_bits,y          ; get numbits
         sty     _scan
         tay                             ; num_bits in Y
 
-        ; lda     #0                    ; No need to init bitval to 0 as we'll shift min 8 bits into it
-        ldx     _nbits_avail
+        ; lda     #0                    ; No need to init bitval to 0: we'll shift minimum 8 bits and overwrite every bit
 
+; bit shifter hot loop
 next_bit:
         dex
         bmi     inc_cache               ; No more bits in cur byte, increment cache pointer
 inc_cache_done:
-_cache_read = *+1
-        lsr     $FFFF                   ; Get next bit
+_cache_read = *+1                       ; Get next bit
+        lsr     _cache+INITIAL_CACHE_OFFSET+HEADER_SIZE ; Init with address of first byte to read
         ror
         dey
         bne     next_bit
-
-        stx     _nbits_avail            ; Remember how many bits we have
+; end of bit shifter hot loop
 
         tay
 asrtab:
         lda     $FF00,y                 ; Shift and sign-extend
-        ldy     _scan                   ; Reload _scan for caller
-        beq     force_pos               ; if scan == 0, force coef[0] positive
-got_bits:
-
-        ldx     _SCAN,y                 ; Load coef number
-        sta     _coef,x                 ; And store it
+coef_addr = *+1
+        sta     _coef                   ; And store it
+        ldy     _scan                   ; Reload _scan, it got destroyed
 inc_scan:
         iny
         cpy     #64
@@ -220,10 +320,6 @@ inc_scan:
         bne     :+
         inc     _cache_read+1
 :       rts
-
-force_pos:
-        and     #$7F
-        jmp     got_bits
 .endproc
 _bits_table    = _get_coeffs::bits_table
 _shift_table   = _get_coeffs::shift_table
@@ -235,11 +331,11 @@ _cache_read    = _get_coeffs::_cache_read
         ldx     _image_size
         lda     row_step_l,x
         clc
-        adc     idx0_1+1
-        sta     idx0_1+1
+        adc     idx0_3+1
+        sta     idx0_3+1
         lda     row_step_h,x
-        adc     idx0_1+2
-        sta     idx0_1+2
+        adc     idx0_3+2
+        sta     idx0_3+2
         lda     _blocks_per_row
         sta     _blocks_rem_in_row
         jmp     _update_idx
@@ -252,10 +348,10 @@ inc_block:
         ldx     _image_size
         lda     block_step,x
         clc
-        adc     idx0_1+1
-        sta     idx0_1+1
+        adc     idx0_3+1
+        sta     idx0_3+1
         bcc     _update_idx
-        inc     idx0_1+2
+        inc     idx0_3+2
         ; fallthrough
 .endproc
 .proc _update_idx
@@ -263,8 +359,7 @@ inc_block:
         beq     patch_small
 patch_large:
         .assert <_raw_image = 0, error
-        ldy     idx0_1+1
-        sty     idx0_3+1
+        ldy     idx0_3+1
         sty     idx0_6+1
 
         sty     idx1_3+1
@@ -276,13 +371,12 @@ patch_large:
         sty     idx3_3+1
         sty     idx3_6+1
 
-        ldy     idx0_1+2
+        ldy     idx0_3+2
 prev_idx0l = *+1
         cpy     #$00                    ; Don't patch unchanged high bytes
         bne     :+
         rts
 :       sty     prev_idx0l
-        sty     idx0_3+2
         sty     idx0_6+2
         .assert RAW_WIDTH = 512, error
         iny
@@ -303,7 +397,8 @@ prev_idx0l = *+1
 
 patch_small:
         .assert <_raw_image = 0, error
-        ldy     idx0_1+1
+        ldy     idx0_3+1
+        sty     idx0_1+1
         sty     idx0_2+1
         sty     idx0_4+1
         sty     idx0_5+1
@@ -343,12 +438,13 @@ patch_small:
         sty     idx7_4+1
         sty     idx7_5+1
 
-        ldy     idx0_1+2
+        ldy     idx0_3+2
 prev_idx0s = *+1
         cpy     #$00                    ; Don't patch unchanged high bytes
         bne     :+
         rts
 :       sty     prev_idx0s
+        sty     idx0_1+2
         sty     idx0_2+2
         sty     idx0_4+2
         sty     idx0_5+2
@@ -666,6 +762,7 @@ _idct_1d_cols:
         ldx     #0
 next_x:
         lda     _row_out+16,x
+        bne     full_cols               ; Early check as A != 0 70% of the time here
         ora     _row_out+32,x
         ora     _row_out+48,x
         ora     _row_out+64,x
@@ -703,7 +800,7 @@ idx7_2: sta     $FFFF,x
 :       rts
 
 fast_cols_scale_down:
-        ldy     _asr1,x                 ; Y = X/2 (X < 128)
+        ldy     _lsr1,x                 ; Y = X/2 (X < 128)
 
         lda     _row_out+0,x            ; Easy way out, 320w images
         CLAMPU
@@ -872,7 +969,7 @@ idx7_5: sta     $FFFF,y
 :       rts
 
 full_cols_scale_down:
-        ldy     _asr1,x
+        ldy     _lsr1,x
 
         lda     _tmp0
         ADDU    _tmp7
@@ -899,11 +996,11 @@ idx3_6: sta     $FFFF,y
 
 .proc _init_idx
         ldy     #>_raw_image
-        sty     idx0_1+2
+        sty     idx0_3+2                ; Use _3 as reference to speed up large images
 
         .assert <_raw_image = 0, error
         ldy     #<_raw_image
-        sty     idx0_1+1
+        sty     idx0_3+1
         rts
 .endproc
 

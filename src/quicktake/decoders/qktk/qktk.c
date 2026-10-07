@@ -27,7 +27,7 @@
 
 /* Shared with qt-conv.c */
 char magic[5] = QKTK_MAGIC;
-char *decoder_name = "QKTK";
+char decoder_name[] = "QKTK";
 
 uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 cache[CACHE_SIZE];

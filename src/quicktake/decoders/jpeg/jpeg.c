@@ -29,7 +29,7 @@
 
 /* Shared with qt-conv.c */
 char magic[5] = JPEG_EXIF_MAGIC;
-char *decoder_name = "JPEG";
+char decoder_name[] = "JPEG";
 
 uint16 *huff_ptr;
 
@@ -833,11 +833,11 @@ static uint8 locateSOSMarker(uint8* pFoundEOI)
 //------------------------------------------------------------------------------
 static uint8 init(void)
 {
-   gCompsInFrame = 
-     gRestartInterval = 
-     gCompsInScan = 
-     gValidQuantTables = 
-     gTemFlag = 
+   gCompsInFrame =
+     gRestartInterval =
+     gCompsInScan =
+     gValidQuantTables =
+     gTemFlag =
      gBitBuf = 0;
 
    gBitsLeft = 0;

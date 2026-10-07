@@ -1,9 +1,93 @@
+/* 6502-friendly decoder for the Dycam 10-C. Initially
+ * based on the es3000_decode.py included in this directory,
+ * which is an LLM-generated reverse-engineer of the Amiga
+ * binary (https://aminet.net/package/driver/other/ES3000_Demo)
+ * that has been provided to me by Jonathan Adar, and then
+ * rewritten using the reference Chinon decoder source code
+ * that has been provided to my by Frank Mariak of MorphOS,
+ * and who is the original developer of the Amiga Chinon
+ * program.
+ *
+ * Of course full matrix multiplications were never going
+ * to be OK, so the DCT core has been replaced by an AAN
+ * implementation, descaled to 8-bit maths (the artifacting is
+ * not too obnoxious especially once dithered), and
+ * reorganized to build the image using the least possible
+ * copies and indexes.
+ */
 #include <unistd.h>
 #include <assert.h>
 
 #include "platform.h"
 #include "dct_data.h"
 #include "dct_platform.h"
+
+
+char decoder_name[] = "Chinon DCT";
+
+uint8 *cache_start = cache;
+
+#define DATASIZE_IDX 0x186
+#define HEADER_SIZE  0x200
+
+char qt_setup_decode(void) {
+  int8 i, data_size;
+  /* avoid importing memcmp */
+  for (i = 3; i >= 0; i--) {
+    if ((cache+INITIAL_CACHE_OFFSET)[i] != DCT_MAGIC[i]) {
+        cputs("Invalid file.\r\n");
+        return -1;
+    }
+  }
+
+  bits_table = normal_bits;
+  shift_table = normal_shift;
+  width = 320;
+  height = 240;
+
+  /* Take a single byte to recognize size, it's enough:
+   * 005DC0
+   * 017700
+   * 02EE00 */
+  data_size = cache[DATASIZE_IDX + INITIAL_CACHE_OFFSET + 2];
+  if (data_size == 0x00) {
+    image_size = 0;
+    blocks_per_row = 20;
+    blocks_per_band = 600/(DECODE_HEIGHT/BAND_HEIGHT);
+  }
+  if (data_size == 0x02) {
+    bits_table = superfine_bits;
+    shift_table = superfine_shift;
+  }
+
+  cur_cache_ptr = cache + INITIAL_CACHE_OFFSET + HEADER_SIZE;
+
+  /* zero coef so we don't have to store zeroes in the
+   * always-zero coefficients for normal/fine pictures
+   */
+  bzero(coef, sizeof(coef));
+  return 0;
+}
+
+uint8 qt_load_raw(uint16 top)
+{
+    uint16 block;
+
+    init_idx();
+    update_idx();
+    blocks_rem_in_row = blocks_per_row;
+
+    for (block = blocks_per_band; block != 0; block--) {
+        get_coeffs();
+        idct_1d_rows();
+        idct_1d_cols();
+        advance_block();
+
+        /* Each block consumes a constant number of full bytes */
+        // assert(nbits_avail == 0);
+    }
+    return 0;
+}
 
 static int8 mul_362(int8 w)
 {
@@ -59,6 +143,10 @@ void get_coeffs(void) {
   cur_cache_ptr++;
 }
 
+/* Very naive bitbuffer that's good enough on GHz-class machines
+ * Rewritten in a much more optimised manner in the .s but I don't
+ * have the will to backport it to C.
+ */
 void get_bitval(void) {
   bitval = valneg = 0;
 

@@ -41,7 +41,6 @@ extern uint8 *bits_table;
 extern uint8 *shift_table;
 
 extern uint8 image_size;
-extern uint16 total_blocks;
 extern uint16 blocks_per_band;
 extern uint8 blocks_per_row;
 extern uint8 blocks_rem_in_row;

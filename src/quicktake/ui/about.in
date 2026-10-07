@@ -15,8 +15,8 @@ gigabytes of RAM, and terabytes of storage, but still sense that there's
 something cool in this program.
 
 Thanks to Pierre Dandumont for lending me hardware and letting me have it
-long enough to implement their support.
-
+long enough to implement their support, and to Frank Mariak of MorphOS for
+letting me look at the reference Chinon DCT decoder's source.
 Thanks to FozzTexx and Jonathan Adar for extensive testing and debugging on
 different Apple II machines.
 
