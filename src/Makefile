@@ -13,7 +13,7 @@ SUBDIRS = a2trace \
 	weather \
 	wozamp \
 	woztubes \
-	
+
 INSTALL_SUBDIRS = \
 	a2trace \
 	surl-server \
@@ -42,10 +42,11 @@ all clean dist upload:
 
 hdv:
 	rm -f $(HD_IMG)
-	../bin/cp2/cp2 create-disk-image $(HD_IMG) 32M prodos 
+	../bin/cp2/cp2 create-disk-image $(HD_IMG) 32M prodos
 	../bin/cp2/cp2 rename $(HD_IMG) : COLIN.S.THINGS
 	for file in BASIC.SYSTEM BITSY.BOOT QUIT.SYSTEM PRODOS; do \
 		../bin/cp2/cp2 add --strip-paths $(HD_IMG) ../bin/$$file ; \
+		../bin/cp2/cp2 set-attr $(HD_IMG) type=SYS $$file; \
 	done
 	for dir in $(HD_SUBDIRS); do \
 		IMG=../$(HD_IMG) $(MAKE) -C $$dir -f Makefile $@ || exit; \
