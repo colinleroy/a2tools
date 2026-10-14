@@ -1397,7 +1397,7 @@ static int setup_ftp_delete(CURL *curl, const char *url) {
   char r = 0;
   char *path = strdup(url);
   char *o_path = path;
-  char *cmd;
+  char *cmd, *p;
 
   path = strstr(path, "://");
   if (path) {
@@ -1407,8 +1407,8 @@ static int setup_ftp_delete(CURL *curl, const char *url) {
     path = o_path;
   }
 
-  if(strrchr(url, '/')) {
-    *(strrchr(url, '/') + 1) = '\0';
+  if((p = (char *)strrchr(url, '/')) != NULL) {
+    *(p + 1) = '\0';
   }
 
   cmd = malloc(strlen("DELE ") + strlen(path) + 1);
