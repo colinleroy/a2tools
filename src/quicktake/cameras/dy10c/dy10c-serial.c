@@ -254,12 +254,11 @@ static uint8 dy10c_set_speed(CamSpeed speed) {
   return -1;
 }
 
-#define BATTERY_STATUS_IDX         8
 #define AC_STATUS_IDX              9
 #define TIME_IDX                   14
 #define COMPRESSION_MODE_IDX       23
 #define FLASH_MODE_IDX             24
-#define TIMER_MODE_IDX             29
+#define BATTERY_STATUS_IDX         29
 #define NUM_INTERNAL_PIC_IDX       9
 #define NUM_INTERNAL_PIC_LEFT_IDX  11
 // #define NUM_CARD_PIC_IDX      51
@@ -287,12 +286,11 @@ static uint8 dy10c_get_information(void) {
     return -1;
   }
 
-  // switch(buffer[BATTERY_STATUS_IDX]) {
-  // case 0: /* full  */ buffer[BATTERY_STATUS_IDX] = 90; break;
-  // case 1: /* low   */ buffer[BATTERY_STATUS_IDX] = 50; break;
-  // case 2: /* empty */ buffer[BATTERY_STATUS_IDX] = 10; break;
-  // }
-  // cam_info.battery_level = buffer[BATTERY_STATUS_IDX];
+  switch(buffer[BATTERY_STATUS_IDX]) {
+  case 0: /* full  */ cam_info.battery_level = 90; break;
+  case 1: /* low   */ cam_info.battery_level = 50; break;
+  case 2: /* empty */ cam_info.battery_level = 10; break;
+  }
 
   cam_info.flash_mode    = buffer[FLASH_MODE_IDX];
   cam_info.quality_mode  = buffer[COMPRESSION_MODE_IDX];

@@ -281,11 +281,10 @@ static uint8 dc50_get_information(void) {
   }
 
   switch(buffer[BATTERY_STATUS_IDX]) {
-  case 0: /* full  */ buffer[BATTERY_STATUS_IDX] = 90; break;
-  case 1: /* low   */ buffer[BATTERY_STATUS_IDX] = 50; break;
-  case 2: /* empty */ buffer[BATTERY_STATUS_IDX] = 10; break;
+  case 0: /* full  */ cam_info.battery_level = 90; break;
+  case 1: /* low   */ cam_info.battery_level = 50; break;
+  case 2: /* empty */ cam_info.battery_level = 10; break;
   }
-  cam_info.battery_level = buffer[BATTERY_STATUS_IDX];
 
   cam_info.flash_mode    = buffer[FLASH_MODE_IDX];
   cam_info.quality_mode  = buffer[COMPRESSION_MODE_IDX];
