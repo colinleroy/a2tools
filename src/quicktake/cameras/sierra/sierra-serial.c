@@ -87,6 +87,12 @@ uint8 sierra_packet_type;
 uint8 resetting = 0;
 uint8 header[3], footer[2];
 
+uint8 sierra_model = SIERRA_GENERIC;
+uint8 max_quality_mode = 2;
+
+/* cam-specific info */
+uint8 image_resolution;
+
 /* Helper for stupid cameras that want us to send slow. */
 static void sierra_putc_slow(uint8 c) {
   platform_msleep(2);
@@ -268,7 +274,7 @@ wait_again:
 
 static CamSpeed my_speed;
 
-static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FIRST, 0x06, 0x00, 0x00, 
+static char speed_set_packet[] = {SIERRA_PACKET_COMMAND, SIERRA_SUBPACKET_CMD_FIRST, 0x06, 0x00, 0x00,
                                   SIERRA_REG_SPEED, SIERRA_SPEED_19200, 0x00, 0x00,
                                   0x00, SIERRA_REG_SPEED+SIERRA_SPEED_19200, 0x00};
 uint8 sierra_reset(void) {
@@ -290,21 +296,7 @@ try_again:
     /* Flush shit */
     if (do_debug) cputs("Flushing port\r\n");
     sierra_flush();
-#ifdef __CC65__
-    /* Sierra cameras timing suck at 115k, there are framing errors */
-    my_speed = SER_BAUD_19200;
-#endif
     first_reset = 0;
-  } else {
-    /* We failed. Downgrade speed. */
-    if (my_speed == SER_BAUD_115200) {
-// #ifdef __CC65__
-//       __asm__("sta $C030");
-// #endif
-      tries = 0;
-      my_speed = SER_BAUD_19200;
-      PC_DEBUG_PRINTF("Downgrading speed to %d\n", my_speed);
-    }
   }
 
   /* Do the reset without interfering with buffer, so that we can reset anytime. */
@@ -381,6 +373,7 @@ static uint8 sierra_wakeup(CamSpeed speed) {
   my_speed = speed;
 
   r = QT_MODEL_UNKNOWN;
+  my_speed = SER_BAUD_19200;
   if (sierra_reset() == 0) {
     r = QT_MODEL_SIERRA;
   }
@@ -403,8 +396,11 @@ static uint8 sierra_get_information(void) {
   }
   strcpy(cam_info.name, (char *)buffer);
 
-  if (sierra_read_int(SIERRA_REG_RESOLUTION) != 0) {
-    goto out_err;
+  if (sierra_read_string(SIERRA_REG_MODEL) == 0) {
+    if (!strcmp((char *)buffer, "SR882")) {
+      sierra_model = SIERRA_NIKON_COOLPIX900;
+      max_quality_mode = 6;
+    }
   }
 
   if (sierra_read_int(SIERRA_REG_NUM_PICS) != 0) {
@@ -556,8 +552,16 @@ static uint8 sierra_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 ho
 }
 
 static uint8 sierra_set_quality(uint8 quality) {
-  if (quality > 2) {
+  if (quality > max_quality_mode) {
     quality = 1;
+  }
+  if (sierra_model == SIERRA_NIKON_COOLPIX900) {
+    if (cam_info.quality_mode < 4 && quality > 3) {
+      quality -= 3;
+    }
+    if (cam_info.quality_mode > 3 && quality < 4) {
+      quality += 3;
+    }
   }
   return sierra_write_int(SIERRA_REG_RESOLUTION, quality);
 }
@@ -578,13 +582,25 @@ static const char *sierra_get_quality_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }
-  if (mode > 2) {
+  if (mode > max_quality_mode) {
     mode = 1;
   }
-  switch(mode) {
-  case 2:  return "high";
-  case 1:  return "low";
+  if (sierra_model == SIERRA_NIKON_COOLPIX900) {
+    switch(mode) {
+    case 1:  return "basic (VGA)";
+    case 2:  return "normal (VGA)";
+    case 3:  return "fine (VGA)";
+    case 4:  return "basic (1280)";
+    case 5:  return "normal (1280)";
+    case 6:  return "fine (1280)";
+    }
+  } else {
+    switch(mode) {
+    case 2:  return "high";
+    case 1:  return "low";
+    }
   }
+
   #ifndef __CC65__
   return "unknown";
   #endif

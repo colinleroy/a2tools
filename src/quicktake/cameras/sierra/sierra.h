@@ -6,6 +6,10 @@
 extern uint8 scrw, scrh;
 extern uint8 do_debug;
 
+/* Models */
+#define SIERRA_GENERIC                   0
+#define SIERRA_NIKON_COOLPIX900          1
+
 /* Indexes */
 #define PACKET_TYPE                      0
 #define PACKET_SUBTYPE                   1
