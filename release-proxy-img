@@ -26,3 +26,5 @@ git checkout "$BRANCH"
 sudo ./build-docker.sh
 
 ls -l "$TMPDIR"/pi-gen/deploy/surl-server*lite.img.gz
+
+#gh release upload v26.3.1 Documents/git/pi-gen/deploy/surl-server-trixie-2026-10-22-lite.img.gz -R colinleroy/a2tools
