@@ -251,15 +251,17 @@ static uint8 dc2x0_set_speed(CamSpeed speed) {
   return -1;
 }
 
+#define CAMERA_TYPE_IDX       1
 #define BATTERY_STATUS_IDX    8
 #define AC_STATUS_IDX         9
 #define TIME_IDX              12
 #define COMPRESSION_MODE_IDX  19
 #define FLASH_MODE_IDX        20
+#define PICTURE_SIZE_IDX      22
+#define FILE_TYPE_IDX         23
 #define TIMER_MODE_IDX        29
-#define NUM_INTERNAL_PIC_IDX  35
-#define NUM_CARD_PIC_IDX      51
-#define CAMERA_NAME_IDX       80
+#define NUM_CARD_PIC_IDX      57
+#define CAMERA_NAME_IDX       90
 
 #define PIC_QUALITY_IDX       4
 #define PIC_FLASH_IDX         16
@@ -298,7 +300,7 @@ static uint8 dc2x0_get_information(void) {
   }
 
   cam_info.flash_mode    = buffer[FLASH_MODE_IDX];
-  cam_info.quality_mode  = buffer[COMPRESSION_MODE_IDX];
+  cam_info.quality_mode  = buffer[COMPRESSION_MODE_IDX] - 1; /* Index 0-2 instead of 1-3 */
 
   cam_info.charging      = buffer[AC_STATUS_IDX];
 
@@ -309,17 +311,6 @@ static uint8 dc2x0_get_information(void) {
   cam_info.num_pics   = buffer[NUM_CARD_PIC_IDX];
   cam_info.left_pics  = buffer[pics_left_on_card[cam_info.quality_mode]];
   card_present     = 1;
-  cam_info.name[31-8] = '\0'; /* room for " (card)" */
-  strcat(cam_info.name, " (card)");
-
-  if (cam_info.num_pics == 0 && cam_info.left_pics == 0) {
-    /* No card */
-    cam_info.num_pics    = buffer[NUM_INTERNAL_PIC_IDX];
-    cam_info.left_pics   = buffer[pics_left_on_cam[cam_info.quality_mode]];
-    card_present      = 0;
-    cam_info.name[31-12] = '\0'; /* room for " (internal)" */
-    strcat(cam_info.name, " (internal)");
-  }
 
 #ifndef __CC65__
   int_time     =  buffer[TIME_IDX+3]
@@ -667,7 +658,8 @@ static uint8 dc2x0_command(uint8 command, uint8 param) {
 }
 
 static uint8 dc2x0_set_quality(uint8 quality) {
-  return dc2x0_command(CMD_SET_QUALITY, quality % 3);
+  quality++; /* Indexed 1-3 */
+  return dc2x0_command(CMD_SET_QUALITY, quality % 4);
 }
 
 static uint8 dc2x0_set_flash(uint8 mode) {
@@ -692,11 +684,12 @@ static const char *dc2x0_get_quality_str(uint8 is_pic, uint8 mode) {
   if (mode == 0xFF) {
     return "unknown";
   }
+  // 1=best, 2= better, 3 = good
   /* we return %s quality, not compression, so invert */
   switch (mode % 3) {
-  case 0:  return "high";
-  case 1:  return "medium";
-  case 2:  return "low";
+  case 0:  return "best";
+  case 1:  return "better";
+  case 2:  return "good";
   }
   #ifndef __CC65__
   return "unknown";
