@@ -158,7 +158,7 @@ again:
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
 
-  simple_serial_send_break(250);
+  simple_serial_send_break(500);
   sleep(1);
 
   /* Flush shit */
@@ -301,7 +301,11 @@ static uint8 dc2x0_get_information(void) {
 
   cam_info.charging      = buffer[AC_STATUS_IDX];
 
-  memcpy(cam_info.name, buffer+CAMERA_NAME_IDX, 31);
+  if (buffer[CAMERA_NAME_IDX]) {
+    memcpy(cam_info.name, buffer+CAMERA_NAME_IDX, 31);
+  } else {
+    strcpy(cam_info.name, "Kodak DC2x0");
+  }
   cam_info.name[31] = '\0';
 
   /* Prepare data as if there is a card */
@@ -353,7 +357,7 @@ static void dc2x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
 
 static uint8 dc2x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint32 pic_size;
-  uint8 c, blocks_to_read, d;
+  uint8 blocks_to_read, d;
 
   if (dc2x0_get_picture_info(n_pic) != 0) {
     return -1;
@@ -526,8 +530,8 @@ static uint8 dc2x0_command(uint8 command, uint8 param) {
 }
 
 static uint8 dc2x0_set_quality(uint8 quality) {
-  quality++; /* Indexed 1-3 */
-  return dc2x0_command(CMD_SET_QUALITY, quality % 4);
+  quality = (quality % 3) + 1; /* Indexed 1-3 */
+  return dc2x0_command(CMD_SET_QUALITY, quality);
 }
 
 static uint8 dc2x0_set_flash(uint8 mode) {
