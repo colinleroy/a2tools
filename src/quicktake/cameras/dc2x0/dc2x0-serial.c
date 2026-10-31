@@ -178,9 +178,6 @@ again:
 
 static CamSpeed my_speed = SER_BAUD_9600;
 
-/* Are we reading from card or internal storage */
-static uint8 card_present;
-
 /* Help: send a command and read the reply. */
 static uint8 dc2x0_send_and_read_response(uint8 num_blocks, uint16 block_len) {
   char *dest = (char *)buffer;
@@ -238,7 +235,7 @@ static uint8 dc2x0_set_speed(CamSpeed speed) {
     return -1;
   }
 
-  platform_msleep(300);
+  platform_msleep(600);
 
   /* Toggle speed */
   simple_serial_set_speed(speed);
@@ -266,7 +263,7 @@ static uint8 dc2x0_set_speed(CamSpeed speed) {
 #define PIC_QUALITY_IDX       4
 #define PIC_FLASH_IDX         16
 
-#define DC2X0_EPOCH           852073200UL  //Wed Jan 01 1997 00:00:00 GMT-0100
+#define DC2X0_EPOCH           852073200UL //Wed Jan 01 1997 00:00:00 GMT+0100
 
 static void dc2x0_time_to_camera_date(time_t int_time, camera_date *date) {
   struct tm *tm_time;
@@ -310,7 +307,6 @@ static uint8 dc2x0_get_information(void) {
   /* Prepare data as if there is a card */
   cam_info.num_pics   = buffer[NUM_CARD_PIC_IDX];
   cam_info.left_pics  = buffer[pics_left_on_card[cam_info.quality_mode]];
-  card_present     = 1;
 
 #ifndef __CC65__
   int_time     =  buffer[TIME_IDX+3]
@@ -332,19 +328,13 @@ static uint8 dc2x0_get_information(void) {
 
 static uint8 dc2x0_get_picture_info(uint8 n_pic) {
   /* Get picture info */
-  init_packet(card_present ? CMD_CARD_PIC_INFO : CMD_CAM_PIC_INFO);
-  command_packet[CMD_PIC_NUM+1] = n_pic;
-  if (card_present) {
-    return dc2x0_send_and_read_response(5, 256);
-  } else {
-    return dc2x0_send_and_read_response(1, 256);
-  }
+  init_packet(CMD_CARD_PIC_INFO);
+  command_packet[CMD_PIC_NUM+1] = n_pic - 1;
+  return dc2x0_send_and_read_response(1, 256);
 }
 
 #define INFO_BUF_PIC_TYPE_IDX 1
-#define INFO_BUF_PIC_NAME_IDX 37
-
-#define INFO_BUF_CARD_NAME_IDX 428 //Hardcoded, should I parse TIFF header? ugh
+#define INFO_BUF_PIC_NAME_IDX 32
 
 static void dc2x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
   if (dc2x0_get_picture_info(n_pic) != 0) {
@@ -352,90 +342,14 @@ static void dc2x0_get_filename(uint8 n_pic, char *dirname, char *filename) {
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"", n_pic);
   } else {
-    sprintf(filename, "%s%s%s.KDC",
+    sprintf(filename, "%s%s%s",
           IS_NOT_NULL(dirname)?dirname:"",
           IS_NOT_NULL(dirname)?"/":"",
-          buffer+(card_present ? INFO_BUF_CARD_NAME_IDX : INFO_BUF_PIC_NAME_IDX));
+          buffer+(INFO_BUF_PIC_NAME_IDX));
   }
 }
 
 #define CAM_PIC_SIZE_IDX 8
-#define CARD_PIC_SIZE_IDX 754
-
-/* Hardcoded even if loses space, because dcraw hardcodes it, and I want my
- * downloads to be decodable by dcraw. */
-#define HEADER_LEN 19712
-
-static uint8 minimal_exif_header[] = {
-    // TIFF header, big endian
-    0x4D, 0x4D, 0x00, 0x2A,
-    // IFD0 offset
-    0x00, 0x00, 0x00, 0x08,
-
-    // IFD0: 3 tags
-    0x00, 0x03,
-
-    // Tag 1: Make (0x010F), ASCII, count=5, offset=0x0070
-    0x01, 0x0F,
-    0x00, 0x02,
-    0x00, 0x00, 0x00, 0x05,
-    0x00, 0x00, 0x00, 0x70,
-
-    // Tag 2: Model (0x0110), ASCII, count=10, offset=0x0086
-    0x01, 0x10,
-    0x00, 0x02,
-    0x00, 0x00, 0x00, 0x0A,
-    0x00, 0x00, 0x00, 0x76,
-
-    // Tag 3: SubIFD (0x014A), LONG, offset=0x0032
-    0x01, 0x4A,
-    0x00, 0x04,
-    0x00, 0x00, 0x00, 0x01,
-    0x00, 0x00, 0x00, 0x32,
-
-    // Next IFD pointer: nope
-    0x00, 0x00, 0x00, 0x00,
-
-    // --- SubIFD at offset 0x0032 ---
-    0x00, 0x04,   // 4 tags
-
-    // Width (0x0100), SHORT = 756
-    0x01, 0x00,
-    0x00, 0x03,
-    0x00, 0x00, 0x00, 0x01,
-    0x02, 0xF4, 0x00, 0x00,
-
-    // Height (0x0101), SHORT = 504
-    0x01, 0x01,
-    0x00, 0x03,
-    0x00, 0x00, 0x00, 0x01,
-    0x01, 0xF8, 0x00, 0x00,
-
-    // StripOffset (0x0111), LONG = 19712 (HEADER_LEN)
-    0x01, 0x11,
-    0x00, 0x04,
-    0x00, 0x00, 0x00, 0x01,
-    0x00, 0x00, 0x4D, 0x00,
-
-    // CompressedBitsPerPixel (0x9102), RATIONAL, offset=0x0068
-    0x91, 0x02,
-    0x00, 0x05,
-    0x00, 0x00, 0x00, 0x01,
-    0x00, 0x00, 0x00, 0x68,
-
-    // Next IFD pointer: nope
-    0x00, 0x00, 0x00, 0x00,
-
-    // RATIONAL data at offset 104 (CompressedBitsPerPixel)
-    0x00, 0x00, 0x00, 0xFF,   // numerator, to be set according to image quality (At 0x6B)
-    0x00, 0x00, 0x00, 0x64,   // denominator = 100
-
-    // ASCII data at offset 112 (Make)
-    'K','o','d','a','k', 0x00,
-
-    // ASCII data at offset 118 (Model)
-    'K','o','d','a','k',' ','D','C','5','0', 0x00
-};
 
 static uint8 dc2x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   uint32 pic_size;
@@ -445,78 +359,31 @@ static uint8 dc2x0_get_picture(uint8 n_pic, int fd, off_t avail) {
     return -1;
   }
 
-  if (card_present) {
 #ifndef __CC65__
-    pic_size     = buffer[CARD_PIC_SIZE_IDX+3]
-                 + (buffer[CARD_PIC_SIZE_IDX+2] << 8)
-                 + (buffer[CARD_PIC_SIZE_IDX+1] << 16);
+  pic_size     = buffer[CAM_PIC_SIZE_IDX+3]
+               + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
+               + (buffer[CAM_PIC_SIZE_IDX+1] << 16);
 #else
-    /* Get size (24 bits big endian)*/
-    ((unsigned char *)&pic_size)[0] = buffer[CARD_PIC_SIZE_IDX+3];
-    ((unsigned char *)&pic_size)[1] = buffer[CARD_PIC_SIZE_IDX+2];
-    ((unsigned char *)&pic_size)[2] = buffer[CARD_PIC_SIZE_IDX+1];
-    ((unsigned char *)&pic_size)[3] = 0;
+  /* Get size (24 bits big endian)*/
+  ((unsigned char *)&pic_size)[0] = buffer[CAM_PIC_SIZE_IDX+3];
+  ((unsigned char *)&pic_size)[1] = buffer[CAM_PIC_SIZE_IDX+2];
+  ((unsigned char *)&pic_size)[2] = buffer[CAM_PIC_SIZE_IDX+1];
+  ((unsigned char *)&pic_size)[3] = 0;
 #endif
 
-  } else {
-#ifndef __CC65__
-    pic_size     = buffer[CAM_PIC_SIZE_IDX+3]
-                 + (buffer[CAM_PIC_SIZE_IDX+2] << 8)
-                 + (buffer[CAM_PIC_SIZE_IDX+1] << 16);
-#else
-    /* Get size (24 bits big endian)*/
-    ((unsigned char *)&pic_size)[0] = buffer[CAM_PIC_SIZE_IDX+3];
-    ((unsigned char *)&pic_size)[1] = buffer[CAM_PIC_SIZE_IDX+2];
-    ((unsigned char *)&pic_size)[2] = buffer[CAM_PIC_SIZE_IDX+1];
-    ((unsigned char *)&pic_size)[3] = 0;
-#endif
-  }
-
-  if (pic_size + HEADER_LEN > avail) {
+  if (pic_size > avail) {
     errno = ENOSPC;
     return -1;
   }
-
+  PC_DEBUG_PRINTF("Picture size %d\n", pic_size);
   ui_get_image_str(640, 480, pic_size);
-
-  /* Images from card come with the EXIF header. From internal storage,
-   * they don't. Adapt accordingly. */
-  if (card_present) {
-    /* Verify data */
-    if (memcmp(buffer, "MM\0*", 4)) {
-      errno = EINVAL;
-      return -1;
-    }
-    write(fd, buffer, 256*5);
-    bzero(buffer, sizeof buffer);
-    for (d = 0; d <= (HEADER_LEN-1280) / sizeof buffer; d++) {
-      write(fd, buffer, sizeof buffer);
-    }
-  } else {
-    /* "Fix" file header for pictures from cam */
-    write(fd, minimal_exif_header, sizeof(minimal_exif_header));
-    /* Remember quality */
-    c = buffer[4] == 0x00 ? 0xF3 : 0x98;
-
-    /* Fill with blank */
-    bzero(buffer, sizeof buffer);
-    for (d = 0; d <= HEADER_LEN / sizeof buffer; d++) {
-      write(fd, buffer, sizeof buffer);
-    }
-
-    /* 0x6B is the CompressedBitsPerPixel offset in our minimal EXIF header. */
-    lseek(fd, 0x6B, SEEK_SET);
-    write(fd, &c, 1);
-  }
-
-  lseek(fd, HEADER_LEN, SEEK_SET);
 
   blocks_to_read = 1+ (pic_size >> 10); /* div 1024 */
   d = 0;
   progress_bar(2, wherey(), scrw - 2, 0, blocks_to_read);
 
-  init_packet(card_present ? CMD_GET_CARD_PIC : CMD_GET_CAM_PIC);
-  command_packet[CMD_PIC_NUM+1] = n_pic;
+  init_packet(CMD_GET_CARD_PIC);
+  command_packet[CMD_PIC_NUM+1] = n_pic-1;
   dc2x0_send_command();
 
   while (d++ < blocks_to_read) {
@@ -558,9 +425,9 @@ static uint8 dc2x0_get_thumbnail(uint8 n_pic, int fd) {
 #endif
   dc2x0_time_to_camera_date(int_time, &(th_info.date));
 
-  init_packet(card_present ? CMD_GET_CARD_THUMB : CMD_GET_CAM_THUMB);
-  command_packet[CMD_PIC_NUM+1] = n_pic;
-  blocks_to_read = 3;
+  init_packet(CMD_GET_CARD_THUMB);
+  command_packet[CMD_PIC_NUM+1] = n_pic-1;
+  blocks_to_read = 4;
   d = 0;
   dc2x0_send_command();
 
@@ -576,6 +443,7 @@ static uint8 dc2x0_get_thumbnail(uint8 n_pic, int fd) {
       return -1;
     }
   }
+
   return wait_command_completion();
 }
 
@@ -667,7 +535,7 @@ static uint8 dc2x0_set_flash(uint8 mode) {
 }
 
 static uint8 dc2x0_take_picture(void) {
-  if (dc2x0_command(card_present ? CMD_TAKE_PICTURE_CARD : CMD_TAKE_PICTURE_CAM, 0) != 0) {
+  if (dc2x0_command(CMD_TAKE_PICTURE_CARD, 0) != 0) {
     return -1;
   }
   /* Camera returns completion before being ready... */
@@ -676,7 +544,7 @@ static uint8 dc2x0_take_picture(void) {
 }
 
 static uint8 dc2x0_delete_pictures(void) {
-  return dc2x0_command(card_present ? CMD_DELETE_CARD : CMD_DELETE_CAM, 0);
+  return dc2x0_command(CMD_DELETE_CARD, 0);
 }
 
 

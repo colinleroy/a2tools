@@ -8,13 +8,8 @@ extern uint8 do_debug;
 
 #define CMD_SET_SPEED          0x41
 
-#define CMD_GET_CAM_PIC        0x51
-#define CMD_GET_CARD_PIC       0x61
-
-#define CMD_CAM_PIC_INFO       0x55
+#define CMD_GET_CARD_PIC       0x64
 #define CMD_CARD_PIC_INFO      0x65
-
-#define CMD_GET_CAM_THUMB      0x56
 #define CMD_GET_CARD_THUMB     0x66
 
 #define CMD_SET_QUALITY        0x71
