@@ -173,13 +173,15 @@ display:
     }
   } else if (h == 72 && qtmodel == QT_MODEL_DC2X0) {
     char line[80];
-    fseek(fp, 0, SEEK_SET);
+    /* Skip 6 lines top */
+    fseek(fp, 96*6, SEEK_SET);
     printf("DC2X0\n");
-    for (y = 0; y < 72; y++) {
+    for (y = 0; y < 60; y++) {
       if (!(y % 2)) {
         fread(line, 1, 96, fp);
       }
-      for (int i = 0, x = 0; x < 96;) {
+      /* Skip 8 pixels */
+      for (int i = 8, x = 0; x < 80;) {
         PIXEL_OUTPUT(x,   y, line[i] << 4, 0);
         x++;
         PIXEL_OUTPUT(x, y, line[i] << 4, 0);

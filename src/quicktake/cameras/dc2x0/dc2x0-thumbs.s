@@ -17,8 +17,9 @@
         jsr     pusha0
 
         jsr     push0         ; Whence is long
-        lda     #(96*2)       ; Offset 96*2 to skip two lines
-        jsr     pusha0
+        lda     #<(96*6)      ; Offset 96*6 to skip six lines
+        ldx     #>(96*6)
+        jsr     pushax
         lda     #SEEK_SET
         ldx     #0
         jsr     _lseek
@@ -49,28 +50,19 @@ next:                         ; Don't really do the histogram.
         ldy     #0
 next:
         lda     _buffer+256,x
-        and     #$F0
+        asl
+        asl
+        asl
+        asl
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+1,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+2,y
         sta     _buffer+THUMBNAIL_BUFFER_OFFSET+3,y
 
-        lda     _buffer+256+1,x
-        asl
-        asl
-        asl
-        asl
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+4,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+5,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+6,y
-        sta     _buffer+THUMBNAIL_BUFFER_OFFSET+7,y
-
-        clc
-        txa
-        adc     #3
-        tax
+        inx
         tya
-        adc     #8
+        clc
+        adc     #4
         tay
         cpy     #(THUMB_WIDTH*2)
         bcc     next

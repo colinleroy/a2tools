@@ -10,7 +10,7 @@ extern int ifd;
 /* No histogram on dc2x0 thumbs, too expensive */
 void dc2x0_thumb_histogram(void) {
   uint8 x = 0;
-  lseek(ifd, 96*2, SEEK_SET);
+  lseek(ifd, 96*6, SEEK_SET);
 
   do {
     x--;
@@ -24,13 +24,11 @@ void dc2x0_load_thumb_data(uint8 line) {
 
     read(ifd, buffer+256, 96);
     for (i = 8, x = 0; x < 80; ) {
-      THUMBNAIL_BUF_START[x] = buffer[i+256] & 0xF0;
-      THUMBNAIL_BUF_START[x+1] = buffer[i+256] & 0xF0;
+      THUMBNAIL_BUF_START[x] = buffer[i+256] << 4;
+      x++;
+      THUMBNAIL_BUF_START[x] = buffer[i+256] << 4;
       i++;
-      THUMBNAIL_BUF_START[x+2] = buffer[i+256] << 4;
-      THUMBNAIL_BUF_START[x+3] = buffer[i+256] << 4;
-      i+=2;
-      x+=4;
+      x++;
     }
   }
 }
