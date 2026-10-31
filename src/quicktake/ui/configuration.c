@@ -25,6 +25,7 @@ static cam_driver cameras[] = {
   {"FUJI.ZX",  "Fujifilm DS-7"},
   {"FUJI.ZX",  "Fujifilm DX-8"},
   {"DC50.ZX",  "Kodak DC50 Zoom"},
+  {"DC2X0.ZX", "Kodak DC200"},
   {"PS350.ZX", "Konika Q-Mini"},
   {"SRRA.ZX",  "Nikon Coolpix 900"},
   {"PS350.ZX", "Panasonic NV-DCF1"},
