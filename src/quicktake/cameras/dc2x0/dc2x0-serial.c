@@ -266,7 +266,7 @@ static uint8 dc2x0_set_speed(CamSpeed speed) {
 #define PIC_QUALITY_IDX       4
 #define PIC_FLASH_IDX         16
 
-#define DC2X0_EPOCH           852094800UL  //Wed Jan 01 1997 05:00:00 GMT+0000
+#define DC2X0_EPOCH           852073200UL  //Wed Jan 01 1997 00:00:00 GMT-0100
 
 static void dc2x0_time_to_camera_date(time_t int_time, camera_date *date) {
   struct tm *tm_time;
