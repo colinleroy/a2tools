@@ -12,6 +12,7 @@
 extern void *qt1x0_callbacks[];
 extern void *fuji_callbacks[];
 extern void *dc50_callbacks[];
+extern void *dc2x0_callbacks[];
 extern void *sierra_callbacks[];
 extern void *ps350_callbacks[];
 extern void *dy10c_callbacks[];
@@ -103,7 +104,7 @@ int main(int argc, char *argv[]) {
   if (argc < 3) {
     printf("Usage: %s camera_model tty_path [command] [command parameter]\n"
            "\n"
-           "       camera_models: qt1x0, fuji, dc50, sierra, ps350, dy10c\n"
+           "       camera_models: qt1x0, fuji, dc50, dc2x0, sierra, ps350, dy10c\n"
            "       tty_path:      /dev/ttyUSB0 for example\n"
            "       command:       get (parameter: picture number)\n"
            "                      thumb (parameter: picture number)\n"
@@ -124,6 +125,8 @@ int main(int argc, char *argv[]) {
     setup_pointers(fuji_callbacks);
   } else if (!strcmp(argv[1], "dc50")) {
     setup_pointers(dc50_callbacks);
+  } else if (!strcmp(argv[1], "dc2x0")) {
+    setup_pointers(dc2x0_callbacks);
   } else if (!strcmp(argv[1], "sierra")) {
     setup_pointers(sierra_callbacks);
   } else if (!strcmp(argv[1], "ps350")) {
@@ -244,7 +247,7 @@ next_pic:
       time_t now = time(NULL);
       struct tm *date = localtime(&now);
 
-      cam_set_camera_time(date->tm_mday, date->tm_mon+1, (date->tm_year+1900)%100, 
+      cam_set_camera_time(date->tm_mday, date->tm_mon+1, (date->tm_year+1900)%100,
                           date->tm_hour, date->tm_min, 00);
       argc = 2;
       goto get_info;

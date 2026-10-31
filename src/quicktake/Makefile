@@ -36,6 +36,9 @@ microserial_SOURCES := \
 	cameras/dc50/dc50-serial.c \
 	cameras/dc50/dc50-read-response.c \
 	cameras/dc50/dc50-thumbs.c \
+	cameras/dc2x0/dc2x0-serial.c \
+	cameras/dc2x0/dc2x0-read-response.c \
+	cameras/dc2x0/dc2x0-thumbs.c \
 	cameras/dy10c/dy10c-serial.c \
 	cameras/dy10c/dy10c-read-response.c \
 	cameras/dy10c/dy10c-thumbs.c \
@@ -77,6 +80,8 @@ slowtake_SOURCES := \
 	cameras/fuji/fuji-read-response.s \
 	cameras/dc50/dc50-serial.c \
 	cameras/dc50/dc50-read-response.s \
+	cameras/dc2x0/dc2x0-serial.c \
+	cameras/dc2x0/dc2x0-read-response.s \
 	cameras/dy10c/dy10c-serial.c \
 	cameras/dy10c/dy10c-read-response.s \
 	cameras/sierra/sierra-serial.c \
@@ -95,6 +100,7 @@ slowtake_CC65SOURCES := \
 	cameras/qt1x0/qt1x0-thumbs.s \
 	cameras/fuji/fuji-thumbs.s \
 	cameras/dc50/dc50-thumbs.s \
+	cameras/dc2x0/dc2x0-thumbs.s \
 	cameras/dy10c/dy10c-thumbs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -393,6 +399,7 @@ DCTCONV.BZX: dctconv.bin
 QT1X0.DRV: slowtake.bin
 FUJI.DRV: slowtake.bin
 DC50.DRV: slowtake.bin
+DC2X0.DRV: slowtake.bin
 DY10C.DRV: slowtake.bin
 PS350.DRV: slowtake.bin
 SRRA.DRV: slowtake.bin
@@ -403,13 +410,14 @@ SRRA.DRV: slowtake.bin
 # ../zxloader/zxloader.system: ../zxloader/loader.s
 # 	make -C ../zxloader/ clean all
 
-add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX DCTCONV.BZX ../zxloader/zxloader.system
+add_disk: ABOUT.ZX QT1X0.ZX FUJI.ZX DC50.ZX DC2X0.ZX DY10C.ZX PS350.ZX SRRA.ZX CONFIG.BZX SLOWTAKE.BZX QKTKCONV.BZX RADCCONV.BZX JPEGCONV.BZX DCTCONV.BZX ../zxloader/zxloader.system
 	java -jar ../../bin/ac.jar -d $(IMG) $(PREFIX)BASIC.SYSTEM; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)CONFIG.SYSTEM SYS   < /share/cc65/target/apple2/util/zxloader.system; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)ABOUT.ZX BIN 0x2000 < ABOUT.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)QT1X0.ZX BIN 0xC00  < QT1X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)FUJI.ZX BIN 0xC00   < FUJI.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC50.ZX BIN 0xC00   < DC50.ZX; \
+	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DC2X0.ZX BIN 0xC00  < DC2X0.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)DY10C.ZX BIN 0xC00  < DY10C.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)PS350.ZX BIN 0xC00  < PS350.ZX; \
 	java -jar ../../bin/ac.jar -p $(IMG) $(PREFIX)SRRA.ZX BIN 0xC00   < SRRA.ZX; \

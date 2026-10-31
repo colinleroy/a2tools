@@ -1,0 +1,10 @@
+CMD_SET_SPEED  = $41
+CMD_INITIALIZE = $7E
+CMD_GET_STATUS = $7F
+
+REP_COMPLETE   = $00
+REP_ACK        = $d1
+REP_CORRECT    = $d2
+REP_NACK       = $e1
+REP_ILLEGAL    = $e3
+REP_BUSY       = $f0
