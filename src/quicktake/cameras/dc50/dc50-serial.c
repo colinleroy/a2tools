@@ -108,7 +108,7 @@ again:
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_parity(SER_PAR_NONE);
 
-  simple_serial_send_break(250);
+  simple_serial_send_break(500);
   sleep(1);
 
   /* Flush shit */
