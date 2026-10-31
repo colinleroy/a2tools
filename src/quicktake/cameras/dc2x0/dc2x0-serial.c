@@ -96,58 +96,6 @@ static void init_packet(char command) {
 extern camera_info cam_info;
 extern thumb_info th_info;
 
-#pragma warn(unused-param, push, off)
-/* Wakeup and detect a dc2x0 camera
- * Returns 0 if successful, -1 otherwise
- */
-static uint8 dc2x0_wakeup(CamSpeed speed) {
-  uint8 c, tries = 3;
-  cputs("Pinging Kodak DC2x0...");
-
-again:
-  simple_serial_set_speed(SER_BAUD_9600);
-  simple_serial_set_parity(SER_PAR_NONE);
-
-  simple_serial_send_break(250);
-  sleep(1);
-
-  /* Flush shit */
-  while (simple_serial_read_no_irq((char *)&c, 1) != EOF);
-
-  if (dc2x0_set_speed(speed) == 0) {
-    return QT_MODEL_DC2X0;
-  } else if (tries--) {
-    goto again;
-  }
-  return QT_MODEL_UNKNOWN;
-}
-#pragma warn(unused-param, pop)
-
-static CamSpeed my_speed = SER_BAUD_9600;
-
-/* Are we reading from card or internal storage */
-static uint8 card_present;
-
-/* Wait for ack after a command requiring it */
-static uint8 wait_command_completion(void) {
-  char c;
-  do {
-    /* Wait for a character... */
-    while (simple_serial_read_no_irq((char *)&c, 1) == EOF);
-    PC_DEBUG_PRINTF("completion: %02X\n", c);
-    /* Is camera still busy? If so wait */
-    if (c == REP_BUSY) {
-      continue;
-    }
-    /* We're done! */
-    if (c == REP_COMPLETE) {
-      return 0;
-    }
-    /* Anything else is an error. */
-    return -1;
-  } while (1);
-}
-
 /* Send the command (packet previously inited with init_packet()) */
 static uint8 dc2x0_send_command(void) {
   uint8 c;
@@ -169,6 +117,69 @@ static uint8 dc2x0_send_command(void) {
   }
   return 0;
 }
+
+/* Wait for ack after a command requiring it */
+static uint8 wait_command_completion(void) {
+  char c;
+  do {
+    /* Wait for a character... */
+    while (simple_serial_read_no_irq((char *)&c, 1) == EOF);
+    PC_DEBUG_PRINTF("completion: %02X\n", c);
+    /* Is camera still busy? If so wait */
+    if (c == REP_BUSY) {
+      continue;
+    }
+    /* We're done! */
+    if (c == REP_COMPLETE) {
+      return 0;
+    }
+    /* Anything else is an error. */
+    return -1;
+  } while (1);
+}
+
+static uint8 dx2x0_initialize(void) {
+  init_packet(CMD_INITIALIZE);
+  if (dc2x0_send_command() != 0) {
+    return -1;
+  }
+  return wait_command_completion();
+}
+
+#pragma warn(unused-param, push, off)
+/* Wakeup and detect a dc2x0 camera
+ * Returns 0 if successful, -1 otherwise
+ */
+static uint8 dc2x0_wakeup(CamSpeed speed) {
+  uint8 c, tries = 3;
+  cputs("Pinging Kodak DC2x0...");
+
+again:
+  simple_serial_set_speed(SER_BAUD_9600);
+  simple_serial_set_parity(SER_PAR_NONE);
+
+  simple_serial_send_break(250);
+  sleep(1);
+
+  /* Flush shit */
+  while (simple_serial_read_no_irq((char *)&c, 1) != EOF);
+
+  if (dx2x0_initialize() != 0) {
+    return QT_MODEL_UNKNOWN;
+  }
+  if (dc2x0_set_speed(speed) == 0) {
+    return QT_MODEL_DC2X0;
+  } else if (tries--) {
+    goto again;
+  }
+  return QT_MODEL_UNKNOWN;
+}
+#pragma warn(unused-param, pop)
+
+static CamSpeed my_speed = SER_BAUD_9600;
+
+/* Are we reading from card or internal storage */
+static uint8 card_present;
 
 /* Help: send a command and read the reply. */
 static uint8 dc2x0_send_and_read_response(uint8 num_blocks, uint16 block_len) {
