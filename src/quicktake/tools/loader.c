@@ -143,7 +143,7 @@ display:
         opt_histogram[i] = 255;
       }
   }
-  
+
   fseek(fp, PNM_HEADER_SIZE, SEEK_SET);
   if (fp2) {
     fseek(fp2, PNM_HEADER_SIZE, SEEK_SET);
@@ -169,6 +169,22 @@ display:
         PIXEL_OUTPUT(x+3, y, line[i] << 4, 0);
         i+=2;
         x+=4;
+      }
+    }
+  } else if (h == 72 && qtmodel == QT_MODEL_DC2X0) {
+    char line[80];
+    fseek(fp, 0, SEEK_SET);
+    printf("DC2X0\n");
+    for (y = 0; y < 72; y++) {
+      if (!(y % 2)) {
+        fread(line, 1, 96, fp);
+      }
+      for (int i = 0, x = 0; x < 96;) {
+        PIXEL_OUTPUT(x,   y, line[i] << 4, 0);
+        x++;
+        PIXEL_OUTPUT(x, y, line[i] << 4, 0);
+        x++;
+        i++;
       }
     }
   } else if (w != 80) {
