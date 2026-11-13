@@ -15,23 +15,18 @@ typedef struct _cam_driver {
 } cam_driver;
 
 static cam_driver cameras[] = {
-  {"QT1X0.ZX", "Apple Quicktake 100"},
-  {"QT1X0.ZX", "Apple Quicktake 150"},
+  {"QT1X0.ZX", "Apple Quicktake 100, 150"},
   {"FUJI.ZX",  "Apple Quicktake 200"},
   {"PS350.ZX", "Canon PowerShot 350"},
   {"DY10C.ZX", "Chinon ES-3000"},
   {"DY10C.ZX", "Dycam 10-C"},
   {"SRRA.ZX",  "Epson PhotoPC PCDC001"},
-  {"FUJI.ZX",  "Fujifilm DS-7"},
-  {"FUJI.ZX",  "Fujifilm DX-8"},
-  {"DC50.ZX",  "Kodak DC50 Zoom"},
-  {"DC2X0.ZX", "Kodak DC200"},
+  {"FUJI.ZX",  "Fujifilm DS-7, DX-8"},
+  {"DC50.ZX",  "Kodak DC50 Zoom, DC200"},
   {"PS350.ZX", "Konika Q-Mini"},
-  {"SRRA.ZX",  "Nikon Coolpix 900"},
-  {"SRRA.ZX",  "Nikon Coolpix 950"},
+  {"SRRA.ZX",  "Nikon Coolpix 900, 950, 990, 995"},
   {"PS350.ZX", "Panasonic NV-DCF1"},
-  {"SRRA.ZX",  "Sanyo VPC-G1"},
-  {"SRRA.ZX",  "Sanyo VPC-G200"},
+  {"SRRA.ZX",  "Sanyo VPC-G1, VPC-G200"},
   {"SRRA.ZX",  "Sierra Imaging SD640"},
 
   {NULL, NULL}
