@@ -2,9 +2,9 @@
 TYPE="full"
 if [ "$1" != "" ]; then
   TYPE=$1
-	FLOP2="-flop2 ../../disks/qt$1.dsk"
+	FLOP2="-flop2 ../../disks/qt$1.po"
 else
-	FLOP2="-flop2 ../../disks/qt100.dsk"
+	FLOP2="-flop2 ../../disks/qt100.po"
 fi
 
 make clean quicktake.po DEBUG_FLOPPY=$TYPE && mame apple2ee -window -flop1 quicktake.po $FLOP2 -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug

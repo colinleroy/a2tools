@@ -91,10 +91,10 @@ void main(int argc, char *argv) {
   register_start_device();
 
   zxloader_name = "CONFIG.SYSTEM";
-#ifdef DEBUG_FLOPPY
+#if defined(DEBUG_FLOPPY) && DEBUG_FLOPPY != 0
   zexec("-SLOWTAKE");
 #endif
-#ifdef DEBUG_HD
+#if defined(DEBUG_HD) && DEBUG_HD != 0
   zexec("-SLOWTAKE");
 #endif
 #ifdef DEBUG_THUMB
