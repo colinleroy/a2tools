@@ -232,8 +232,7 @@ BaudOK: sta     tmp1
         ldy     #SER_PAR_NONE
         lda     ParityTable,y   ; Get 6551 value
 
-        ora     #%00000001      ; Set DTR active
-        ora     #%00001010      ; Disable interrupts and set RTS low
+        ora     #%00001011      ; Disable interrupts, set RTS low, DTR active
         sta     ACIA_CMD,x
 
         ; Done
