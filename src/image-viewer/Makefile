@@ -2,7 +2,6 @@ TARGET := apple2
 
 GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
-	--asm-define SERIAL_ENABLE_IRQ \
 	--asm-define NO_FILESEL_MKDIR \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
@@ -23,7 +22,6 @@ imgview_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/asm/simple_serial_configure.s \
-	../lib/serial/asm/simple_serial_getc_immediate.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
@@ -87,7 +85,7 @@ imageviewer.po: imgview.bin
 	java -jar ../../bin/ac.jar -n $@ $(FLOP_NAME)
 	IMG=$@ PREFIX= make add_disk
 
-hdv: 
+hdv:
 	../../bin/cp2/cp2 mkdir $(IMG) $(FLOP_NAME)
 	../../bin/cp2/cp2 copy --recurse imageviewer.po $(IMG):$(FLOP_NAME)
 

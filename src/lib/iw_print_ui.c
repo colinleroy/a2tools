@@ -47,7 +47,6 @@ open_again:
       vsdrive_install();
     }
   }
-  simple_serial_set_irq(0);
   return 0;
 
 check_configure:
