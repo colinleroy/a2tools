@@ -1,3 +1,9 @@
+a2tools (26.4.2) bionic; urgency=medium
+
+  * Fix image upload segfault
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sun, 15 Nov 2026 21:28:19 +0200
+
 a2tools (26.3.1) bionic; urgency=medium
 
   * Proxy upgrade to trixie
