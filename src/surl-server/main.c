@@ -422,8 +422,8 @@ new_req:
       secs = cur_time.tv_sec - 1;
       msecs = 1000 + (cur_time.tv_nsec / 1000000);
 
-      LOG(" [built json data in %lums]",
-          (1000*(secs - start_secs))+(msecs - start_msecs));
+      LOG(" [built json data in %llums]",
+          (unsigned long long)(1000*(secs - start_secs))+(msecs - start_msecs));
     }
 
     LOG("\n");
@@ -769,23 +769,23 @@ abort:
             IO_BARRIER("JSON, pre-content");
             simple_serial_puts(result);
 
-            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes (%lums)\n",
+            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes (%llums)\n",
                     param, bufsize,
                     striphtml ? ", striphtml":"",
                     translit,
                     strlen(result),
-                    (1000*(secs - start_secs))+(msecs - start_msecs));
+                    (unsigned long long)(1000*(secs - start_secs))+(msecs - start_msecs));
             if (VERBOSE) {
               LOG("----\n%s\n----\n", result);
             }
             free(result);
           } else {
             simple_serial_putc(SURL_ERROR_NOT_FOUND);
-            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: Not found (%lums)\n",
+            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: Not found (%llums)\n",
                     param, bufsize,
                     striphtml ? ", striphtml":"",
                     translit,
-                    (1000*(secs - start_secs))+(msecs - start_msecs));
+                    (unsigned long long)(1000*(secs - start_secs))+(msecs - start_msecs));
           }
         }
 
@@ -850,8 +850,8 @@ abort:
       secs = cur_time.tv_sec - 1;
       msecs = 1000 + (cur_time.tv_nsec / 1000000);
 
-      LOG("RESP: handled in %lums\n",
-          (1000*(secs - start_secs))+(msecs - start_msecs));
+      LOG("RESP: handled in %llums\n",
+          (unsigned long long)(1000*(secs - start_secs))+(msecs - start_msecs));
     }
 
     fflush(stdout);
@@ -1367,7 +1367,7 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
           if (curl_mime_type(field, field_type) != CURLE_OK)
             LOG("REQ: POST: could not set field type %s\n", field_type);
 
-          snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
+          snprintf(field_filename, 512, "file-%llu-%s", (unsigned long long)time(NULL), field_type);
           if (strchr(field_filename, '/'))
             *strchr(field_filename, '/') = '.';
           if (curl_mime_filename(field, field_filename) != CURLE_OK)
@@ -1677,8 +1677,8 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   secs = cur_time.tv_sec - 1;
   msecs = 1000 + (cur_time.tv_nsec / 1000000);
 
-  LOG("CURL: request took %lums\n",
-      (1000*(secs - curlbuf->start_secs))+(msecs - curlbuf->start_msecs));
+  LOG("CURL: request took %llums\n",
+      (unsigned long long)(1000*(secs - curlbuf->start_secs))+(msecs - curlbuf->start_msecs));
 
   curl_slist_free_all(curl_headers);
   if (curl_ftp_opts) {

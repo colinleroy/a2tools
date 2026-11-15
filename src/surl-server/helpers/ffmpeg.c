@@ -885,7 +885,6 @@ static int init_audio_filters(const char *filters_descr, int sample_rate)
     static const AVChannelLayout out_ch_layouts[] = { AV_CHANNEL_LAYOUT_MONO };
 #else
     static const enum AVSampleFormat out_sample_fmts[] = { AV_SAMPLE_FMT_U8, -1 };
-    static const int64_t out_channel_layouts[] = { AV_CH_LAYOUT_MONO, -1 };
 #endif
     static int out_sample_rates[] = { 0, -1 };
 
