@@ -22,7 +22,8 @@ static cam_driver cameras[] = {
   {"DY10C.ZX", "Dycam 10-C"},
   {"SRRA.ZX",  "Epson PhotoPC PCDC001"},
   {"FUJI.ZX",  "Fujifilm DS-7, DX-8"},
-  {"DC50.ZX",  "Kodak DC50 Zoom, DC200"},
+  {"DC50.ZX",  "Kodak DC50 Zoom"},
+  {"DC2X0.ZX", "Kodak DC200"},
   {"PS350.ZX", "Konika Q-Mini"},
   {"SRRA.ZX",  "Nikon Coolpix 800, 900, 950, 990, 995"},
   {"PS350.ZX", "Panasonic NV-DCF1"},
@@ -73,7 +74,7 @@ static void header(char *str) {
   cputs("Quicktake for Apple II - configuration\r\n");
   chline(80);
   cputs(str);
-  set_scrollwindow(3, 24);
+  set_scrollwindow(4, 24);
 }
 
 void main(int argc, char *argv) {
