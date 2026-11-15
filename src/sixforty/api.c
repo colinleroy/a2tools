@@ -301,6 +301,7 @@ char api_delete_post(post_t *post) {
 
 char jpeg_magic[] = { 0xFF, 0xD8, 0xFF};
 char qtk_magic[]  = "qkt";
+char dct_magic[]  = "Cdcx";
 char mime_type[]  = "application/octet-stream";
 
 char api_post_image(char *filename, char *description, char cam_id, char x, char y, char w) {
@@ -329,6 +330,8 @@ char api_post_image(char *filename, char *description, char cam_id, char x, char
     strcpy(mime_type, "image/jpg");
   } else if (!memcmp(gen_buf, qtk_magic, 3)) {
     strcpy(mime_type, "image/qtk");
+  } else if (!memcmp(gen_buf, dct_magic, 4)) {
+    strcpy(mime_type, "image/dct");
   } else {
     strcpy(mime_type, (gen_buf[0x78] % 2) == 0 ? "image/hgr" : "image/hgr-color");
   }
